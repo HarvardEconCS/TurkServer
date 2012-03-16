@@ -1,13 +1,15 @@
 package edu.harvard.econcs.turkserver.mturk;
 
-import edu.harvard.econcs.turkserver.mturk.response.CreateHITResponse;
-import edu.harvard.econcs.turkserver.mturk.response.DisableHITResponse;
 import edu.harvard.econcs.turkserver.server.SessionRecord;
 import edu.harvard.econcs.turkserver.server.mysql.DataTracker;
 
 import java.math.BigInteger;
 import java.util.List;
 import java.util.logging.Logger;
+
+import com.amazonaws.mturk.requester.HIT;
+import com.amazonaws.mturk.requester.QualificationRequirement;
+import com.amazonaws.mturk.service.exception.ServiceException;
 
 /**
  * A hacked together class to create HITs and expire leftovers when the end
@@ -27,7 +29,7 @@ public class TurkHITManager<T> implements Runnable {
 
 	protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 	
-	private final MTurkRequester requester;
+	private final RequesterServiceExt requester;
 	private final DataTracker<T> tracker;
 	
 	private final int initialAmount;
@@ -50,7 +52,7 @@ public class TurkHITManager<T> implements Runnable {
 	 * @param additionalDelay the amount to wait before each additional hit
 	 * @param totalAmount
 	 */
-	public TurkHITManager(MTurkRequester req, DataTracker<T> tracker, int initialAmount, 
+	public TurkHITManager(RequesterServiceExt req, DataTracker<T> tracker, int initialAmount, 
 			int additionalDelay, int totalAmount) {
 		this.requester = req;
 		this.tracker = tracker;
@@ -75,19 +77,18 @@ public class TurkHITManager<T> implements Runnable {
 			String title, 
 			String description,
 			String keywords,
-			String rewardAmountInUSD,
-			int assignmentDurationInSeconds,
-			int autoApprovalDelayInSeconds,			
-			List<Qualification> qualifications) {
-		try {
-			hitTypeId = requester.registerHITTypeWithQual(
-					title, description, keywords, rewardAmountInUSD, 
-					assignmentDurationInSeconds, autoApprovalDelayInSeconds, 
-					qualifications);			
+			double reward,
+			long assignmentDurationInSeconds,
+			long autoApprovalDelayInSeconds,			
+			QualificationRequirement[] qualRequirements) {
+		try {					
+			hitTypeId = requester.registerHITType(
+					autoApprovalDelayInSeconds, assignmentDurationInSeconds, 
+					reward, title, keywords, description, qualRequirements);
 			
 			logger.info("Got HIT Type: " + hitTypeId);
 			
-		} catch (TurkException e) {			
+		} catch (ServiceException e) {			
 			e.printStackTrace();
 		}		
 	}
@@ -144,13 +145,13 @@ public class TurkHITManager<T> implements Runnable {
 			}			
 
 			try {
-				CreateHITResponse resp = requester.createHITExternalFromID(
+				HIT resp = requester.createHITExternalFromID(
 							hitTypeId, newUrl, frameHeight, String.valueOf(lifeTime));
 
 				String hitId = resp.getHITId();
 				tracker.saveHITIdForSession(newID, hitId);				
 
-			} catch (TurkException e) {
+			} catch (ServiceException e) {
 				e.printStackTrace();
 				i--;
 
@@ -178,14 +179,10 @@ public class TurkHITManager<T> implements Runnable {
 			// TODO fix this ugly ass code
 			do {			
 				try {
-					DisableHITResponse resp = requester.disableHIT(hitId);
-					if( !resp.isValid() ) {
-						logger.warning("Error disabling HIT " + hitId);
-						resp.printXMLResponse();
-					}
+					requester.disableHIT(hitId);					
 					
 					break;					
-				} catch (TurkException e) {					
+				} catch (ServiceException e) {					
 					e.printStackTrace();
 					
 					logger.info("Throttling HIT disabling");
