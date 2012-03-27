@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package edu.harvard.econcs.turkserver.server.http;
+package edu.harvard.econcs.turkserver.server;
 
 import java.util.ArrayList;
 import java.util.HashMap;

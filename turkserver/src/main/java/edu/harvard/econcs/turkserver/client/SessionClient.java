@@ -1,7 +1,8 @@
-package edu.harvard.econcs.turkserver.server.http;
+package edu.harvard.econcs.turkserver.client;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Logger;
 
 import org.cometd.bayeux.Channel;
 import org.cometd.bayeux.Message;
@@ -16,22 +17,24 @@ import org.cometd.java.annotation.Service;
 import org.cometd.java.annotation.Session;
 import org.cometd.java.annotation.Subscription;
 
-public abstract class SimpleClient implements Runnable {
+public abstract class SessionClient<T> implements Runnable {
+	
+	protected final Logger logger;
 	
 	private final String url;
-	protected final String hitId;
+	protected final T hitId;
 	protected final String assignmentId;
 	protected final String workerId;
 	
 	protected BayeuxClient bayeuxClient;
 	protected ClientAnnotationProcessor processor;
 	
-	private volatile boolean connected;
+	protected volatile boolean connected;
 	private volatile boolean wasConnected;
 	
 	private volatile boolean isError = false;
 	
-	protected SimpleClient(String cometURL, String hitId, String assignmentId, String workerId) {
+	protected SessionClient(String cometURL, T hitId, String assignmentId, String workerId) {
 		this.url = cometURL;
 		this.hitId = hitId;
 		this.assignmentId = assignmentId;
@@ -41,6 +44,8 @@ public abstract class SimpleClient implements Runnable {
 		
 		bayeuxClient.addExtension(new TimesyncClientExtension());
 		bayeuxClient.addExtension(new AckExtension());
+	
+		logger = Logger.getLogger(this.getClass().getSimpleName() + this.getSessionIdStr());
 		
 		processor = new ClientAnnotationProcessor(bayeuxClient);
 		
@@ -65,12 +70,12 @@ public abstract class SimpleClient implements Runnable {
 	
 	public BayeuxClient getBayeux() { return bayeuxClient; }
 	
-	public boolean getIsError() { return isError; }
+	public boolean getIsError() { return isError; }		
 	
 	/**
 	 * @return the hitId
 	 */
-	public String getHitId() { return hitId; }
+	public abstract String getSessionIdStr();
 
 	/**
 	 * @return the assignmentId
@@ -178,10 +183,11 @@ public abstract class SimpleClient implements Runnable {
 			Map<String, Object> m = service.getDataAsMap();
 			Object status = m.get("status");
 			if( status != null ) {
-				System.out.println(m.get("msg"));
+				System.out.println("Status: " + status.toString() + ", " + "Message: " + m.get("msg"));
 				
 				if( "error".equals(status.toString()) ) {
 					isError = true;
+					processError(m.get("msg").toString());
 				}
 				else if( "completed".equals(status.toString()) ) {
 					System.out.println("Got complete confirmation, disconnecting.");
@@ -196,16 +202,36 @@ public abstract class SimpleClient implements Runnable {
 		}
 	}
 
+	public abstract void processError(String string);
+
 	@Override
-	public void run() {
+	public final void run() {		
+		Thread.currentThread().setName(this.getClass().getSimpleName() + " " + getSessionIdStr());
+		logger.info("Begin client log with session ID " + getSessionIdStr());
+		
 		bayeuxClient.handshake();
 		boolean success = bayeuxClient.waitFor(1000, BayeuxClient.State.CONNECTED);
 		
 		if( !success ) {
-			System.out.println("Failed Handshake. Quitting.");
+			handShakeFail();			
 			return;
-		}		
+		}
+		
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			public void run() {								
+				logger.info("Disconnecting Bayeux client");				
+				disconnect();
+			}
+		});
 	}
 
+	/* ****************************************************
+	 * Various methods that can be overridden by the client
+	 ******************************************************/
+	protected void handShakeFail() {
+		System.out.println("Failed Handshake. Quitting.");
+	}
+	
+	protected void runClient() {}
 	
 }

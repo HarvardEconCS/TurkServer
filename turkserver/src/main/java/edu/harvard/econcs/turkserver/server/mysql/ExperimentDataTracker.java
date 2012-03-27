@@ -125,7 +125,7 @@ public abstract class ExperimentDataTracker implements DataTracker<BigInteger> {
 	 * @param qr
 	 * @throws QuizFailException 
 	 */
-	public abstract void saveQuizResults(BigInteger sessionID, String workerId,	QuizResults qr) 
+	public abstract void saveQuizResults(BigInteger sessionID, QuizResults qr) 
 	throws QuizFailException;
 
 	/**
@@ -406,5 +406,10 @@ public abstract class ExperimentDataTracker implements DataTracker<BigInteger> {
 	public final int getNumExpsRunning() {		
 		return experiments.getFalseCount();
 	}
+	
+	@Override
+	public int getSetLimit() {		
+		return totalSetLimit;
+	}	
 	
 }

@@ -1,4 +1,4 @@
-package edu.harvard.econcs.turkserver.server.http;
+package edu.harvard.econcs.turkserver.server;
 
 import java.io.IOException;
 import java.util.Map;
@@ -18,11 +18,11 @@ import org.cometd.server.ext.AcknowledgedMessagesExtension;
 import org.cometd.server.ext.TimesyncExtension;
 import org.eclipse.jetty.util.log.Log;
 
-public abstract class SimpleExperimentServlet<T extends SimpleExperimentServer> extends GenericServlet {
+public abstract class SessionServlet<S extends SessionServer<T>, T> extends GenericServlet {
 
 	private static final long serialVersionUID = -3882966106597782108L;	
 	
-	protected T theServer;
+	protected S theServer;
 	
 	protected BayeuxServerImpl bayeux;
 	protected ServerAnnotationProcessor processor;
@@ -32,7 +32,7 @@ public abstract class SimpleExperimentServlet<T extends SimpleExperimentServer> 
 	public void init() throws ServletException {
 		super.init();
 		
-		theServer = (T) getServletContext().getAttribute(SimpleExperimentServer.ATTRIBUTE);
+		theServer = (S) getServletContext().getAttribute(SessionServer.ATTRIBUTE);
 		
 		bayeux = (BayeuxServerImpl) 
 				getServletContext().getAttribute(BayeuxServer.ATTRIBUTE);		
@@ -51,12 +51,18 @@ public abstract class SimpleExperimentServlet<T extends SimpleExperimentServer> 
         });
 
         // Allow anybody to handshake
-        bayeux.getChannel(ServerChannel.META_HANDSHAKE).addAuthorizer(GrantAuthorizer.GRANT_PUBLISH);
-        
+        bayeux.getChannel(ServerChannel.META_HANDSHAKE).addAuthorizer(GrantAuthorizer.GRANT_PUBLISH);             
+                
         processor = new ServerAnnotationProcessor(bayeux);
         
         processor.process(new Monitor());
         processor.process(new UserData());
+        
+        bayeux.addListener(theServer.new UserSessionListener());        
+	}
+	
+	public ServerAnnotationProcessor getProcessor() {
+		return processor;
 	}
 
 	@Service("userdata")
@@ -75,8 +81,8 @@ public abstract class SimpleExperimentServlet<T extends SimpleExperimentServer> 
 			String status = data.get("status").toString();
 						
 			String clientId = session.getId();
-			String hitId = null;			
-			try { hitId = data.get("hitId").toString(); } catch (NullPointerException e) {}
+			T hitId = null;			
+			try { hitId = theServer.stringToType(data.get("hitId").toString()); } catch (NullPointerException e) {}
 			
 			if( "view".equals(status) ) {				
 				Log.getRootLogger().info("HIT " + hitId + " is being viewed by " + clientId);
@@ -101,12 +107,7 @@ public abstract class SimpleExperimentServlet<T extends SimpleExperimentServer> 
 				
 				Log.getRootLogger().info("HIT " + hitId + " submitting");
 				theServer.sessionSubmit(clientId, hitId, workerId);
-			}
-			else if( "disconnect".equals(status) ) {
-				Log.getRootLogger().info("HIT " + hitId  + " disconnecting");
-				theServer.sessionDisconnect(clientId, hitId);
-			}
-			
+			}						
 			
 		}
 				

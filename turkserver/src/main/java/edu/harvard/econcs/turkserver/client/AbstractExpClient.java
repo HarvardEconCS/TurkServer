@@ -10,7 +10,7 @@ public interface AbstractExpClient {
 	 * Get the session ID, or none if not applicable.
 	 * @return
 	 */
-	public BigInteger getSessionID();
+	public BigInteger getSessionBigInt();
 	
 	/**
 	 * Update the ready status

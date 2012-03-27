@@ -108,4 +108,10 @@ public interface DataTracker<T> {
 	 */
 	public abstract List<SessionRecord> expireUnusedSessions();
 
+	/**
+	 * Gets the maximum number of allowed tasks per session
+	 * @return
+	 */
+	public abstract int getSetLimit();
+
 }

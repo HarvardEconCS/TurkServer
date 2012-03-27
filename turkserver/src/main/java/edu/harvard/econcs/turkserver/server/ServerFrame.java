@@ -142,7 +142,10 @@ public class ServerFrame extends JFrame implements ActionListener {
 	public void actionPerformed(ActionEvent e) {
 		if( e.getActionCommand() != null && e.getActionCommand().equals(updateStatusCmd) ) {
 			hostServer.serverMessage.set(statusMsg.getText());
-			// Update message for everyone
+			
+			/* publish the message to lobby
+			 * It's fine to broadcast here as it is a rare occurrence
+			 */
 			hostServer.sendLobbyStatus();			
 		}
 		else if( e.getSource() == timeTicker && runningExpModel.size() > 0 ) {			
@@ -174,7 +177,8 @@ public class ServerFrame extends JFrame implements ActionListener {
 			
 			BigInteger id = (BigInteger) value;
 			
-			setText( hostServer.tracker.getUsername(id) + " - " + hostServer.lobbyMessage.get(id));			
+			setText( hostServer.tracker.getUsername(id) );
+			// TODO render textual messages
 			
 			setEnabled(true); // not list.isEnabled()); otherwise the icon won't draw
 			setFont(list.getFont());

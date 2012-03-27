@@ -325,14 +325,16 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	public void saveQuizResults(BigInteger sessionID, String workerId,
-			QuizResults results) throws QuizFailException {
+	public void saveQuizResults(BigInteger sessionID, QuizResults results) throws QuizFailException {
 		if( quizMaster == null ) {
 			logger.severe("Got back quiz results with no quiz master?");
 			return;
 		}
 		
+		String workerId = "unidentified";
 		try {
+			workerId = qr.query("SELECT workerId FROM session WHERE id=?", defaultScalarHandler, sessionID.toString(16)).toString();
+			
 			// Make sure the worker table contains this workerId first, but ignore if already exists
 			qr.update("INSERT IGNORE INTO worker(id) VALUES (?)", workerId);
 			
@@ -461,6 +463,6 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 		}
 		
 		return expired;
-	}	
+	}
 	
 }

@@ -5,28 +5,22 @@ package edu.harvard.econcs.turkserver.server;
 
 import edu.harvard.econcs.turkserver.*;
 import edu.harvard.econcs.turkserver.Codec.LoginStatus;
-import edu.harvard.econcs.turkserver.Update.*;
 import edu.harvard.econcs.turkserver.mturk.TurkHITManager;
 import edu.harvard.econcs.turkserver.server.ExpServerFactory.ExperimentFactoryException;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 
-import java.io.IOException;
 import java.math.BigInteger;
-import java.net.InetSocketAddress;
-import java.nio.*;
-import java.nio.channels.*;
-import java.nio.channels.spi.SelectorProvider;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.CharsetEncoder;
-import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
-import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.logging.Logger;
+
+import org.cometd.bayeux.server.ConfigurableServerChannel;
+import org.cometd.bayeux.server.ConfigurableServerChannel.Initializer;
+import org.cometd.bayeux.server.LocalSession;
+import org.cometd.bayeux.server.ServerChannel;
+import org.cometd.bayeux.server.ServerSession;
+import org.eclipse.jetty.servlet.ServletHolder;
 
 import net.andrewmao.misc.ConcurrentBooleanCounter;
 
@@ -35,28 +29,11 @@ import net.andrewmao.misc.ConcurrentBooleanCounter;
  * @author Mao
  *
  */
-public class HostServer<T extends ExperimentServer<T>> implements Runnable, Updater {
+public class HostServer<T extends ExperimentServer<T>> extends SessionServer<BigInteger> {
 	
 	public static final int ID_BYTES = 20;
 	public static final int ID_LEN = ID_BYTES * 8 - 1;	// Number of bits in clientIDs
-	public static final int BUF_LEN = 4096; 		// Fixed buffer size
-		
-	private final Logger logger = Logger.getLogger(HostServer.class.getSimpleName());
-	
-	// RMI stuff
-	private final int listenPort;
-	private final int rmiPort;		
-	private Updater stub;
-	private Registry reg;
-
-	// NIO stuff
-	private final CharsetEncoder encoder = Codec.getEncoder();
-	private ByteBuffer buffer = ByteBuffer.allocateDirect(HostServer.BUF_LEN);	
-	
-	private ServerSocketChannel ssc;
-	private Selector sel;
-	private SelectionKey serverKey;
-	
+					
 	// Turk crap
 	private final TurkHITManager<BigInteger> turkHITManager;
 	private final int completedHITGoal;
@@ -67,18 +44,18 @@ public class HostServer<T extends ExperimentServer<T>> implements Runnable, Upda
 	final ExperimentDataTracker tracker;
 	
 	private final String logPath;
-	
-	// Client trackers
-	private final ConcurrentHashMap<BigInteger, SocketChannel> idToChan;
-	private final ConcurrentHashMap<SocketChannel, BigInteger> chanToID;
-	
-	final ConcurrentBooleanCounter<BigInteger> lobbyStatus;
-	final ConcurrentHashMap<BigInteger, String> lobbyMessage;
+		
+	final ConcurrentBooleanCounter<BigInteger> lobbyStatus;	
 	
 	final AtomicReference<String> serverMessage;
 	
 	private final AtomicInteger completedHITs;
 	
+	private LocalSession lobbyBroadcaster;
+	
+	// Servlet stuff
+	private ServletHolder expServlet;
+
 	// GUI
 	private ServerFrame serverGUI;
 	
@@ -97,30 +74,29 @@ public class HostServer<T extends ExperimentServer<T>> implements Runnable, Upda
 			QuizFactory quizFac,
 			ExperimentDataTracker userTracker,
 			TurkHITManager<BigInteger> thm, int completedHitGoal,
-			int listenPort, int rmiPort, String logPath) {
+			int listenPort, String logPath) {
+		// TODO add correct thm, resources, hitGoal to this
+		super(userTracker, thm, null, 0, listenPort);
+		
+        expServlet = context.addServlet(HostServlet.class, "/exp");  
+        expServlet.setInitOrder(3);  
 						
 		this.quizFactory = quizFac;
 		this.expFactory = factory;
 		this.tracker = userTracker;
 		
 		this.turkHITManager = thm;
-		this.completedHITGoal = completedHitGoal;
-		
-		this.listenPort = listenPort;
-		this.rmiPort = rmiPort;
+		this.completedHITGoal = completedHitGoal;				
 		
 		this.logPath = logPath;
-		
-		idToChan = new ConcurrentHashMap<BigInteger, SocketChannel>();		
-		chanToID = new ConcurrentHashMap<SocketChannel, BigInteger>();
-		
-		lobbyStatus = new ConcurrentBooleanCounter<BigInteger>();		
-		lobbyMessage = new ConcurrentHashMap<BigInteger, String>();
+				
+		lobbyStatus = new ConcurrentBooleanCounter<BigInteger>();				
 		
 		completedHITs = new AtomicInteger(0);
 		serverMessage = new AtomicReference<String>("");
 		
 		serverGUI = new ServerFrame(this);
+				
 	}
 
 	/**
@@ -135,24 +111,77 @@ public class HostServer<T extends ExperimentServer<T>> implements Runnable, Upda
 	public HostServer(ExpServerFactory<T> factory, ExperimentDataTracker userTracker,
 			TurkHITManager<BigInteger> thm, int completedHitGoal,
 			int listenPort, String logPath) {
-		this(factory, null, userTracker, thm, completedHitGoal, listenPort, 0, logPath); 
-	}
+		this(factory, null, userTracker, thm, completedHitGoal, listenPort, logPath); 
+	}	
 	
 	public String getLogPath() {		
 		return logPath;
 	}
 
 	@Override
-	public LoginStatus sessionLogin(BigInteger sessionID, String assignmentId, String workerId)
-	throws RemoteException {		
-		try {
-			return tracker.registerAssignment(sessionID, assignmentId, workerId);
-		} catch (ExpServerException e) {			
-			throw new RemoteException("Server Error:", e);
-		}					
+	protected LoginStatus sessionAccept(String clientId, BigInteger hitId,
+			String assignmentId, String workerId) {		
+		LoginStatus ls = super.sessionAccept(clientId, hitId, assignmentId, workerId);
+		
+		Map<String, Object> data = new HashMap<String, Object>();
+		ServerSession session = bayeux.getSession(clientId);
+				
+		if( ls == LoginStatus.QUIZ_REQUIRED ) {
+			// Check if we need to do a quiz
+			QuizMaterials qm = quizFactory.getQuiz();
+			if( qm != null ) {
+							
+				data.put("status", Codec.quizNeeded);
+				data.put("quiz", qm.toData());
+				
+				session.deliver(session, "/service/user", data, null);				
+			}
+		}
+		else if( ls == LoginStatus.NEW_USER ) {
+			// Check if we need to get username			
+			data.put("status", Codec.usernameNeeded);
+			
+			session.deliver(session, "/service/user", data, null);
+		}		
+		else if( ls == LoginStatus.REGISTERED ) {			
+			/* Is user already in an experiment?
+			 * already-completed sessions should be caught way before this
+			 */
+			if( tracker.sessionIsInProgress(hitId) ) {
+				ExperimentServer<?> exp = tracker.getExperimentForID(hitId);
+				if( exp != null ) {
+					data.put("status", Codec.connectExpAck);
+					data.put("channel", exp.getChannelName());
+
+					session.deliver(session, "/service/user", data, null);
+
+					// TODO experiment should send state to user (?)
+					exp.clientConnected(hitId);				
+				}
+				else {
+					logger.severe("Unknown experiment but session is in progress: "	+ 
+							hitId.toString(16) );
+				}
+			} 
+			else {
+				data.put("status", Codec.connectLobbyAck);				
+				session.deliver(session, "/service/user", data, null);
+				
+				logger.info(String.format("%s (%s) connected to lobby",	
+						hitId.toString(16), tracker.getUsername(hitId)));
+			}								
+			
+		}
+		else {
+			logger.warning("Unexpected id tried to connect: " + hitId.toString(16));
+			data.put("status", Codec.connectErrorAck);				
+			session.deliver(session, "/service/user", data, null);
+		}
+		
+		return ls;
 	}
 
-	@Override
+	//	@Override
 	public QuizMaterials getQuizMaterials(BigInteger sessionID,
 			String assignmentId, String workerId) {		
 		if( quizFactory != null ) 
@@ -161,61 +190,100 @@ public class HostServer<T extends ExperimentServer<T>> implements Runnable, Upda
 			return null;
 	}
 
-	@Override
-	public void sendQuizResults(BigInteger sessionID,
-			String assignmentId, String workerId, QuizResults qr) throws RemoteException {
+//	@Override
+	public void sendQuizResults(BigInteger sessionID, QuizResults qr) {		
 		try {
-			tracker.saveQuizResults(sessionID, workerId, qr);
+			tracker.saveQuizResults(sessionID, qr);
+			
+			/* TODO quiz passed? allow lobby login
+			 * careful - this assumes that quiz always precedes username
+			 */
+			sendStatus(sessionID, "username");
+			
 		} catch (QuizFailException e) {
-			throw new RemoteException("Server Error:", e);
-		}
+			sendStatus(sessionID, "quizfail");
+		}		
 	}
 
-	@Override
-	public boolean lobbyLogin(BigInteger sessionID, String username) throws RemoteException {		
-		return tracker.lobbyLogin(sessionID, username);
+	public void sendStatus(BigInteger sessionID, String status) {
+		Map<String, Object> data = new HashMap<String, Object>();		
+		ServerSession session = bayeux.getSession(clientToId.inverse().get(sessionID));
+		data.put("status", status);		
+		session.deliver(session, "/service/user", data, null);
 	}
 
-	@Override
-	public boolean clientUpdate(CliUpdate u) throws RemoteException {
-		// If someone is in an experiment, they shouldn't be sending lobby updates
-		ExperimentServer<?> exp = tracker.getExperimentForID(u.clientID);
-		
-		if( exp != null ) {
-			exp.receiveUpdate(u);
-			return true;
-		} 		
-		else if (u instanceof LobbyStatusUpdate) {
+	public boolean lobbyLogin(BigInteger sessionID, String username) {		
+		if( ! tracker.lobbyLogin(sessionID, username) )  {
+			// some error, request it again.
+			sendStatus(sessionID, "username");
 			
-			LobbyStatusUpdate lsu = (LobbyStatusUpdate) u;			
-			lobbyStatus.put(lsu.clientID, lsu.isReady);
-			if( lsu.msg != null ) lobbyMessage.put(lsu.clientID, lsu.msg);
-			
-			int neededPeople = expFactory.getExperimentSize();
-			
-			// are there enough people ready to start?
-			synchronized(lobbyStatus) {	
-				logger.info("Lobby has " + lobbyStatus.getTrueCount() + " ready people");				
-				if( lobbyStatus.getTrueCount() >= neededPeople ) {
-					// Create a new experiment and assign the ready people to it
-					createNewExperiment();
-				}
-				else if( lobbyStatus.size() < neededPeople ) {
-					// Make sure everyone's ready is disabled
-					for( BigInteger id : lobbyStatus.keySet() ) {
-						lobbyStatus.put(id, false);
-					}
-				}
-			}
-				
-			// Notify everyone who is remaining in the lobby
-			sendLobbyStatus();
-			
-			return true;
-		}
-		else {
+			// Don't broadcast this username
 			return false;
 		}
+		return true;
+	}
+
+	public boolean lobbyUpdate(BigInteger sessionID, boolean isReady) {
+		lobbyStatus.put(sessionID, isReady);				
+		
+		int neededPeople = expFactory.getExperimentSize();
+		
+		// are there enough people ready to start?
+		synchronized(lobbyStatus) {	
+			logger.info("Lobby has " + lobbyStatus.getTrueCount() + " ready people");				
+			if( lobbyStatus.getTrueCount() >= neededPeople ) {
+				
+				// Create a new experiment and assign the ready people to it
+				createNewExperiment();
+				
+			}
+			else if( lobbyStatus.size() < neededPeople ) {
+				
+				// Make sure everyone's ready is disabled
+				for( BigInteger id : lobbyStatus.keySet() ) {
+					lobbyStatus.put(id, false);
+				}
+			}
+		}
+							
+		serverGUI.updateLobbyModel();
+		
+		// Notify everyone who is remaining in the lobby
+		sendLobbyStatus();
+		
+		return true;
+	}
+
+	void sendLobbyStatus() {
+		Map<String, Object> data = new TreeMap<String, Object>();
+		
+		int usersInLobby = lobbyStatus.size();
+		int usersNeeded = expFactory.getExperimentSize();
+		
+		data.put("status", "update");
+		
+		data.put("numusers", usersInLobby);
+		data.put("numneeded", usersNeeded);
+		data.put("joinenabled", usersInLobby >= usersNeeded);
+		
+		data.put("servermsg", serverMessage.get());
+		data.put("currentexps", tracker.getNumExpsRunning());
+		data.put("totalusers", bayeux.getSessions().size());
+		
+		// TODO could be some race conditions here if lobby size changes?
+		Object[] users = new Object[lobbyStatus.size()];		
+		int i = 0;
+		for( Map.Entry<BigInteger, Boolean> e : lobbyStatus.entrySet() ) {
+			BigInteger id = e.getKey();
+			
+			// clientId, username, and status
+			users[i++]= new Object[] { clientToId.inverse().get(id), tracker.getUsername(id), e.getValue() };
+		}
+		data.put("users", users);
+		
+		// TODO broadcast to lobby?
+		bayeux.getChannel("lobby").publish(this.lobbyBroadcaster, data, null);
+		
 	}
 
 	private void createNewExperiment() {
@@ -246,10 +314,23 @@ public class HostServer<T extends ExperimentServer<T>> implements Runnable, Upda
 			e.printStackTrace();
 			for( BigInteger id : expClients.keySet()) {
 				lobbyStatus.put(id, false);
-				notifyClient(id, Codec.startExpError);
+				sendStatus(id, Codec.startExpError);
 			}
 			return;
 		}
+		
+		/* Create necessary channels for this experiment
+		 * Note that hostServlet automatically routes these already
+		 */
+		Initializer persistent = new Initializer() {
+			@Override
+			public void configureChannel(ConfigurableServerChannel channel) {
+				channel.setPersistent(true);
+			}			
+		};
+		
+		bayeux.createIfAbsent(Codec.expChanPrefix + newExp.getChannelName(), persistent);
+		bayeux.createIfAbsent(Codec.expSvcPrefix + newExp.getChannelName(), persistent);
 		
 		serverGUI.newExperiment(newExp);	
 		
@@ -272,84 +353,27 @@ public class HostServer<T extends ExperimentServer<T>> implements Runnable, Upda
 		for( BigInteger id : expClients.keySet()) lobbyStatus.remove(id);
 	}
 
-	protected void sendLobbyStatus() {
-		for( BigInteger lobbyDude : lobbyStatus.keySet() ) {
-			notifyClient(lobbyDude, Codec.lobbyUpdateMsg);
-		}
-		serverGUI.updateLobbyModel();
+	public void addInactiveTime(BigInteger sessionId, long inactiveTime) {		
+		ExperimentServer<?> exp = tracker.getExperimentForID(sessionId);
+		exp.addInactiveTime(sessionId, inactiveTime);		
 	}
 
-	public SrvUpdate pullUpdate(UpdateReq clientReq) throws RemoteException {
-		ExperimentServer<?> exp = tracker.getExperimentForID(clientReq.clientID);
-		
-		LobbyUpdateReq lobbyur = null;
-		if( clientReq instanceof LobbyUpdateReq )
-			lobbyur = (LobbyUpdateReq) clientReq;
-				
-		if( exp != null ) {
-			if( lobbyur != null ) {
-				logger.warning("Client " + clientReq.clientID.toString(16) + 
-				" asked for a lobby update but should already be in experiment");
-			}
-			
-			// Ask experiment server for update								
-			try {
-				return exp.getUpdate(clientReq);
-			} catch (ExpServerException e) {
-				throw new RemoteException("Experiment server exception", e);
-			}
-		} 
-		else if (lobbyur != null) {			
-			// Populate lobby update
-			int usersInLobby = lobbyStatus.size();
-			int usersNeeded = expFactory.getExperimentSize();			
-			boolean joinEnabled = (lobbyStatus.size() >= usersNeeded);					
-			
-			LobbyUpdateResp resp = 
-				new LobbyUpdateResp(lobbyur.clientID, usersNeeded, joinEnabled, usersInLobby,
-						serverMessage.get(), tracker.getNumExpsRunning(), chanToID.size());
-			
-			for( Map.Entry<BigInteger, Boolean> e : lobbyStatus.entrySet() ) {
-				BigInteger id = e.getKey();
-				String msg = lobbyMessage.get(id);
-				if( msg == null ) msg = "";
-				
-				resp.addRecord(id, tracker.getUsername(id), e.getValue(), msg);
-			}
-			return resp;
-		}
-		else {
-			logger.warning("Got a client request that is not in the lobby or experiment!");
-			throw new RemoteException("Unexpected client request: " + clientReq.getClass().getSimpleName());
-		}
-	}
-
-	/**
-	 * Note: this is called asynchronously by worker threads from client RMI
-	 * TODO possibly unify the notifying system
-	 */
-	public void notifyClient(BigInteger id, String msg) {
-		SocketChannel sc = idToChan.get(id);
-		
-		if( sc == null || sc.socket().isClosed() ) return;
-		
-		try {
-			// put whitespace here so client can split multiple messages
-			sc.write(encoder.encode(CharBuffer.wrap(msg + "\r\n")));
-		} catch (CharacterCodingException e) {			
-			e.printStackTrace();
-		} catch (IOException e) {			
-			e.printStackTrace();
-		}		
-	}	
-		
 	public void experimentFinished(T expServer) {
 		tracker.experimentFinished(expServer);		
 		serverGUI.finishedExperiment(expServer);				
 		
+		// unsubscribe from and/or remove channels
+		ServerChannel toRemove = null;
+		if( (toRemove = bayeux.getChannel(Codec.expChanPrefix + expServer.getChannelName())) != null ) {
+			toRemove.setPersistent(false);
+		}
+		if( (toRemove = bayeux.getChannel(Codec.expSvcPrefix + expServer.getChannelName())) != null ) {
+			toRemove.setPersistent(false);
+		}
+		
 		// Tell clients they are done!
 		for( BigInteger id : expServer.clients.keySet() )
-			notifyClient(id, Codec.doneExpMsg);	
+			sendStatus(id, Codec.doneExpMsg);	
 		
 		if( completedHITs.addAndGet(expServer.clients.keySet().size()) >= completedHITGoal ) {
 			logger.info("Goal of " + completedHITGoal + " users reached!");
@@ -358,262 +382,46 @@ public class HostServer<T extends ExperimentServer<T>> implements Runnable, Upda
 			
 			// Only notify people in experiment, not lobby (experiment people need to submit)
 			for( BigInteger id : lobbyStatus.keySet() )
-				notifyClient(id, Codec.batchFinishedMsg);
+				sendStatus(id, Codec.batchFinishedMsg);
 			
 			// TODO quit the thread in this case
-		}				
+		}
+		
+		
 	}
-
-	/*
-	 * Main thread
-	 */	
-	public void run() {
-		Thread.currentThread().setName("HostServer");
+	
+	protected void runServerInit() {
+		expFactory.doInit(this);
 		
 		// Start the generating factory if it needs to do work
 		// TODO have this quit properly
-		new Thread(expFactory, expFactory.getClass().getSimpleName()).start();
+		new Thread(expFactory, expFactory.getClass().getSimpleName()).start();				
 		
-		// Register the RMI stub
-		try {
-			stub = (Updater) UnicastRemoteObject.exportObject(this, rmiPort);
-			
-			reg = LocateRegistry.createRegistry(Registry.REGISTRY_PORT);
-			reg.rebind(Updater.class.getSimpleName(), stub);
-			
-			logger.info("RMI registry created");
-		} catch (RemoteException e) {
-			logger.severe("Failed to bind RMI server");			
-			e.printStackTrace();
-			return;
-		} 
+		lobbyBroadcaster = bayeux.newLocalSession("lobby");
+		lobbyBroadcaster.handshake();
 		
-		// Start the nonblocking I/O thread
-		try {
-			sel = SelectorProvider.provider().openSelector();
-			
-			ssc = ServerSocketChannel.open();
-			ssc.configureBlocking(false);			
-			
-			// Listen on all interfaces (more likely to work than trying to find IP)
-			InetSocketAddress isa = new InetSocketAddress("0.0.0.0", listenPort);
-			ssc.socket().bind(isa);
-			
-			serverKey = ssc.register(sel, SelectionKey.OP_ACCEPT);
-			logger.info("Listening on port " + listenPort);
-		} catch (IOException e) {
-			logger.severe("Could not open server port");
-			e.printStackTrace();
-			return;
-		}
 		
-		// Post Turk HITs
-		if( turkHITManager != null ) new Thread(turkHITManager).start();
-		
-		// Register shutdown hook
-		Runtime.getRuntime().addShutdownHook(new Thread() {
-			public void run() {
-				// TODO add stuff from above to in here, like auto expiring hits
-				
-				logger.info("Shutdown initiated");
-				
-				try {
-					sel.close();
-					ssc.close();
-					for( SocketChannel sc : chanToID.keySet() ) {
-						sc.close();
-					}
-				} catch (IOException e) {					
-					e.printStackTrace();
-				}
-			}
-		});			
-		
-		// Enter main loop
-		logger.info("Waiting for clients on " + listenPort);
-		while( true  ) {
-			Iterator<SelectionKey> it = null;
-			
-			try {
-				if (sel.select() == 0) continue;
-				it = sel.selectedKeys().iterator();
-			} catch (ClosedSelectorException e) {
-				// Shutdown has been initiated
-				break;
-			} catch (IOException e) {
-				e.printStackTrace();
-				if (it == null) continue;
-			}
-			
-			while(it.hasNext()) {
-				SelectionKey sk = it.next();
-				it.remove();
-
-				if( sk == serverKey && sk.isAcceptable() ) {					
-					// new connection (could be a new client or reconnecting client)					
-					try {
-						SocketChannel sc;
-						sc = ((ServerSocketChannel) sk.channel()).accept();
-						sc.configureBlocking(false);
-						
-
-						// add this to the selector for reading
-						sc.register(sel, SelectionKey.OP_READ);
-					} catch (IOException e) {						
-						e.printStackTrace();
-					}										
-				} else {
-					// Someone sent some data
-					buffer.clear();
-					SocketChannel sc = (SocketChannel) sk.channel();
-										
-					int bytesRead = 0;					
-					try {
-						// Read the message into buffer
-						bytesRead = sc.read(buffer);												
-						logger.fine(bytesRead + " bytes read");
-						
-						if( bytesRead == -1 ) {
-							// Stream closed
-							sc.close();
-							removeUserData(sc);																			
-							continue;
-						}
-						
-					} catch (IOException e1) {
-						/* TODO this catches "Connection reset by peer or connection timed out",
-						 * but careful if there is anything else
-						 */
-						e1.printStackTrace();
-						logger.warning("Assuming that this guy disconnected:");
-						try{ sc.close(); } catch(IOException e2) { e2.printStackTrace(); }
-						removeUserData(sc);
-						continue;
-					} 														
-					
-					buffer.flip();
-
-					if( chanToID.containsKey(sc) && !sc.socket().isClosed() ) {						
-						/* TODO Message sent on open channel, not really used right now
-						 * And does not take into account lobby
-						 */
-						
-						BigInteger id = chanToID.get(sc);
-						ExperimentServer<?> exp = tracker.getExperimentForID(id);
-						
-						if (exp != null) exp.processData(buffer, bytesRead);
-						else { logger.warning("Unknown experiment for " + id.toString(16)); }
-					}
-					else {
-						// Message sent on unrecognized channel
-						processNewChannel(sc, bytesRead);
-					}						
-				}						
-			}
-		}		
 	}
-
-	private void processNewChannel(SocketChannel sc, int bytesRead) {
-		// Check their ID to see if this is their first time connecting		 
+	
+	@Override
+	public void sessionDisconnect(String clientId, BigInteger sessionId) {
 		
-		byte[] idbuf = new byte[bytesRead];
-		buffer.get(idbuf, 0, bytesRead);
-		BigInteger id = new BigInteger(idbuf);		
-		
-		if( idToChan.containsKey(id) ) {
-			// Close any old channel associated with this id, if one exists (double connect)
-			SocketChannel oldChannel = idToChan.remove(id);
-			try {
-				oldChannel.close();
-			} catch( IOException e ) {
-				e.printStackTrace();
-			}
-		}
-		
-		try {
-			if( tracker.sessionIsInProgress(id) ) {								
-				// Send reply - reconnecting to an experiment								 
-
-				sc.write(encoder.encode(CharBuffer.wrap(Codec.reconnectExpAck)));
-
-				chanToID.put(sc, id);
-				idToChan.put(id, sc);
-
-				ExperimentServer<?> exp = tracker.getExperimentForID(id);								
-				if( exp != null ) {
-					exp.clientConnected(id);
-					logger.info("Client reconnected to experiment, " + id.toString(16));
-				}
-				else {
-					logger.severe("Unknown experiment but session is in progress: "
-							+ id.toString(16) );
-				}
-			}
-			else if (tracker.sessionCompletedInDB(id) ) {
-				/* TODO might want to let user view the graph even if they are already done
-				 * In this case, mesh up with sessionIsInProgress above
-				 * For now, just close the channel
-				 * 
-				 * TODO this is now caught way earlier in the login
-				 */
-				
-				logger.info("Client connected to experiment after completion: "
-						+ id.toString(16));
-				sc.write(encoder.encode(CharBuffer.wrap(Codec.expFinishedAck)));
-				sc.close();
-			}
-			else if( tracker.sessionExistsInDB(id) ) {						
-				// Not associated with experiment - send to lobby				
-				logger.info(String.format("%s (%s) connected to lobby",
-						id.toString(16), tracker.getUsername(id)));
-				sc.write(encoder.encode(CharBuffer.wrap(Codec.connectLobbyAck)));
-				
-				chanToID.put(sc, id);
-				idToChan.put(id, sc);
-				
-				// Record IP address of client for shits and giggles
-				tracker.saveIPForSession(id, sc.socket().getInetAddress(), new Date());
-			}		
-			else {
-				logger.warning("Unexpected id tried to connect: " + id.toString(16));
-				sc.write(encoder.encode(CharBuffer.wrap(Codec.connectErrorAck)));
-				sc.close();
-			}
-
-		} catch (CharacterCodingException e) {				
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (SessionExpiredException e) {
-			logger.warning(id.toString(16) + ": Unexpected connection on expired session!");
-			
-			try {
-				sc.write(encoder.encode(CharBuffer.wrap(Codec.connectErrorAck)));
-				sc.close();
-			} catch (IOException e1) {				
-				e1.printStackTrace();
-			}			
-		} 
-	}
-
-	private void removeUserData(SocketChannel sc) {				
-		BigInteger id = chanToID.get(sc);
-		logger.warning(id.toString(16) + " disconnected");
-		
-		// Was this dude in the lobby? If so remove him from the lobby and notify lobby ppl
-		if( lobbyStatus.remove(id) != null ) {
-			lobbyMessage.remove(id);
+		// Was this dude in the lobby? If so remove him from the lobby and notify lobby ppl		
+		if( lobbyStatus.remove(sessionId) != null ) {			
 			logger.info(String.format("%s (%s) removed from lobby",
-					id.toString(16), tracker.getUsername(id)));			
-			sendLobbyStatus();
-		}				
+					sessionId.toString(16), tracker.getUsername(sessionId)));			
+			
+			// TODO check on this quit message to lobby
+			Map<String, Object> data = new TreeMap<String, Object>();
+			
+			data.put("status", "quit");
+			data.put("username", tracker.getUsername(sessionId));
+			
+			bayeux.getChannel("/lobby").publish(bayeux.getSession(clientId), data, null);
+		}
 		
-		// Notify the experiment server if this guy was in one (shouldn't overlap with above)
-		tracker.sessionDisconnected(id);
-		
-		// Remove channel-ID mappings (get new one if connect again)
-		idToChan.remove(id);
-		chanToID.remove(sc);		
+		// This takes care of disconnecting in the tracker
+		super.sessionDisconnect(clientId, sessionId);
 	}
 
 	public class UsernameComparator implements Comparator<BigInteger> {	
@@ -629,6 +437,59 @@ public class HostServer<T extends ExperimentServer<T>> implements Runnable, Upda
 			
 			return o1.compareTo(o2);
 		}	
+	}
+
+	@Override
+	public BigInteger stringToType(String sessionId) {		
+		return new BigInteger(sessionId, 16);
+	}
+
+	/**
+	 * 
+	 * @param clientId
+	 * @param data
+	 * @return
+	 */
+	void experimentServiceMsg(String clientId, Map<String, Object> data) {		
+		BigInteger sessionId = getSessionForClient(clientId);
+		if( sessionId == null ) {
+			logger.warning("Message from unrecognized client: " + clientId);
+		}
+		else {
+			@SuppressWarnings("unchecked")
+			T exp = (T) tracker.getExperimentForID(sessionId);
+			
+			if( exp == null ) {
+				logger.warning("No experiment recorded for client: " + clientId);
+				return;
+			}
+			
+			exp.rcvServiceMsg(sessionId, data);						
+		}		
+	}
+	
+	/**
+	 * Deliver a message to an experiment. Can be broadcast (automatically routed to other clients) or private 
+	 * @param clientId
+	 * @param data 
+	 */
+	boolean experimentBroadcastMsg(String clientId, Map<String, Object> data) {		
+		BigInteger sessionId = getSessionForClient(clientId);
+		if( sessionId == null ) {
+			logger.warning("Message from unrecognized client: " + clientId);
+			return false;
+		}
+		else {
+			@SuppressWarnings("unchecked")
+			T exp = (T) tracker.getExperimentForID(sessionId);
+			
+			if( exp == null ) {
+				logger.warning("No experiment recorded for client: " + clientId);
+				return false;
+			}
+						
+			return exp.rcvBroadcastMsg(sessionId, data);			
+		}		
 	}
 
 }

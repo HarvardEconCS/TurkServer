@@ -121,8 +121,7 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	public void saveQuizResults(BigInteger sessionID, String workerId,
-			QuizResults qr) {
+	public void saveQuizResults(BigInteger sessionID, QuizResults qr) {
 		logger.info(String.format("Session %s got %d out of %d correct", 
 				sessionID.toString(16), qr.correct, qr.total));
 	}

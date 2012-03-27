@@ -1,21 +1,21 @@
-/**
- * 
- */
-package edu.harvard.econcs.turkserver.server.http;
+package edu.harvard.econcs.turkserver.server;
 
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
 
 import net.andrewmao.misc.Utils;
 
-import org.cometd.bayeux.server.*;
+import org.cometd.bayeux.server.BayeuxServer;
+import org.cometd.bayeux.server.BayeuxServer.SessionListener;
+import org.cometd.bayeux.server.ServerSession;
 import org.cometd.java.annotation.AnnotationCometdServlet;
 import org.cometd.server.CometdServlet;
 import org.cometd.server.DefaultSecurityPolicy;
-
+import org.cometd.server.JettyJSONContextServer;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.bio.SocketConnector;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
@@ -23,10 +23,18 @@ import org.eclipse.jetty.server.nio.SelectChannelConnector;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.util.ajax.JSON.Convertor;
+import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.resource.Resource;
 import org.eclipse.jetty.util.resource.ResourceCollection;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
+import com.google.common.collect.Maps;
+
+import edu.harvard.econcs.turkserver.Codec;
+import edu.harvard.econcs.turkserver.Codec.LoginStatus;
 import edu.harvard.econcs.turkserver.ExpServerException;
 import edu.harvard.econcs.turkserver.Messages;
 import edu.harvard.econcs.turkserver.SessionCompletedException;
@@ -36,56 +44,46 @@ import edu.harvard.econcs.turkserver.SessionUnknownException;
 import edu.harvard.econcs.turkserver.SimultaneousSessionsException;
 import edu.harvard.econcs.turkserver.TooManySessionsException;
 import edu.harvard.econcs.turkserver.mturk.TurkHITManager;
-import edu.harvard.econcs.turkserver.server.mysql.SimpleDataTracker;
+import edu.harvard.econcs.turkserver.server.mysql.DataTracker;
 
-/**
- * @author mao
- * 
- * A simple experiment server supporting one-way communication via JSON
- * with javascript clients.
- * 
- * Useful for experiments that don't require interaction between clients
- *
- */
-public abstract class SimpleExperimentServer implements Runnable {	
+public abstract class SessionServer<T> implements Runnable {
+
+	protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 	
-	public static final String ATTRIBUTE = "turkserver.simple-experiment";
+	public static final String ATTRIBUTE = "turkserver.session";
 	
-	private final TurkHITManager<String> turkHITs;
-	
-	private final int hitGoal;	
-	protected final SimpleDataTracker tracker;
-	
+	private final DataTracker<T> tracker;
+	protected final TurkHITManager<T> turkHITs;
+	protected final int hitGoal;
 	protected final Server server;
-	private final CometdServlet cometdServlet; 
+	protected final ServletContextHandler context;
+	protected final CometdServlet cometdServlet;
 	
-	protected BayeuxServer bayeux;
+	protected BayeuxServer bayeux;	
 	
-	private ConcurrentHashMap<String, String> clientToHITId;
+	protected BiMap<String, T> clientToId;	
 	
-	private ConcurrentHashMap<String, Long> startTimes;
-	private ConcurrentHashMap<String, StringBuffer> sessionLogs;
+	protected final AtomicInteger completedHITs;
+
+	ConcurrentHashMap<String, Long> logStartTimes;
+	ConcurrentHashMap<String, StringBuffer> sessionLogs;
 	
-	private final AtomicInteger completedHITs;
-	
-	public SimpleExperimentServer(
-			SimpleDataTracker userTracker,
-			TurkHITManager<String> thm,
-			Class<? extends SimpleExperimentServlet<?>> servletClass,
-			Resource[] resources,
-			int hitGoal,
-			int httpPort) throws Exception {
-		
-		this.tracker = userTracker;
+	public SessionServer(DataTracker<T> tracker, TurkHITManager<T> thm,
+			Resource[] resources, int hitGoal, int httpPort) {
+
+		this.tracker = tracker;								
+
 		this.turkHITs = thm;
+		
 		this.hitGoal = hitGoal;
 		
-		this.clientToHITId = new ConcurrentHashMap<String, String>();
-		
-		this.startTimes = new ConcurrentHashMap<String, Long>();
-		this.sessionLogs = new ConcurrentHashMap<String, StringBuffer>();
+		BiMap<String, T> bm = HashBiMap.create();
+		this.clientToId = Maps.synchronizedBiMap(bm);		
 		
 		this.completedHITs = new AtomicInteger();
+		
+		this.logStartTimes = new ConcurrentHashMap<String, Long>();
+		this.sessionLogs = new ConcurrentHashMap<String, StringBuffer>();
 		
 		// Set up the jetty server
 		server = new Server();
@@ -113,7 +111,7 @@ public abstract class SimpleExperimentServer implements Runnable {
         server.setHandler(contexts);
         
         // Base files servlet
-        ServletContextHandler context = new ServletContextHandler(contexts,"/",ServletContextHandler.SESSIONS);        
+        context = new ServletContextHandler(contexts,"/",ServletContextHandler.SESSIONS);        
         context.setBaseResource(new ResourceCollection(resources));
         
         // Default servlet
@@ -121,7 +119,7 @@ public abstract class SimpleExperimentServer implements Runnable {
         dftServlet.setInitOrder(1);
         
         // Cometd servlet
-        cometdServlet = new AnnotationCometdServlet();
+        cometdServlet = new AnnotationCometdServlet();        
         ServletHolder comet = new ServletHolder(cometdServlet);
         context.addServlet(comet, "/cometd/*");
         
@@ -131,94 +129,127 @@ public abstract class SimpleExperimentServer implements Runnable {
         comet.setInitParameter("multiFrameInterval", "5000");
         comet.setInitParameter("logLevel", "1");
         
+        // for registering serialization and deserialization
+        comet.setInitParameter("jsonContext", "org.cometd.server.JettyJSONContextServer");
+        
         comet.setInitParameter("transports", "org.cometd.server.websocket.WebSocketTransport");
 //        comet.setInitParameter("transports","org.cometd.server.transport.LongPollingTransport");
-        comet.setInitOrder(2);
-        
-        ServletHolder experiment = context.addServlet(servletClass, "/exp");  
-        experiment.setInitOrder(3);
+        comet.setInitOrder(2);       
         
         context.setAttribute(ATTRIBUTE, this);
-        
-        // TODO init server extensions
+	}
+
+	public class UserSessionListener implements SessionListener {
+		@Override
+		public void sessionAdded(ServerSession session) {
+			T oldId = clientToId.forcePut(session.getId(), null);
+			
+			if( oldId != null ) {
+				logger.info(session.getId() + " reconnected, used to have id " + oldId.toString());
+			}
+		}
+
+		@Override
+		public void sessionRemoved(ServerSession session, boolean timedout) {
+			String clientId = session.getId();
+			T hitId = clientToId.get(clientId);
+			
+			if( timedout ) {
+				Log.getRootLogger().info("Session " + clientId + " timed out");
+				sessionDisconnect(clientId, hitId);
+			}
+			else {
+				Log.getRootLogger().info("Session " + clientId + " disconnected");
+				sessionDisconnect(clientId, hitId);
+			}
+		}	
+	}
+
+	public void registerConvertor(Class<?> cl, Convertor conv) {
+		JettyJSONContextServer jsonContext = (JettyJSONContextServer) bayeux.getOption("jsonContext");
+		jsonContext.getJSON().addConvertor(cl, conv);
 	}
 	
 	public int getNumCompleted() {		
 		return completedHITs.get();
 	}
 
-	protected void logReset(String hitId) {						
+	protected void logReset(String logId) {						
 		// Close any previous log if it was open
-		StringBuffer log = sessionLogs.get(hitId);
+		StringBuffer log = sessionLogs.get(logId);
 		if( log != null ) 
 			log.delete(0, log.length());
 		else {
 			log = new StringBuffer();
-			sessionLogs.put(hitId, log);
+			sessionLogs.put(logId, log);
 		}
 		
-		startTimes.put(hitId, System.currentTimeMillis());
-		logString(hitId, "started");		
+		logStartTimes.put(logId, System.currentTimeMillis());
+		logString(logId, "started");		
 	}
-	
-	protected synchronized void logString(String hitId, String msg) {
-		if( hitId == null ) {
-			System.out.println("Got null hitId");
+
+	protected synchronized void logString(String logId, String msg) {
+		if( logId == null ) {
+			System.out.println("Got null logId");
 			return;
 		}
 		
-		StringBuffer log = sessionLogs.get(hitId);
+		StringBuffer log = sessionLogs.get(logId);
 		if( log != null ) {
 			log.append(	String.format(
 					"%s %s\n",
-					Utils.clockStringMillis(System.currentTimeMillis() - startTimes.get(hitId)), 
+					Utils.clockStringMillis(System.currentTimeMillis() 
+							- logStartTimes.get(logId)), 
 					msg ) );
 		}				
-		else System.out.println(hitId + "Log discarded: " + msg);
+		else System.out.println(logId + "Log discarded: " + msg);
 	}
-	
-	protected void logFlush(String hitId) {				
-		logString(hitId, "finished");		
-		
-		StringBuffer log = sessionLogs.get(hitId);
-		if( log != null ) {
-			String data = log.toString();
+
+	protected String logFlush(String logId) {				
+			logString(logId, "finished");		
 			
-			// Save to file
-//			String path = NPuzzleSettings.config.getString(NPuzzleSettings.RESULT_DIR);
-//			String filename = path + "/" + sessionId.toString(16) + ".log.gz";
-//			FileObjUtils.writeToGZIP(filename, data);
+			StringBuffer log = sessionLogs.get(logId);
+			if( log != null ) {
+				return log.toString();				
+			}					
 			
-			// Save to db
-			tracker.saveSessionLog(hitId, data);
-		}					
-	}
-	
-	public void sessionView(String clientId, String hitId) {
+			return null;
+		}
+
+	public void sessionView(String clientId, T hitId) {
 		if( hitId != null ) {						
-			clientToHITId.put(clientId, hitId);
+			clientToId.forcePut(clientId, hitId);			
 		}
 		else {
 			System.out.println("Client " + clientId + " sent null hitId");
 		}
 	}
-	
-	protected boolean sessionAccept(String clientId, String hitId,
-			String assignmentId, String workerId) {
+
+	protected LoginStatus sessionAccept(String clientId, T hitId, String assignmentId,
+			String workerId) {
+		LoginStatus ls = LoginStatus.ERROR;
+
 		if( hitId != null ) {			
-						
 			try {				
-				tracker.registerAssignment(hitId, assignmentId, workerId);
 				
+				
+				ls = tracker.registerAssignment(hitId, assignmentId, workerId);
+
+				// Successful registration, save info
 				tracker.saveIPForSession(hitId, 
 						bayeux.getContext().getRemoteAddress().getAddress(), new Date());
-				
+
 				// Reset the log, no saved state
-				clientToHITId.put(clientId, hitId);
-				logReset(hitId);
+				clientToId.forcePut(clientId, hitId);
 				
+				// Save some extra information, that we can access later
+				ServerSession session = bayeux.getSession(clientId);				
+				session.setAttribute("hitId", hitId);
+				session.setAttribute("assignmentId", assignmentId);
+				session.setAttribute("workerId", workerId);
+
 			} catch (ExpServerException e) {		
-				
+
 				if( e instanceof SessionUnknownException ) {
 					sendException(clientId, null, Messages.UNRECOGNIZED_SESSION);
 				}
@@ -229,6 +260,8 @@ public abstract class SimpleExperimentServer implements Runnable {
 				}
 				else if (e instanceof SessionExpiredException ) {					
 					sendException(clientId, null, Messages.EXPIRED_SESSION);
+					
+					logger.warning("Unexpected connection on expired session: " + hitId.toString());
 				}
 				else if (e instanceof TooManySessionsException) {
 					sendException(clientId, null, "You've already done enough for today. Please return this HIT and come back tomorrow.");
@@ -237,73 +270,84 @@ public abstract class SimpleExperimentServer implements Runnable {
 					sendException(clientId, null, Messages.SESSION_OVERLAP);
 				}
 				else if (e instanceof SessionCompletedException) {
-					sendException(clientId, "completed", Messages.SESSION_COMPLETED);									
+					sendException(clientId, "completed", Messages.SESSION_COMPLETED);
+					
+					logger.info("Client connected to experiment after completion: "	+ hitId.toString());
 				}
 				else {
-					sendException(clientId, null, "Unknown Error");
-				}
-																		
-				return false;
+					sendException(clientId, null, "Unknown Error: " + e.toString());
+				}				
 			}
 		}
-		
-		return true;
+
+		return ls;
 	}
-	
-	public void sessionSubmit(String clientId, String hitId, String workerId) {				
-		logFlush(hitId);
+
+	public void sessionSubmit(String clientId, T hitId, String workerId) {				
+		logFlush(hitId.toString());
 		
 		int completed = completedHITs.incrementAndGet();
 		System.out.println(completed + " HITs completed");
 		
-		int additional = Math.min(tracker.getSetLimit(), getTotalPuzzles()) - tracker.getSetSessionInfoForWorker(workerId).size();
+		// TODO check the total number of possible different tasks as well - getTotalPuzzles()
+		int additional = tracker.getSetLimit() - tracker.getSetSessionInfoForWorker(workerId).size();
 		
 		sendException(clientId, "completed", "Thanks for your work! You may do " + additional + " more HITs in this session.");				
 	}
-	
-	public void sessionDisconnect(String clientId, String hitId) {
-		tracker.sessionDisconnected(hitId);
-		
-		// TODO remove client session
+
+	public void sessionDisconnect(String clientId, T hitId) {
+		if( hitId != null ) {
+			tracker.sessionDisconnected(hitId);
+		}				
 	}
-	
+
 	protected void sendException(String clientId, String status, String msg) {
 		Map<String, Object> errorMap = new HashMap<String, Object>();
 		
 		if( status != null ) errorMap.put("status", status);
-		else errorMap.put("status", "error");
+		else errorMap.put("status", Codec.connectErrorAck);
 		
 		errorMap.put("msg", msg);
 		
 		ServerSession client = bayeux.getSession(clientId);
 		client.deliver(client, "/service/user", errorMap, null);
 	}
+
+	public abstract T stringToType(String sessionId);
 	
-	protected String getSessionForClient(String clientId) {
-		return clientToHITId.get(clientId);
-	}
-
-	protected abstract int getTotalPuzzles();
-
+	protected T getSessionForClient(String clientId) {
+		return clientToId.get(clientId);
+	}	
+	
 	@Override
-	public void run() {
-		Thread.currentThread().setName(this.getClass().getSimpleName());
+	public final void run() {
+		Thread.currentThread().setName(this.getClass().getSimpleName());				
 		
-        try {
+	    try {
 			server.start();
 		} catch (Exception e) {			
 			e.printStackTrace();
 			return;
 		}
-        
-        bayeux = cometdServlet.getBayeux();
-		bayeux.setSecurityPolicy(new DefaultSecurityPolicy());
+	    
+	    bayeux = cometdServlet.getBayeux();
+		bayeux.setSecurityPolicy(new DefaultSecurityPolicy());		
 		
 		if( turkHITs != null ) {
 			new Thread(turkHITs).start();
 		}
 		
-        // Hang out until goal # of HITs are reached and shutdown jetty server
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			public void run() {
+				// TODO add stuff from above to in here, like auto expiring hits
+				
+				logger.info("Shutdown initiated");								
+			}
+		});
+		
+		runServerInit();
+		
+	    // Hang out until goal # of HITs are reached and shutdown jetty server
 		while( completedHITs.get() < hitGoal ) {			
 			try {
 				Thread.sleep(5000);
@@ -338,7 +382,10 @@ public abstract class SimpleExperimentServer implements Runnable {
 			e.printStackTrace();
 		}
 		
-	}		
-	
-	
+	}
+
+	protected void runServerInit() {
+		
+	}
+
 }

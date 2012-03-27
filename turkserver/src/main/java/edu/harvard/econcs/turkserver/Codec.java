@@ -5,29 +5,35 @@ import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
 
 public class Codec {
-
-	// Connection ACK messages
-	public final static String connectLobbyAck = "Lobby";
-	public final static String reconnectExpAck = "Experiment";
-	public static final String expFinishedAck = "AlreadyFinished";	
-	public final static String connectErrorAck = "Error";
+		
+	public static final String expFinishedAck = "alreadyfinished";	
+	public final static String connectErrorAck = "error";
 	
 	// Update messages
-	public static final String lobbyUpdateMsg = "LobbyUpdate";
-	// Start exp message happens when the ExpServer sends its own notification
-	public static final String startExpError = "ExpStartError";
-	public static final String doneExpMsg = "FinishedExp";
+	public static final String quizNeeded = "quiz";	
+	public static final String usernameNeeded = "username";
+	
+	public final static String connectLobbyAck = "lobby";	
+	public final static String connectExpAck = "startexp";
+	
+	public static final String startExpError = "experror";
+	
+	public static final String doneExpMsg = "finishexp";
 	// Sent when the host server is done with experiments
-	public static final String batchFinishedMsg = "BatchFinished";
+	public static final String batchFinishedMsg = "batchfinished";
 	
 	private static final Charset charset = Charset.forName("US-ASCII");
+			
+	// Channels
+	public static final String expChanPrefix = "/experiment/";
+	public static final String expSvcPrefix = "/service/experiment/";
 	
 	public static enum LoginStatus {
 		ERROR,
 		QUIZ_REQUIRED,
 		NEW_USER,
 		REGISTERED
-	}
+	}	
 	
     public static CharsetDecoder getDecoder() { return charset.newDecoder(); }
 	public static CharsetEncoder getEncoder() { return charset.newEncoder(); }

@@ -1,4 +1,4 @@
-package edu.harvard.econcs.turkserver.server.http;
+package edu.harvard.econcs.turkserver.server;
 
 import java.util.Map;
 
@@ -14,7 +14,7 @@ import org.cometd.java.annotation.Session;
 import org.cometd.server.authorizer.GrantAuthorizer;
 import org.eclipse.jetty.util.log.Log;
 
-public class DemoServlet extends SimpleExperimentServlet<SimpleExperimentServer> {
+public class DemoServlet extends SessionServlet<SimpleExperimentServer, String> {
 	
 	private static final long serialVersionUID = 3128535146982507267L;
 	

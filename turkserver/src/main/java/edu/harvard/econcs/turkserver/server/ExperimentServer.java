@@ -3,20 +3,20 @@
  */
 package edu.harvard.econcs.turkserver.server;
 
-import edu.harvard.econcs.turkserver.ExpServerException;
-import edu.harvard.econcs.turkserver.Update.*;
-
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.math.BigInteger;
-import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
+
+import org.cometd.bayeux.server.LocalSession;
+
+import edu.harvard.econcs.turkserver.Codec;
 
 import net.andrewmao.misc.Utils;
 
@@ -30,6 +30,7 @@ public abstract class ExperimentServer<T extends ExperimentServer<T>> implements
 	protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 		
 	protected final HostServer<T> host;	
+	protected final LocalSession expBroadcaster;
 	
 	// Keeps track of whether clients are connected
 	protected final ConcurrentHashMap<BigInteger, Boolean> clients;
@@ -59,6 +60,8 @@ public abstract class ExperimentServer<T extends ExperimentServer<T>> implements
 		disconnectTime = new ConcurrentHashMap<BigInteger, Long>();
 		inactiveTime = new ConcurrentHashMap<BigInteger, AtomicLong>();
 		for( BigInteger id : clients.keySet() ) inactiveTime.put(id, new AtomicLong(0));
+				
+		expBroadcaster = host.bayeux.newLocalSession(getChannelName());
 	}
 	
 	public Set<BigInteger> getClients() { return clients.keySet(); }		
@@ -68,7 +71,11 @@ public abstract class ExperimentServer<T extends ExperimentServer<T>> implements
 
 	public String toString() {
 		return "Experiment " + experimentID; 
-	}	
+	}
+	
+	public String getChannelName() {
+		return experimentID.replace(" ", "");
+	}
 
 	public int size() {
 		return clients.size();
@@ -150,27 +157,39 @@ public abstract class ExperimentServer<T extends ExperimentServer<T>> implements
 			
 		experimentLog = null;
 	}
-		
-	/**
-	 * Called asynchronously by client
-	 * @param clientReq
-	 * @return
-	 * @throws ExpServerException
-	 */
-	public abstract SrvUpdate getUpdate(UpdateReq clientReq) throws ExpServerException;
 	
 	/**
-	 * Client sends update
-	 * @param clientUp
+	 * Send a message to a particular user
+	 * @param sessionId
+	 * @param data
 	 */
-	public abstract void receiveUpdate(CliUpdate clientUp);
+	protected void sendServiceMsg(BigInteger sessionId, Object data) {
+		host.bayeux.getSession(host.clientToId.inverse().get(sessionId)).deliver(
+				expBroadcaster, Codec.expSvcPrefix + getChannelName(), data, null);
+	}
 	
 	/**
-	 * This is called by the HostServer independently of the run() thread
-	 * We need to make sure the buffer is not trampled
-	 * @param channel
+	 * Broadcast a message to everyone
+	 * @param data
 	 */
-	public abstract void processData(ByteBuffer buffer, int bytesRead);
+	protected void sendBroadcastMsg(Object data) {		
+		host.bayeux.getChannel(Codec.expChanPrefix + getChannelName()).publish(expBroadcaster, data, null);
+	}
+	
+	/**
+	 * service message from client 
+	 * @param sessionId
+	 * @param data
+	 */
+	protected abstract void rcvServiceMsg(BigInteger sessionId, Map<String, Object> data);
+	
+	/**
+	 * 
+	 * @param sessionId
+	 * @param data
+	 * @return true if the message should be relayed to other clients
+	 */
+	protected abstract boolean rcvBroadcastMsg(BigInteger sessionId, Map<String, Object> data);
 	
 	/**
 	 * Puts the client in a connected time and records the time since last disconnection, if any

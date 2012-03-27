@@ -23,9 +23,15 @@ public abstract class ExpServerFactory<T extends ExperimentServer<T>> implements
 	 */
 	public abstract T getNewExperiment(HostServer<T> host, ConcurrentHashMap<BigInteger, Boolean> clients)
 	throws ExperimentFactoryException;
-	
+		
 	public abstract int getExperimentSize();
 
+	/**
+	 * Init method which can register serializers, etc
+	 * @param host
+	 */
+	public abstract void doInit(HostServer<T> host);
+	
 	/**
 	 * Default run method, which does nothing.
 	 */

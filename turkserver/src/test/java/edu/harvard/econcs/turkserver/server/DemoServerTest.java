@@ -1,6 +1,9 @@
-package edu.harvard.econcs.turkserver.server.http;
+package edu.harvard.econcs.turkserver.server;
 
 import org.eclipse.jetty.util.resource.Resource;
+
+import edu.harvard.econcs.turkserver.server.DemoServlet;
+import edu.harvard.econcs.turkserver.server.SimpleExperimentServer;
 
 
 public class DemoServerTest {
@@ -20,6 +23,11 @@ public class DemoServerTest {
 			@Override
 			protected int getTotalPuzzles() {				
 				return 0;
+			}
+
+			@Override
+			public String stringToType(String sessionId) {				
+				return sessionId;
 			}			
 		}).start();
 		
