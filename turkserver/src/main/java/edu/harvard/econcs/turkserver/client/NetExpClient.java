@@ -158,7 +158,8 @@ public abstract class NetExpClient extends SessionClient<BigInteger> implements 
 //				state = State.LOBBY;
 			}
 			
-			Map<String, Object> data = service.getDataAsMap();			
+			Map<String, Object> data = service.getDataAsMap();
+			
 			// TODO process lobby information with correct data
 			
 			

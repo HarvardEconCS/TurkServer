@@ -113,6 +113,7 @@ public abstract class SessionServer<T> implements Runnable {
         // Base files servlet
         context = new ServletContextHandler(contexts,"/",ServletContextHandler.SESSIONS);        
         context.setBaseResource(new ResourceCollection(resources));
+        context.setAliases(true);
         
         // Default servlet
         ServletHolder dftServlet = context.addServlet(DefaultServlet.class, "/");

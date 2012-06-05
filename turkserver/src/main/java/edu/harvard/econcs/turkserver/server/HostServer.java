@@ -21,6 +21,7 @@ import org.cometd.bayeux.server.LocalSession;
 import org.cometd.bayeux.server.ServerChannel;
 import org.cometd.bayeux.server.ServerSession;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.util.resource.Resource;
 
 import net.andrewmao.misc.ConcurrentBooleanCounter;
 
@@ -73,10 +74,11 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 	public HostServer(ExpServerFactory<T> factory,
 			QuizFactory quizFac,
 			ExperimentDataTracker userTracker,
-			TurkHITManager<BigInteger> thm, int completedHitGoal,
+			TurkHITManager<BigInteger> thm,
+			Resource[] resources, int completedHitGoal,
 			int listenPort, String logPath) {
 		// TODO add correct thm, resources, hitGoal to this
-		super(userTracker, thm, null, 0, listenPort);
+		super(userTracker, thm, resources, 0, listenPort);
 		
         expServlet = context.addServlet(HostServlet.class, "/exp");  
         expServlet.setInitOrder(3);  
@@ -100,7 +102,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 	}
 
 	/**
-	 * Constructs a server with the default RMI port
+	 * Constructs a server with the default port
 	 * 
 	 * @param factory
 	 * @param userTracker
@@ -111,7 +113,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 	public HostServer(ExpServerFactory<T> factory, ExperimentDataTracker userTracker,
 			TurkHITManager<BigInteger> thm, int completedHitGoal,
 			int listenPort, String logPath) {
-		this(factory, null, userTracker, thm, completedHitGoal, listenPort, logPath); 
+		this(factory, null, userTracker, thm, null, completedHitGoal, listenPort, logPath); 
 	}	
 	
 	public String getLogPath() {		
