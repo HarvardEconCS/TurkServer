@@ -18,11 +18,9 @@ import edu.harvard.econcs.turkserver.server.ExperimentServer;
 import edu.harvard.econcs.turkserver.server.SessionRecord;
 import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
 
-import java.math.BigInteger;
 import java.net.InetAddress;
 import java.util.Date;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
@@ -38,20 +36,19 @@ import net.andrewmao.misc.ConcurrentBooleanCounter;
  *
  * @param <T>
  */
-public abstract class ExperimentDataTracker implements DataTracker<BigInteger> {
+public abstract class ExperimentDataTracker implements DataTracker<String> {
 
-	protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
-	protected final Random rnd = new Random();
+	protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());	
 				
 	private final int simultaneousSessionLimit;
 	private final int totalSetLimit;
 			
 	// Username tracking - cached for faster access by HostServer		
-	private ConcurrentHashMap<BigInteger, String> idToUsername;
+	private ConcurrentHashMap<String, String> idToUsername;
 		
 	// Experiment tracking - FALSE if in progress and TRUE if finished
 	protected final ConcurrentBooleanCounter<ExperimentServer<?>> experiments; 
-	protected final ConcurrentHashMap<BigInteger, ExperimentServer<?>> idToExp;	
+	protected final ConcurrentHashMap<String, ExperimentServer<?>> idToExp;	
 	
 	protected ExperimentDataTracker(int simultaneousSessionLimit, int totalSetLimit) {					
 		
@@ -59,21 +56,15 @@ public abstract class ExperimentDataTracker implements DataTracker<BigInteger> {
 		this.totalSetLimit = totalSetLimit;
 		
 		// User trackers		
-		idToUsername = new ConcurrentHashMap<BigInteger, String>();		
+		idToUsername = new ConcurrentHashMap<String, String>();		
 				
 		// Experiment trackers
 		experiments = new ConcurrentBooleanCounter<ExperimentServer<?>>();
-		idToExp = new ConcurrentHashMap<BigInteger, ExperimentServer<?>>();
+		idToExp = new ConcurrentHashMap<String, ExperimentServer<?>>();
 	}		
-	
-	/* (non-Javadoc)
-	 * @see edu.harvard.econcs.turkserver.server.DataTracker#getNewSessionID()
-	 */
+		
 	@Override
-	public abstract BigInteger getNewSessionID();
-	
-	@Override
-	public abstract boolean sessionExistsInDB(BigInteger sessionID) throws SessionExpiredException;
+	public abstract boolean sessionExistsInDB(String sessionID) throws SessionExpiredException;
 
 	/**
 	 * Does this worker need to take a quiz for the current set?
@@ -86,7 +77,7 @@ public abstract class ExperimentDataTracker implements DataTracker<BigInteger> {
 	 * @see edu.harvard.econcs.turkserver.server.DataTracker#sessionIsInProgress(java.math.BigInteger)
 	 */
 	@Override
-	public final boolean sessionIsInProgress(BigInteger sessionID) {
+	public final boolean sessionIsInProgress(String sessionID) {
 		/* Return true if the id is assigned to an experiment and the experiment is not finished
 		 * TODO fix this later to be more in sync with the DB
 		 */
@@ -95,27 +86,21 @@ public abstract class ExperimentDataTracker implements DataTracker<BigInteger> {
 	
 	@Override
 	public
-	abstract boolean sessionCompletedInDB(BigInteger sessionID);
+	abstract boolean sessionCompletedInDB(String sessionID);
 	
 	@Override
 	public abstract List<SessionRecord> getSetSessionInfoForWorker(String workerId);
 
 	@Override
-	public abstract SessionRecord getStoredSessionInfo(BigInteger sessionID);
+	public abstract SessionRecord getStoredSessionInfo(String sessionID);
 	
-	/* (non-Javadoc)
-	 * @see edu.harvard.econcs.turkserver.server.DataTracker#saveHITIdForSession(java.math.BigInteger, java.lang.String)
-	 */
-	@Override
-	public abstract void saveHITIdForSession(BigInteger sessionID, String hitId);
-
 	/**
 	 * Associate an assignment and worker Id to a session
 	 * @param sessionID
 	 * @param assignmentId
 	 * @param workerId
 	 */
-	public abstract void saveAssignmentForSession(BigInteger sessionID, 
+	public abstract void saveAssignmentForSession(String sessionID, 
 			String assignmentId, String workerId);
 
 	/**
@@ -125,7 +110,7 @@ public abstract class ExperimentDataTracker implements DataTracker<BigInteger> {
 	 * @param qr
 	 * @throws QuizFailException 
 	 */
-	public abstract void saveQuizResults(BigInteger sessionID, QuizResults qr) 
+	public abstract void saveQuizResults(String sessionID, QuizResults qr) 
 	throws QuizFailException;
 
 	/**
@@ -134,13 +119,13 @@ public abstract class ExperimentDataTracker implements DataTracker<BigInteger> {
 	 * @param sessionId
 	 * @param username
 	 */
-	protected abstract void saveUsernameForSession(BigInteger sessionId, String username);
+	protected abstract void saveUsernameForSession(String sessionId, String username);
 		
 	/* (non-Javadoc)
 	 * @see edu.harvard.econcs.turkserver.server.DataTracker#saveIPForSession(java.math.BigInteger, java.net.InetAddress, java.util.Date)
 	 */
 	@Override
-	public abstract void saveIPForSession(BigInteger id, InetAddress remoteAddress, Date lobbyTime);
+	public abstract void saveIPForSession(String id, InetAddress remoteAddress, Date lobbyTime);
 
 	/**
 	 * Saves an experiment start time in the db
@@ -154,7 +139,7 @@ public abstract class ExperimentDataTracker implements DataTracker<BigInteger> {
 	 * @param clientID
 	 * @param experimentID
 	 */
-	protected abstract void saveExperimentForSession(BigInteger clientID, String experimentID);
+	protected abstract void saveExperimentForSession(String clientID, String experimentID);
 
 	/**
 	 * Saves an experiment end time in the db
@@ -168,7 +153,7 @@ public abstract class ExperimentDataTracker implements DataTracker<BigInteger> {
 	 * @param sessionID
 	 * @param inactivePercent
 	 */
-	protected abstract void saveSessionCompleteInfo(BigInteger sessionID, double inactivePercent);
+	protected abstract void saveSessionCompleteInfo(String sessionID, double inactivePercent);
 	
 	/**
 	 * Clears the worker for a session, as well as username. 
@@ -176,7 +161,7 @@ public abstract class ExperimentDataTracker implements DataTracker<BigInteger> {
 	 * which is reset when someone else connects
 	 * @param id
 	 */
-	protected abstract void clearWorkerForSession(BigInteger id);
+	protected abstract void clearWorkerForSession(String id);
 
 	/* (non-Javadoc)
 	 * @see edu.harvard.econcs.turkserver.server.DataTracker#expireUnusedSessions()
@@ -188,7 +173,7 @@ public abstract class ExperimentDataTracker implements DataTracker<BigInteger> {
 	 * @see edu.harvard.econcs.turkserver.server.DataTracker#registerAssignment(java.math.BigInteger, java.lang.String, java.lang.String)
 	 */		
 	@Override
-	public final LoginStatus registerAssignment(BigInteger sessionID, String assignmentId, String workerId)
+	public final LoginStatus registerAssignment(String sessionID, String assignmentId, String workerId)
 	throws ExpServerException {
 		if( sessionID == null || assignmentId == null || workerId == null )
 			throw new ExpServerException("Session credentials missing!");
@@ -255,7 +240,7 @@ public abstract class ExperimentDataTracker implements DataTracker<BigInteger> {
 				throw new SessionCompletedException();
 
 			logger.info(String.format("Session %s (with assignment %s) by worker %s is reconnecting",
-					sessionID.toString(16), assignmentId, workerId));
+					sessionID, assignmentId, workerId));
 			
 			// Ask for username again if we somehow didn't get it last time
 			return (sessionRec.getUsername() != null ? LoginStatus.REGISTERED : LoginStatus.NEW_USER );
@@ -278,14 +263,14 @@ public abstract class ExperimentDataTracker implements DataTracker<BigInteger> {
 					 */
 					logger.info(String.format("Session %s was in experiment or completed with worker %s," +
 							"but new worker %s tried to accept",
-							sessionID.toString(16), prevWorkerId, workerId));
+							sessionID, prevWorkerId, workerId));
 					
 					throw new SessionOverlapException();
 				}								
 
 				// Taking over the person in lobby
 				logger.info(String.format("session %s replaced by worker %s with assignment %s",
-						sessionID.toString(16), workerId, assignmentId));
+						sessionID, workerId, assignmentId));
 			}
 
 			// First connection	for this assignment (but multiple from worker should be caught above)		
@@ -301,14 +286,14 @@ public abstract class ExperimentDataTracker implements DataTracker<BigInteger> {
 	 * @param username
 	 * @return
 	 */
-	public final boolean lobbyLogin(BigInteger sessionID, String username) {
+	public final boolean lobbyLogin(String sessionID, String username) {
 		if( username != null ) {
 			idToUsername.put(sessionID, username);
 			saveUsernameForSession(sessionID, username);
 			return true;
 		}		
 		else {
-			logger.warning(sessionID.toString(16) + " sent null username");
+			logger.warning(sessionID + " sent null username");
 			return false;
 		}
 	}
@@ -322,7 +307,7 @@ public abstract class ExperimentDataTracker implements DataTracker<BigInteger> {
 		
 		saveExpStartTime(newExp, new Date());
 		
-		for( BigInteger clientID : newExp.getClients() ) {
+		for( String clientID : newExp.getClients() ) {
 			idToExp.put(clientID, newExp);
 			saveExperimentForSession(clientID, newExp.experimentID);
 		}			
@@ -333,7 +318,7 @@ public abstract class ExperimentDataTracker implements DataTracker<BigInteger> {
 		saveExpEndTime(exp, new Date());
 		
 		// store final client info, with inactive time measured properly for disconnections
-		for( BigInteger id : exp.getClients() ) {
+		for( String id : exp.getClients() ) {
 			saveSessionCompleteInfo(id, exp.getInactivePercent(id));
 		}
 		
@@ -344,7 +329,7 @@ public abstract class ExperimentDataTracker implements DataTracker<BigInteger> {
 	 * @see edu.harvard.econcs.turkserver.server.DataTracker#sessionDisconnected(java.math.BigInteger)
 	 */
 	@Override
-	public final void sessionDisconnected(BigInteger id) {		
+	public final void sessionDisconnected(String id) {		
 		if( idToExp.containsKey(id) ) {
 			// Notify experiment server of disconnection
 			idToExp.get(id).clientDisconnected(id);
@@ -375,11 +360,11 @@ public abstract class ExperimentDataTracker implements DataTracker<BigInteger> {
 	 * @param sessionID
 	 * @return garbage if the user has no name
 	 */
-	public final String getUsername(BigInteger sessionID) {
+	public final String getUsername(String sessionID) {
 		if( idToUsername.containsKey(sessionID) ) 
 			return idToUsername.get(sessionID); // Cached				
 				
-		return sessionID.toString(16);
+		return sessionID;
 	}
 	
 	/**
@@ -387,7 +372,7 @@ public abstract class ExperimentDataTracker implements DataTracker<BigInteger> {
 	 * @param clientID
 	 * @return
 	 */
-	public final ExperimentServer<?> getExperimentForID(BigInteger clientID) {		
+	public final ExperimentServer<?> getExperimentForID(String clientID) {		
 		return idToExp.get(clientID);
 	}
 	

@@ -30,13 +30,10 @@ import net.andrewmao.misc.ConcurrentBooleanCounter;
  * @author Mao
  *
  */
-public class HostServer<T extends ExperimentServer<T>> extends SessionServer<BigInteger> {
-	
-	public static final int ID_BYTES = 20;
-	public static final int ID_LEN = ID_BYTES * 8 - 1;	// Number of bits in clientIDs
+public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
 					
 	// Turk crap
-	private final TurkHITManager<BigInteger> turkHITManager;
+	private final TurkHITManager<String> turkHITManager;
 	private final int completedHITGoal;
 	
 	// Experiment and user information
@@ -46,7 +43,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 	
 	private final String logPath;
 		
-	final ConcurrentBooleanCounter<BigInteger> lobbyStatus;	
+	final ConcurrentBooleanCounter<String> lobbyStatus;	
 	
 	final AtomicReference<String> serverMessage;
 	
@@ -74,7 +71,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 	public HostServer(ExpServerFactory<T> factory,
 			QuizFactory quizFac,
 			ExperimentDataTracker userTracker,
-			TurkHITManager<BigInteger> thm,
+			TurkHITManager<String> thm,
 			Resource[] resources, int completedHitGoal,
 			int listenPort, String logPath) {
 		// TODO add correct thm, resources, hitGoal to this
@@ -92,7 +89,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 		
 		this.logPath = logPath;
 				
-		lobbyStatus = new ConcurrentBooleanCounter<BigInteger>();				
+		lobbyStatus = new ConcurrentBooleanCounter<String>();				
 		
 		completedHITs = new AtomicInteger(0);
 		serverMessage = new AtomicReference<String>("");
@@ -111,7 +108,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 	 * @param listenPort
 	 */
 	public HostServer(ExpServerFactory<T> factory, ExperimentDataTracker userTracker,
-			TurkHITManager<BigInteger> thm, int completedHitGoal,
+			TurkHITManager<String> thm, int completedHitGoal,
 			int listenPort, String logPath) {
 		this(factory, null, userTracker, thm, null, completedHitGoal, listenPort, logPath); 
 	}	
@@ -121,7 +118,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 	}
 
 	@Override
-	protected LoginStatus sessionAccept(String clientId, BigInteger hitId,
+	protected LoginStatus sessionAccept(String clientId, String hitId,
 			String assignmentId, String workerId) {		
 		LoginStatus ls = super.sessionAccept(clientId, hitId, assignmentId, workerId);
 		
@@ -162,7 +159,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 				}
 				else {
 					logger.severe("Unknown experiment but session is in progress: "	+ 
-							hitId.toString(16) );
+							hitId );
 				}
 			} 
 			else {
@@ -170,12 +167,13 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 				session.deliver(session, "/service/user", data, null);
 				
 				logger.info(String.format("%s (%s) connected to lobby",	
-						hitId.toString(16), tracker.getUsername(hitId)));
+						hitId, tracker.getUsername(hitId)));
 			}								
 			
 		}
 		else {
-			logger.warning("Unexpected id tried to connect: " + hitId.toString(16));
+			// TODO should have reuse here, and not reach this
+			logger.warning("Unexpected id tried to connect: " + hitId);
 			data.put("status", Codec.connectErrorAck);				
 			session.deliver(session, "/service/user", data, null);
 		}
@@ -193,7 +191,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 	}
 
 //	@Override
-	public void sendQuizResults(BigInteger sessionID, QuizResults qr) {		
+	public void sendQuizResults(String sessionID, QuizResults qr) {		
 		try {
 			tracker.saveQuizResults(sessionID, qr);
 			
@@ -207,14 +205,14 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 		}		
 	}
 
-	public void sendStatus(BigInteger sessionID, String status) {
+	public void sendStatus(String sessionID, String status) {
 		Map<String, Object> data = new HashMap<String, Object>();		
 		ServerSession session = bayeux.getSession(clientToId.inverse().get(sessionID));
 		data.put("status", status);		
 		session.deliver(session, "/service/user", data, null);
 	}
 
-	public boolean lobbyLogin(BigInteger sessionID, String username) {		
+	public boolean lobbyLogin(String sessionID, String username) {		
 		if( ! tracker.lobbyLogin(sessionID, username) )  {
 			// some error, request it again.
 			sendStatus(sessionID, "username");
@@ -225,7 +223,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 		return true;
 	}
 
-	public boolean lobbyUpdate(BigInteger sessionID, boolean isReady) {
+	public boolean lobbyUpdate(String sessionID, boolean isReady) {
 		lobbyStatus.put(sessionID, isReady);				
 		
 		int neededPeople = expFactory.getExperimentSize();
@@ -242,7 +240,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 			else if( lobbyStatus.size() < neededPeople ) {
 				
 				// Make sure everyone's ready is disabled
-				for( BigInteger id : lobbyStatus.keySet() ) {
+				for( String id : lobbyStatus.keySet() ) {
 					lobbyStatus.put(id, false);
 				}
 			}
@@ -275,8 +273,8 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 		// TODO could be some race conditions here if lobby size changes?
 		Object[] users = new Object[lobbyStatus.size()];		
 		int i = 0;
-		for( Map.Entry<BigInteger, Boolean> e : lobbyStatus.entrySet() ) {
-			BigInteger id = e.getKey();
+		for( Map.Entry<String, Boolean> e : lobbyStatus.entrySet() ) {
+			String id = e.getKey();
 			
 			// clientId, username, and status
 			users[i++]= new Object[] { clientToId.inverse().get(id), tracker.getUsername(id), e.getValue() };
@@ -290,12 +288,12 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 
 	private void createNewExperiment() {
 		int expSize = expFactory.getExperimentSize();
-		ConcurrentHashMap<BigInteger, Boolean> expClients = 
-			new ConcurrentHashMap<BigInteger, Boolean>(expSize);
+		ConcurrentHashMap<String, Boolean> expClients = 
+			new ConcurrentHashMap<String, Boolean>(expSize);
 		
 		// Count up exactly expSize people for the new experiment
 		int counter = 0;
-		for( Map.Entry<BigInteger, Boolean> e : lobbyStatus.entrySet() ) {						
+		for( Map.Entry<String, Boolean> e : lobbyStatus.entrySet() ) {						
 			if( e.getValue() == true ) {							
 				expClients.put(e.getKey(), e.getValue());
 				counter++;
@@ -314,7 +312,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 			 * and send an error message
 			 */
 			e.printStackTrace();
-			for( BigInteger id : expClients.keySet()) {
+			for( String id : expClients.keySet()) {
 				lobbyStatus.put(id, false);
 				sendStatus(id, Codec.startExpError);
 			}
@@ -352,10 +350,10 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 		 * So that they are in experiment before being out of lobby - limbo state 
 		 * since experiment is checked first
 		 */			
-		for( BigInteger id : expClients.keySet()) lobbyStatus.remove(id);
+		for( String id : expClients.keySet()) lobbyStatus.remove(id);
 	}
 
-	public void addInactiveTime(BigInteger sessionId, long inactiveTime) {		
+	public void addInactiveTime(String sessionId, long inactiveTime) {		
 		ExperimentServer<?> exp = tracker.getExperimentForID(sessionId);
 		exp.addInactiveTime(sessionId, inactiveTime);		
 	}
@@ -374,7 +372,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 		}
 		
 		// Tell clients they are done!
-		for( BigInteger id : expServer.clients.keySet() )
+		for( String id : expServer.clients.keySet() )
 			sendStatus(id, Codec.doneExpMsg);	
 		
 		if( completedHITs.addAndGet(expServer.clients.keySet().size()) >= completedHITGoal ) {
@@ -383,7 +381,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 			if( turkHITManager != null ) turkHITManager.expireRemainingHITs();
 			
 			// Only notify people in experiment, not lobby (experiment people need to submit)
-			for( BigInteger id : lobbyStatus.keySet() )
+			for( String id : lobbyStatus.keySet() )
 				sendStatus(id, Codec.batchFinishedMsg);
 			
 			// TODO quit the thread in this case
@@ -406,29 +404,29 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 	}
 	
 	@Override
-	public void sessionDisconnect(String clientId, BigInteger sessionId) {
+	public void sessionDisconnect(String clientId, String hitId) {
 		
 		// Was this dude in the lobby? If so remove him from the lobby and notify lobby ppl		
-		if( lobbyStatus.remove(sessionId) != null ) {			
+		if( lobbyStatus.remove(hitId) != null ) {			
 			logger.info(String.format("%s (%s) removed from lobby",
-					sessionId.toString(16), tracker.getUsername(sessionId)));			
+					hitId, tracker.getUsername(hitId)));			
 			
 			// TODO check on this quit message to lobby
 			Map<String, Object> data = new TreeMap<String, Object>();
 			
 			data.put("status", "quit");
-			data.put("username", tracker.getUsername(sessionId));
+			data.put("username", tracker.getUsername(hitId));
 			
 			bayeux.getChannel("/lobby").publish(bayeux.getSession(clientId), data, null);
 		}
 		
 		// This takes care of disconnecting in the tracker
-		super.sessionDisconnect(clientId, sessionId);
+		super.sessionDisconnect(clientId, hitId);
 	}
 
-	public class UsernameComparator implements Comparator<BigInteger> {	
+	public class UsernameComparator implements Comparator<String> {	
 		@Override
-		public int compare(BigInteger o1, BigInteger o2) {
+		public int compare(String o1, String o2) {
 			String u1 = tracker.getUsername(o1);
 			String u2 = tracker.getUsername(o2);
 
@@ -441,11 +439,6 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 		}	
 	}
 
-	@Override
-	public BigInteger stringToType(String sessionId) {		
-		return new BigInteger(sessionId, 16);
-	}
-
 	/**
 	 * 
 	 * @param clientId
@@ -453,7 +446,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 	 * @return
 	 */
 	void experimentServiceMsg(String clientId, Map<String, Object> data) {		
-		BigInteger sessionId = getSessionForClient(clientId);
+		String sessionId = getSessionForClient(clientId);
 		if( sessionId == null ) {
 			logger.warning("Message from unrecognized client: " + clientId);
 		}
@@ -476,7 +469,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer<Big
 	 * @param data 
 	 */
 	boolean experimentBroadcastMsg(String clientId, Map<String, Object> data) {		
-		BigInteger sessionId = getSessionForClient(clientId);
+		String sessionId = getSessionForClient(clientId);
 		if( sessionId == null ) {
 			logger.warning("Message from unrecognized client: " + clientId);
 			return false;

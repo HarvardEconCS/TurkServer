@@ -14,7 +14,7 @@ import org.cometd.java.annotation.Session;
 import org.cometd.server.authorizer.GrantAuthorizer;
 import org.eclipse.jetty.util.log.Log;
 
-public class DemoServlet extends SessionServlet<SimpleExperimentServer, String> {
+public class DemoServlet extends SessionServlet<SimpleExperimentServer> {
 	
 	private static final long serialVersionUID = 3128535146982507267L;
 	

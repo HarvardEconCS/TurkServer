@@ -117,12 +117,7 @@ public class SimpleMySQLDataTracker extends SimpleDataTracker {
 	private void debugUpdate(String query, Object... params) throws SQLException {
 		System.out.println(query);		
 		System.out.println(qr.update(query, params) + " rows updated");
-	}
-	
-	@Override
-	public String getNewSessionID() {
-		return null;
-	}
+	}	
 
 	@Override
 	public boolean sessionExistsInDB(String hitID) throws SessionExpiredException {		
@@ -206,16 +201,16 @@ public class SimpleMySQLDataTracker extends SimpleDataTracker {
 			
 		// Return the first element if one exists
 		return (result == null || result.size() == 0 ? null : result.get(0));
-	}
+	}	
 
 	@Override
-	public void saveHITIdForSession(String nullStr, String hitId) {
+	public void saveHITId(String hitId) {		
 		try {
-			qr.update("INSERT INTO session (hitId, setId) VALUES (?, ?)", 
-					hitId, setID);
+			qr.update("INSERT INTO session (hitId, setId) VALUES (?, ?) " +
+					"ON DUPLICATE KEY UPDATE setId=?", hitId, setID, setID);
 		} catch (SQLException e) {			
 			e.printStackTrace();
-		}		
+		} 		
 	}
 
 	@Override

@@ -1,6 +1,5 @@
 package edu.harvard.econcs.turkserver.server;
 
-import java.math.BigInteger;
 import java.util.Map;
 
 import javax.servlet.ServletException;
@@ -16,7 +15,7 @@ import org.cometd.server.authorizer.GrantAuthorizer;
 import edu.harvard.econcs.turkserver.QuizResults;
 
 
-public class HostServlet<T extends ExperimentServer<T>> extends SessionServlet<HostServer<T>, BigInteger> {
+public class HostServlet<T extends ExperimentServer<T>> extends SessionServlet<HostServer<T>> {
 
 	private static final long serialVersionUID = 8755450296324273985L;
 	

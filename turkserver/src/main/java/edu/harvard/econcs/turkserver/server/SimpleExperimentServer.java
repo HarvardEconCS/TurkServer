@@ -19,14 +19,14 @@ import edu.harvard.econcs.turkserver.server.mysql.SimpleDataTracker;
  * Useful for experiments that don't require interaction between clients
  *
  */
-public abstract class SimpleExperimentServer extends SessionServer<String> implements Runnable {	
+public abstract class SimpleExperimentServer extends SessionServer implements Runnable {	
 				
 	protected SimpleDataTracker tracker;
 	
 	public SimpleExperimentServer(
 			SimpleDataTracker userTracker,
 			TurkHITManager<String> thm,
-			Class<? extends SessionServlet<?, String>> servletClass,
+			Class<? extends SessionServlet<?>> servletClass,
 			Resource[] resources,
 			int hitGoal,
 			int httpPort) throws Exception {

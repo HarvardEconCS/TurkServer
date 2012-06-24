@@ -1,6 +1,5 @@
 package edu.harvard.econcs.turkserver.server.mysql;
 
-import java.math.BigInteger;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -15,7 +14,6 @@ import net.andrewmao.misc.ConcurrentBooleanCounter;
 import org.apache.commons.collections.map.MultiValueMap;
 
 import edu.harvard.econcs.turkserver.SessionExpiredException;
-import edu.harvard.econcs.turkserver.server.HostServer;
 import edu.harvard.econcs.turkserver.server.SessionRecord;
 
 public class SimpleDummyTracker extends SimpleDataTracker {
@@ -33,19 +31,6 @@ public class SimpleDummyTracker extends SimpleDataTracker {
 		// TODO double-check the concurrency of this if it becomes important
 		workerIdToSessions = MultiValueMap.decorate(
 				new ConcurrentHashMap<String, String>(), ConcurrentLinkedQueue.class);
-	}
-
-	@Override
-	public String getNewSessionID() {
-		BigInteger bi = null;
-		do {
-			bi = new BigInteger(HostServer.ID_LEN, rnd);
-		} while	(usedIDs.contains(bi));
-		
-		logger.info("New session ID created: " + bi.toString(16));
-		
-		usedIDs.put(bi.toString(16), false);		
-		return bi.toString(16);
 	}
 	
 	@Override
@@ -90,8 +75,8 @@ public class SimpleDummyTracker extends SimpleDataTracker {
 	}
 
 	@Override
-	public void saveHITIdForSession(String nullStr, String hitId) {
-		logger.info(String.format("Tracked HIT %s\n", hitId));
+	public void saveHITId(String hitId) {
+		usedIDs.put(hitId, false);
 	}
 
 	@Override

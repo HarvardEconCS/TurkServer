@@ -12,14 +12,6 @@ import edu.harvard.econcs.turkserver.server.SessionRecord;
 public interface DataTracker<T> {
 
 	/**
-	 * Get a new, unused session ID, unique in the database
-	 * @param len
-	 * @param rnd
-	 * @return
-	 */
-	public abstract T getNewSessionID();
-
-	/**
 	 * Check if we have a record of a sessionID in the database,
 	 * including from other sets
 	 * @param sessionID
@@ -57,11 +49,10 @@ public interface DataTracker<T> {
 	abstract SessionRecord getStoredSessionInfo(T sessionID);
 	
 	/**
-	 * Associate a hit ID to a session ID
-	 * @param sessionID
+	 * Adds a hitId to the current set in the database
 	 * @param hitId
 	 */
-	public abstract void saveHITIdForSession(T sessionID, String hitId);
+	public abstract void saveHITId(String hitId);
 
 	/**
 	 * Associate an assignment and worker Id to a session

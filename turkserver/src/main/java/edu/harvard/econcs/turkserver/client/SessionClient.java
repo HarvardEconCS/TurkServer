@@ -45,7 +45,7 @@ public abstract class SessionClient<T> implements Runnable {
 		bayeuxClient.addExtension(new TimesyncClientExtension());
 		bayeuxClient.addExtension(new AckExtension());
 	
-		logger = Logger.getLogger(this.getClass().getSimpleName() + this.getSessionIdStr());
+		logger = Logger.getLogger(this.getClass().getSimpleName() + this.getSessionID());
 		
 		processor = new ClientAnnotationProcessor(bayeuxClient);
 		
@@ -75,7 +75,7 @@ public abstract class SessionClient<T> implements Runnable {
 	/**
 	 * @return the hitId
 	 */
-	public abstract String getSessionIdStr();
+	public abstract String getSessionID();
 
 	/**
 	 * @return the assignmentId
@@ -206,8 +206,8 @@ public abstract class SessionClient<T> implements Runnable {
 
 	@Override
 	public final void run() {		
-		Thread.currentThread().setName(this.getClass().getSimpleName() + " " + getSessionIdStr());
-		logger.info("Begin client log with session ID " + getSessionIdStr());
+		Thread.currentThread().setName(this.getClass().getSimpleName() + " " + getSessionID());
+		logger.info("Begin client log with session ID " + getSessionID());
 		
 		bayeuxClient.handshake();
 		boolean success = bayeuxClient.waitFor(1000, BayeuxClient.State.CONNECTED);

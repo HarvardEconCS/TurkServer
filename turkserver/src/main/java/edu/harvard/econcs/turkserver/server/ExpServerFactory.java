@@ -1,6 +1,5 @@
 package edu.harvard.econcs.turkserver.server;
 
-import java.math.BigInteger;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -21,7 +20,7 @@ public abstract class ExpServerFactory<T extends ExperimentServer<T>> implements
 	 * @return
 	 * @throws ExperimentFactoryException
 	 */
-	public abstract T getNewExperiment(HostServer<T> host, ConcurrentHashMap<BigInteger, Boolean> clients)
+	public abstract T getNewExperiment(HostServer<T> host, ConcurrentHashMap<String, Boolean> clients)
 	throws ExperimentFactoryException;
 		
 	public abstract int getExperimentSize();

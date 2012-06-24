@@ -3,7 +3,6 @@ package edu.harvard.econcs.turkserver.mturk;
 import edu.harvard.econcs.turkserver.server.SessionRecord;
 import edu.harvard.econcs.turkserver.server.mysql.DataTracker;
 
-import java.math.BigInteger;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -129,27 +128,13 @@ public class TurkHITManager<T> implements Runnable {
 			
 			// Quit if expiration was reached while sleeping
 			if( expireFlag ) break;
-			
-			T newID = tracker.getNewSessionID();
-			String newUrl = null;
-			
-			// Depends if we need to identify each HIT by session or not 
-			if( newID != null && newID instanceof BigInteger ) {
-				String id = ((BigInteger) newID).toString(16);
-				newUrl = externalURL.contains("?") ?
-						externalURL + "&id=" + id : 
-						externalURL + "?id=" + id;
-			}
-			else {
-				newUrl = externalURL;
-			}			
-
+						
 			try {
 				HIT resp = requester.createHITExternalFromID(
-							hitTypeId, newUrl, frameHeight, String.valueOf(lifeTime));
+							hitTypeId, externalURL, frameHeight, String.valueOf(lifeTime));
 
 				String hitId = resp.getHITId();
-				tracker.saveHITIdForSession(newID, hitId);				
+				tracker.saveHITId(hitId);				
 
 			} catch (ServiceException e) {
 				e.printStackTrace();

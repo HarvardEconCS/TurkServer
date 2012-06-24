@@ -9,8 +9,6 @@ import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.math.BigInteger;
-
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
@@ -40,7 +38,7 @@ public class ServerFrame extends JFrame implements ActionListener {
 	
 	private JTextField statusMsg;
 	
-	private SortedListModel<BigInteger> userListModel;
+	private SortedListModel<String> userListModel;
 	
 	private DefaultListModel runningExpModel;
 	private JList runningExpList;
@@ -88,7 +86,7 @@ public class ServerFrame extends JFrame implements ActionListener {
 		
 		currentUsers = new JLabel();
 		lobbyPanel.add(currentUsers);
-		userListModel = new SortedListModel<BigInteger>(host.new UsernameComparator());
+		userListModel = new SortedListModel<String>(host.new UsernameComparator());
 		JList userList = new JList(userListModel);
 		userList.setCellRenderer(new ServerLobbyCellRenderer());
 		lobbyPanel.add(new JScrollPane(userList));
@@ -175,7 +173,7 @@ public class ServerFrame extends JFrame implements ActionListener {
 			Boolean b = hostServer.lobbyStatus.get(value); 
 			if( b != null) setIcon( b == true ? Lobby.ready : Lobby.notReady );
 			
-			BigInteger id = (BigInteger) value;
+			String id = (String) value;
 			
 			setText( hostServer.tracker.getUsername(id) );
 			// TODO render textual messages

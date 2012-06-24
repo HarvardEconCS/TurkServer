@@ -6,7 +6,6 @@ package edu.harvard.econcs.turkserver.server.mysql;
 import java.net.InetAddress;
 import java.util.Date;
 import java.util.List;
-import java.util.Random;
 import java.util.logging.Logger;
 
 import net.andrewmao.misc.ConcurrentBooleanCounter;
@@ -26,8 +25,7 @@ import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
  */
 public abstract class SimpleDataTracker implements DataTracker<String> {
 	
-	protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
-	protected final Random rnd = new Random();
+	protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());	
 	
 	private final int simultaneousSessionLimit;
 	private final int totalSetLimit;
@@ -45,18 +43,12 @@ public abstract class SimpleDataTracker implements DataTracker<String> {
 	}
 	
 	@Override
-	public abstract String getNewSessionID();
-
-	@Override
 	public boolean sessionIsInProgress(String hitID) {
 		Boolean status = sessionStatus.get(hitID);
 		return status != null && status == false;
 	}
 
 	public abstract List<Object[]> getWorkerAndTotalDataCounts(String workerId);	
-
-	@Override
-	public abstract void saveHITIdForSession(String nullStr, String hitId);
 
 	public abstract void setSessionData(String hitId, String Data);
 
@@ -69,7 +61,7 @@ public abstract class SimpleDataTracker implements DataTracker<String> {
 		if( !sessionExistsInDB(hitID) )	{
 			// This check is important for old sessions!
 			// re-registers this session for this set
-			this.saveHITIdForSession(null, hitID);			
+			this.saveHITId(hitID);			
 		}
 
 		SessionRecord sessionRec = getStoredSessionInfo(hitID);

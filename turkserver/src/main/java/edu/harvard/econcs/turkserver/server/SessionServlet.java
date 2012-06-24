@@ -18,7 +18,7 @@ import org.cometd.server.ext.AcknowledgedMessagesExtension;
 import org.cometd.server.ext.TimesyncExtension;
 import org.eclipse.jetty.util.log.Log;
 
-public abstract class SessionServlet<S extends SessionServer<T>, T> extends GenericServlet {
+public abstract class SessionServlet<S extends SessionServer> extends GenericServlet {
 
 	private static final long serialVersionUID = -3882966106597782108L;	
 	
@@ -81,8 +81,8 @@ public abstract class SessionServlet<S extends SessionServer<T>, T> extends Gene
 			String status = data.get("status").toString();
 						
 			String clientId = session.getId();
-			T hitId = null;			
-			try { hitId = theServer.stringToType(data.get("hitId").toString()); } catch (NullPointerException e) {}
+			String hitId = null;			
+			try { hitId = data.get("hitId").toString(); } catch (NullPointerException e) {}
 			
 			if( "view".equals(status) ) {				
 				Log.getRootLogger().info("HIT " + hitId + " is being viewed by " + clientId);

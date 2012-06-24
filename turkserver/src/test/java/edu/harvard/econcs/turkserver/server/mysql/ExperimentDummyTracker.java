@@ -4,7 +4,6 @@ package edu.harvard.econcs.turkserver.server.mysql;
 import edu.harvard.econcs.turkserver.QuizResults;
 import edu.harvard.econcs.turkserver.TooManyFailsException;
 import edu.harvard.econcs.turkserver.server.ExperimentServer;
-import edu.harvard.econcs.turkserver.server.HostServer;
 import edu.harvard.econcs.turkserver.server.SessionRecord;
 
 import java.math.BigInteger;
@@ -30,12 +29,12 @@ import org.apache.commons.collections.map.MultiValueMap;
  *
  */
 public class ExperimentDummyTracker extends ExperimentDataTracker {
-
+	
 	private final boolean requireQuiz;
 	
-	private ConcurrentBooleanCounter<BigInteger> usedIDs;
+	private ConcurrentBooleanCounter<String> usedIDs;
 	
-	private ConcurrentHashMap<BigInteger, String> idToAssignmentId;	
+	private ConcurrentHashMap<String, String> idToAssignmentId;	
 	
 	private MultiValueMap workerIdToSessions;
 	
@@ -44,30 +43,17 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 		
 		this.requireQuiz = requireQuiz;
 		
-		usedIDs = new ConcurrentBooleanCounter<BigInteger>();
+		usedIDs = new ConcurrentBooleanCounter<String>();
 				
-		idToAssignmentId = new ConcurrentHashMap<BigInteger, String>();
+		idToAssignmentId = new ConcurrentHashMap<String, String>();
 		
 		// TODO double-check the concurrency of this if it becomes important
 		workerIdToSessions = MultiValueMap.decorate(
 				new ConcurrentHashMap<String, BigInteger>(), ConcurrentLinkedQueue.class);
 	}
-	
-	@Override
-	public BigInteger getNewSessionID() {
-		BigInteger bi = null;
-		do {
-			bi = new BigInteger(HostServer.ID_LEN, rnd);
-		} while	(usedIDs.contains(bi));
-		
-		logger.info("New session ID created: " + bi.toString(16));
-		
-		usedIDs.put(bi, false);		
-		return bi;
-	}
 
 	@Override
-	public boolean sessionExistsInDB(BigInteger sessionID) {
+	public boolean sessionExistsInDB(String sessionID) {
 		return usedIDs.containsKey(sessionID);
 	}
 
@@ -78,63 +64,63 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	public boolean sessionCompletedInDB(BigInteger id) {		
+	public boolean sessionCompletedInDB(String id) {		
 		return (usedIDs.containsKey(id) && (usedIDs.get(id) == true));
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public List<SessionRecord> getSetSessionInfoForWorker(String workerId) {		
-		Collection<BigInteger> sessions =
-			(Collection<BigInteger>) workerIdToSessions.get(workerId);
+		Collection<String> sessions =
+			(Collection<String>) workerIdToSessions.get(workerId);
 		
 		List<SessionRecord> srs = new ArrayList<SessionRecord>(sessions.size());		
-		for( BigInteger bi : sessions ) srs.add(getStoredSessionInfo(bi));
+		for( String s : sessions ) srs.add(getStoredSessionInfo(s));
 		
 		return srs;
 	}
 
 	@Override
-	public SessionRecord getStoredSessionInfo(BigInteger sessionID) {
+	public SessionRecord getStoredSessionInfo(String sessionID) {
 		// Obviously, this is missing most of the stuff, but who cares for now
 		SessionRecord sr = new SessionRecord();
 		
-		sr.setId(sessionID);
+		sr.setHitId(sessionID);
 		sr.setAssignmentId(idToAssignmentId.get(sessionID));
 		
 		return sr; 
 	}
 
 	@Override
-	public void saveHITIdForSession(BigInteger sessionID, String hitId) {		
-		logger.info(String.format("session %s assigned to HIT %s\n", sessionID.toString(16), hitId));		
+	public void saveHITId(String hitId) {
+		usedIDs.put(hitId, false);
 	}
 
 	@Override
-	public void saveAssignmentForSession(BigInteger sessionID,
+	public void saveAssignmentForSession(String sessionID,
 			String assignmentId, String workerId) {
 		idToAssignmentId.put(sessionID, assignmentId);		
 		workerIdToSessions.put(workerId, sessionID);
 		
 		logger.info(String.format("session %s has assignment %s by worker %s\n",
-				sessionID.toString(16), assignmentId, workerId));
+				sessionID, assignmentId, workerId));
 	}
 
 	@Override
-	public void saveQuizResults(BigInteger sessionID, QuizResults qr) {
+	public void saveQuizResults(String sessionID, QuizResults qr) {
 		logger.info(String.format("Session %s got %d out of %d correct", 
-				sessionID.toString(16), qr.correct, qr.total));
+				sessionID, qr.correct, qr.total));
 	}
 
 	@Override
-	protected void saveUsernameForSession(BigInteger sessionId, String username) {		
+	protected void saveUsernameForSession(String sessionId, String username) {		
 		logger.info(String.format("test: %s registered username '%s'", 
-				sessionId.toString(16), username));
+				sessionId, username));
 	}
 
 	@Override
-	public void saveIPForSession(BigInteger id, InetAddress remoteAddress, Date lobbyTime) {
-		logger.info(id.toString(16) + " connected from IP " + remoteAddress.getHostAddress() +
+	public void saveIPForSession(String id, InetAddress remoteAddress, Date lobbyTime) {
+		logger.info(id + " connected from IP " + remoteAddress.getHostAddress() +
 				" at time " + lobbyTime.toString());		
 	}
 
@@ -144,7 +130,7 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	protected void saveExperimentForSession(BigInteger clientID,
+	protected void saveExperimentForSession(String clientID,
 			String experimentID) {
 		// TODO Auto-generated method stub
 		
@@ -156,24 +142,24 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	protected void saveSessionCompleteInfo(BigInteger sessionID,
+	protected void saveSessionCompleteInfo(String sessionID,
 			double inactivePercent) {
 		usedIDs.put(sessionID, true);
 		logger.info(String.format("session %s was inactive for fraction %.02f",
-				sessionID.toString(16), inactivePercent));		
+				sessionID, inactivePercent));		
 	}
 
 	
 	@SuppressWarnings("rawtypes")
 	@Override
-	protected void clearWorkerForSession(BigInteger id) {
+	protected void clearWorkerForSession(String id) {
 		// TODO Make this more efficient, although it is so in the DB implementation
 		
 		for( Object worker : workerIdToSessions.keySet() ) {
 			if( ((Collection) workerIdToSessions.get(worker)).contains(id) ) {
 				workerIdToSessions.remove(worker, id);
 				logger.info(String.format("Worker %s disassociated with session %s", 
-						worker.toString(), id.toString(16)));
+						worker.toString(), id));
 				break;
 			}			
 		}

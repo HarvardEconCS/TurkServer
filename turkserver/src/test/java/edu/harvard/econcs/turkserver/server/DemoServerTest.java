@@ -24,11 +24,7 @@ public class DemoServerTest {
 			protected int getTotalPuzzles() {				
 				return 0;
 			}
-
-			@Override
-			public String stringToType(String sessionId) {				
-				return sessionId;
-			}			
+					
 		}).start();
 		
 	}

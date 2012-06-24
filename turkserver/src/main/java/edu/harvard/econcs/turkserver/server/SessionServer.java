@@ -46,14 +46,14 @@ import edu.harvard.econcs.turkserver.TooManySessionsException;
 import edu.harvard.econcs.turkserver.mturk.TurkHITManager;
 import edu.harvard.econcs.turkserver.server.mysql.DataTracker;
 
-public abstract class SessionServer<T> implements Runnable {
+public abstract class SessionServer implements Runnable {
 
 	protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 	
 	public static final String ATTRIBUTE = "turkserver.session";
 	
-	private final DataTracker<T> tracker;
-	protected final TurkHITManager<T> turkHITs;
+	private final DataTracker<String> tracker;
+	protected final TurkHITManager<String> turkHITs;
 	protected final int hitGoal;
 	protected final Server server;
 	protected final ServletContextHandler context;
@@ -61,14 +61,14 @@ public abstract class SessionServer<T> implements Runnable {
 	
 	protected BayeuxServer bayeux;	
 	
-	protected BiMap<String, T> clientToId;	
+	protected BiMap<String, String> clientToId;	
 	
 	protected final AtomicInteger completedHITs;
 
 	ConcurrentHashMap<String, Long> logStartTimes;
 	ConcurrentHashMap<String, StringBuffer> sessionLogs;
 	
-	public SessionServer(DataTracker<T> tracker, TurkHITManager<T> thm,
+	public SessionServer(DataTracker<String> tracker, TurkHITManager<String> thm,
 			Resource[] resources, int hitGoal, int httpPort) {
 
 		this.tracker = tracker;								
@@ -77,7 +77,7 @@ public abstract class SessionServer<T> implements Runnable {
 		
 		this.hitGoal = hitGoal;
 		
-		BiMap<String, T> bm = HashBiMap.create();
+		BiMap<String, String> bm = HashBiMap.create();
 		this.clientToId = Maps.synchronizedBiMap(bm);		
 		
 		this.completedHITs = new AtomicInteger();
@@ -143,7 +143,7 @@ public abstract class SessionServer<T> implements Runnable {
 	public class UserSessionListener implements SessionListener {
 		@Override
 		public void sessionAdded(ServerSession session) {
-			T oldId = clientToId.forcePut(session.getId(), null);
+			String oldId = clientToId.forcePut(session.getId(), null);
 			
 			if( oldId != null ) {
 				logger.info(session.getId() + " reconnected, used to have id " + oldId.toString());
@@ -153,7 +153,7 @@ public abstract class SessionServer<T> implements Runnable {
 		@Override
 		public void sessionRemoved(ServerSession session, boolean timedout) {
 			String clientId = session.getId();
-			T hitId = clientToId.get(clientId);
+			String hitId = clientToId.get(clientId);
 			
 			if( timedout ) {
 				Log.getRootLogger().info("Session " + clientId + " timed out");
@@ -217,16 +217,17 @@ public abstract class SessionServer<T> implements Runnable {
 			return null;
 		}
 
-	public void sessionView(String clientId, T hitId) {
+	public void sessionView(String clientId, String hitId) {
 		if( hitId != null ) {						
-			clientToId.forcePut(clientId, hitId);			
+			clientToId.forcePut(clientId, hitId);
+			tracker.saveHITId(hitId);
 		}
 		else {
 			System.out.println("Client " + clientId + " sent null hitId");
 		}
 	}
 
-	protected LoginStatus sessionAccept(String clientId, T hitId, String assignmentId,
+	protected LoginStatus sessionAccept(String clientId, String hitId, String assignmentId,
 			String workerId) {
 		LoginStatus ls = LoginStatus.ERROR;
 
@@ -284,7 +285,7 @@ public abstract class SessionServer<T> implements Runnable {
 		return ls;
 	}
 
-	public void sessionSubmit(String clientId, T hitId, String workerId) {				
+	public void sessionSubmit(String clientId, String hitId, String workerId) {				
 		logFlush(hitId.toString());
 		
 		int completed = completedHITs.incrementAndGet();
@@ -296,7 +297,7 @@ public abstract class SessionServer<T> implements Runnable {
 		sendException(clientId, "completed", "Thanks for your work! You may do " + additional + " more HITs in this session.");				
 	}
 
-	public void sessionDisconnect(String clientId, T hitId) {
+	public void sessionDisconnect(String clientId, String hitId) {
 		if( hitId != null ) {
 			tracker.sessionDisconnected(hitId);
 		}				
@@ -314,9 +315,7 @@ public abstract class SessionServer<T> implements Runnable {
 		client.deliver(client, "/service/user", errorMap, null);
 	}
 
-	public abstract T stringToType(String sessionId);
-	
-	protected T getSessionForClient(String clientId) {
+	protected String getSessionForClient(String clientId) {
 		return clientToId.get(clientId);
 	}	
 	

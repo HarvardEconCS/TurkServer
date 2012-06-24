@@ -6,7 +6,6 @@ package edu.harvard.econcs.turkserver.server;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.math.BigInteger;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -33,11 +32,11 @@ public abstract class ExperimentServer<T extends ExperimentServer<T>> implements
 	protected final LocalSession expBroadcaster;
 	
 	// Keeps track of whether clients are connected
-	protected final ConcurrentHashMap<BigInteger, Boolean> clients;
+	protected final ConcurrentHashMap<String, Boolean> clients;
 	// Keeps track of the last time someone disconnected, if at all
-	private final ConcurrentHashMap<BigInteger, Long> disconnectTime;	
+	private final ConcurrentHashMap<String, Long> disconnectTime;	
 	// Keeps track of the total number of milliseconds inactive
-	private final ConcurrentHashMap<BigInteger, AtomicLong> inactiveTime;
+	private final ConcurrentHashMap<String, AtomicLong> inactiveTime;
 	
 	protected final long timeLimit;
 	
@@ -48,7 +47,7 @@ public abstract class ExperimentServer<T extends ExperimentServer<T>> implements
 	
 	private PrintWriter experimentLog = null;
 	
-	public ExperimentServer(HostServer<T> host, ConcurrentHashMap<BigInteger, Boolean> clients, long timeLimit) {				
+	public ExperimentServer(HostServer<T> host, ConcurrentHashMap<String, Boolean> clients, long timeLimit) {				
 		this.host = host;	
 		this.clients = clients;
 		this.timeLimit = timeLimit;
@@ -57,14 +56,14 @@ public abstract class ExperimentServer<T extends ExperimentServer<T>> implements
 		experimentID = Utils.getCurrentTimeZoneTimeAsString();
 		
 		// Initialize inactivity tracking
-		disconnectTime = new ConcurrentHashMap<BigInteger, Long>();
-		inactiveTime = new ConcurrentHashMap<BigInteger, AtomicLong>();
-		for( BigInteger id : clients.keySet() ) inactiveTime.put(id, new AtomicLong(0));
+		disconnectTime = new ConcurrentHashMap<String, Long>();
+		inactiveTime = new ConcurrentHashMap<String, AtomicLong>();
+		for( String id : clients.keySet() ) inactiveTime.put(id, new AtomicLong(0));
 				
 		expBroadcaster = host.bayeux.newLocalSession(getChannelName());
 	}
 	
-	public Set<BigInteger> getClients() { return clients.keySet(); }		
+	public Set<String> getClients() { return clients.keySet(); }		
 	
 	// Gets the name of the file associated with this experiment, if any
 	public abstract String getFilename();
@@ -87,7 +86,7 @@ public abstract class ExperimentServer<T extends ExperimentServer<T>> implements
 	 * @param id
 	 * @return
 	 */
-	public double getInactivePercent(BigInteger id) {
+	public double getInactivePercent(String id) {
 		double iTime = inactiveTime.get(id).get();
 		long totalTime = expFinishTime - expStartTime;
 		return iTime / totalTime;
@@ -99,7 +98,7 @@ public abstract class ExperimentServer<T extends ExperimentServer<T>> implements
 	 * @param time
 	 * @return
 	 */
-	protected long addInactiveTime(BigInteger id, long time) {
+	protected long addInactiveTime(String id, long time) {
 		return inactiveTime.get(id).addAndGet(time);
 	}
 	
@@ -108,10 +107,10 @@ public abstract class ExperimentServer<T extends ExperimentServer<T>> implements
 	 * to the count of inactivity
 	 */
 	protected void finalizeInactiveTime() {
-		Iterator<Map.Entry<BigInteger, Long>> it = disconnectTime.entrySet().iterator();
+		Iterator<Map.Entry<String, Long>> it = disconnectTime.entrySet().iterator();
 		
 		while( it.hasNext() ) {
-			Map.Entry<BigInteger, Long> e = it.next();			
+			Map.Entry<String, Long> e = it.next();			
 			addInactiveTime(e.getKey(), expFinishTime - e.getValue());
 			it.remove();
 		}
@@ -163,7 +162,7 @@ public abstract class ExperimentServer<T extends ExperimentServer<T>> implements
 	 * @param sessionId
 	 * @param data
 	 */
-	protected void sendServiceMsg(BigInteger sessionId, Object data) {
+	protected void sendServiceMsg(String sessionId, Object data) {
 		host.bayeux.getSession(host.clientToId.inverse().get(sessionId)).deliver(
 				expBroadcaster, Codec.expSvcPrefix + getChannelName(), data, null);
 	}
@@ -181,7 +180,7 @@ public abstract class ExperimentServer<T extends ExperimentServer<T>> implements
 	 * @param sessionId
 	 * @param data
 	 */
-	protected abstract void rcvServiceMsg(BigInteger sessionId, Map<String, Object> data);
+	protected abstract void rcvServiceMsg(String sessionId, Map<String, Object> data);
 	
 	/**
 	 * 
@@ -189,13 +188,13 @@ public abstract class ExperimentServer<T extends ExperimentServer<T>> implements
 	 * @param data
 	 * @return true if the message should be relayed to other clients
 	 */
-	protected abstract boolean rcvBroadcastMsg(BigInteger sessionId, Map<String, Object> data);
+	protected abstract boolean rcvBroadcastMsg(String sessionId, Map<String, Object> data);
 	
 	/**
 	 * Puts the client in a connected time and records the time since last disconnection, if any
 	 * @param id
 	 */
-	public void clientConnected(BigInteger id) {
+	public void clientConnected(String id) {
 		// If reconnect, count the amount of time they were gone
 		// TODO make sure this works with not allowing people to reconnect when done
 		if( clients.containsKey(id) && (clients.get(id) == false)) {
@@ -210,7 +209,7 @@ public abstract class ExperimentServer<T extends ExperimentServer<T>> implements
 	 * Puts the client in a disconnected state and records the time
 	 * @param id
 	 */
-	public void clientDisconnected(BigInteger id) {
+	public void clientDisconnected(String id) {
 		clients.put(id, false);
 		
 		// Record disconnect time

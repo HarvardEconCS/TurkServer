@@ -2,7 +2,6 @@ package edu.harvard.econcs.turkserver.client;
 
 import edu.harvard.econcs.turkserver.*;
 
-import java.math.BigInteger;
 import java.rmi.RemoteException;
 import java.util.Map;
 import java.util.TreeMap;
@@ -16,12 +15,12 @@ import org.cometd.java.annotation.Service;
 import org.cometd.java.annotation.Session;
 import org.cometd.java.annotation.Subscription;
 
-public abstract class NetExpClient extends SessionClient<BigInteger> implements AbstractExpClient {
+public abstract class NetExpClient extends SessionClient<String> implements AbstractExpClient {
 	
 	protected GUIController<? extends AbstractExpClient> gc;
 	protected State state;
 
-	public final BigInteger sessionID;
+	public final String sessionID;
 	public final String assignmentId;
 	public final String workerId;	
 
@@ -33,7 +32,7 @@ public abstract class NetExpClient extends SessionClient<BigInteger> implements 
 	private MessageListener broadcastListener = null;
 	private MessageListener serviceListener = null;
 	
-	public NetExpClient(BigInteger sessionID, String url, String assignmentId, String workerId) {
+	public NetExpClient(String sessionID, String url, String assignmentId, String workerId) {
 		
 		super(url, sessionID, assignmentId, workerId);
 		
@@ -247,12 +246,7 @@ public abstract class NetExpClient extends SessionClient<BigInteger> implements 
 	}
 
 	@Override
-	public String getSessionIdStr() {		
-		return sessionID.toString(16);
-	}
-	
-	@Override
-	public BigInteger getSessionBigInt() {		
+	public String getSessionID() {		
 		return sessionID;
 	}
 

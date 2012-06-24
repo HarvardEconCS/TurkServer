@@ -1,7 +1,5 @@
 package edu.harvard.econcs.turkserver.client;
 
-import java.math.BigInteger;
-
 public interface AbstractExpClient {
 
 	public static enum State { DISCONNECTED, LOBBY, EXPERIMENT }
@@ -10,7 +8,7 @@ public interface AbstractExpClient {
 	 * Get the session ID, or none if not applicable.
 	 * @return
 	 */
-	public BigInteger getSessionBigInt();
+	public String getSessionID();
 	
 	/**
 	 * Update the ready status

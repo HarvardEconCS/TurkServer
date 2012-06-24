@@ -1,14 +1,11 @@
 package edu.harvard.econcs.turkserver.server;
 
-import java.math.BigInteger;
-
 public class SessionRecord {
 
 	public enum SessionStatus { UNASSIGNED, ASSIGNED, LOBBY, EXPERIMENT, COMPLETED };
 	
 	private SessionStatus status;
-	
-	private BigInteger id;
+		
 	private String setId;
 	private String data;
 
@@ -26,13 +23,7 @@ public class SessionRecord {
 	}
 	public SessionStatus getStatus() {
 		return status;
-	}
-	public BigInteger getId() {
-		return id;
-	}
-	public void setId(BigInteger id) {
-		this.id = id;
-	}
+	}	
 	public String getSetId() {
 		return setId;
 	}

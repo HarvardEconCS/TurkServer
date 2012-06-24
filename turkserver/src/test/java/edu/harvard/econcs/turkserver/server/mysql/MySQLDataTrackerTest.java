@@ -2,7 +2,6 @@ package edu.harvard.econcs.turkserver.server.mysql;
 
 import static org.junit.Assert.*;
 
-import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.sql.SQLException;
@@ -51,36 +50,31 @@ public class MySQLDataTrackerTest {
 		String hitID = "HIT12340931";
 		String assignmentId = "AsstIJFINGPEWRBNAE";		
 		String workerId = "WorkerABJAER";
-		String username = "randomuser\" WHERE";
-		
-		BigInteger sessionID = dt.getNewSessionID();
-		// Test for uniqueness (code copied from tracker)		
-		assertTrue(dt.sessionExistsInDB(sessionID));		
-		// Test that session is not completed
-		assertFalse(dt.sessionCompletedInDB(sessionID));
-		
-		dt.saveHITIdForSession(sessionID, hitID);
+		String username = "randomuser\" WHERE";						
 		
 		// Add shit to database
-		dt.registerAssignment(sessionID, assignmentId, workerId);
-		assertFalse(dt.sessionCompletedInDB(sessionID));
+		dt.registerAssignment(hitID, assignmentId, workerId);
+		// Test for uniqueness (code copied from tracker)		
+		assertTrue(dt.sessionExistsInDB(hitID));		
+		// Test that session is not completed
+		assertFalse(dt.sessionCompletedInDB(hitID));		
 		
 		// Check that sessionIDs stored properly 
 		List<SessionRecord> srs = dt.getSetSessionInfoForWorker(workerId);
 		assertTrue(srs.size() == 1);
-		assertEquals(srs.iterator().next().getId(), sessionID);
+		assertEquals(srs.iterator().next().getHitId(), hitID);
 		
 		// Check that assignmentID is stored correctly
-		assertEquals(dt.getStoredSessionInfo(sessionID).getAssignmentId(), assignmentId);
+		assertEquals(dt.getStoredSessionInfo(hitID).getAssignmentId(), assignmentId);
 		
-		dt.lobbyLogin(sessionID, username);
-		dt.saveIPForSession(sessionID, InetAddress.getLocalHost(), new Date());
+		dt.lobbyLogin(hitID, username);
+		dt.saveIPForSession(hitID, InetAddress.getLocalHost(), new Date());
 		// Check that username cached correctly
-		assertEquals(dt.getUsername(sessionID), username);
-		assertFalse(dt.sessionCompletedInDB(sessionID));
+		assertEquals(dt.getUsername(hitID), username);
+		assertFalse(dt.sessionCompletedInDB(hitID));
 		
 		// Test inactivePercent completion detection
-		dt.saveSessionCompleteInfo(sessionID, 0.02);		
-		assertTrue(dt.sessionCompletedInDB(sessionID));
+		dt.saveSessionCompleteInfo(hitID, 0.02);		
+		assertTrue(dt.sessionCompletedInDB(hitID));
 	}
 }

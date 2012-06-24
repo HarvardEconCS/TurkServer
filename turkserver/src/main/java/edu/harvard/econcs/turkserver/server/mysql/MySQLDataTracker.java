@@ -5,12 +5,10 @@ import edu.harvard.econcs.turkserver.QuizResults;
 import edu.harvard.econcs.turkserver.SessionExpiredException;
 import edu.harvard.econcs.turkserver.TooManyFailsException;
 import edu.harvard.econcs.turkserver.server.ExperimentServer;
-import edu.harvard.econcs.turkserver.server.HostServer;
 import edu.harvard.econcs.turkserver.server.QuizMaster;
 import edu.harvard.econcs.turkserver.server.SessionRecord;
 import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
 
-import java.math.BigInteger;
 import java.net.InetAddress;
 import java.sql.SQLException;
 import java.util.Date;
@@ -39,8 +37,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	private final QueryRunner qr;
 		
 	static final ScalarHandler defaultScalarHandler = new ScalarHandler();
-	static final ArrayListHandler defaultArrayListHandler = new ArrayListHandler();	
-	static final BigIntegerListHandler defaultIDHandler = new BigIntegerListHandler("id");	
+	static final ArrayListHandler defaultArrayListHandler = new ArrayListHandler();		
 	static final ColumnListHandler hitIDHandler = new ColumnListHandler("hitId");
 	static final SessionRecordListHandler sessionHandler = new SessionRecordListHandler();
 
@@ -119,9 +116,8 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			// Session table - use innodb for row locking
 			query = 
 				"CREATE TABLE IF NOT EXISTS session (" +
-				"id VARCHAR(40) NOT NULL PRIMARY KEY," +
-				"setId VARCHAR(24)," +
-				"hitId VARCHAR(30) UNIQUE," +
+				"hitId VARCHAR(30) NOT NULL PRIMARY KEY," +
+				"setId VARCHAR(24)," +				
 				"assignmentId VARCHAR(30) UNIQUE," +
 				"workerId VARCHAR(14)," +
 				"username VARCHAR(40)," +
@@ -174,36 +170,15 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 		System.out.println(query);		
 		System.out.println(qr.update(query, params) + " rows updated");
 	}
-
-	@Override
-	public BigInteger getNewSessionID() {
-		BigInteger newID = null;
-		
-		try { 
-			do {
-				newID = new BigInteger(HostServer.ID_LEN, rnd);				
-			} while( sessionExistsInDB(newID) );
-			
-			// Save the new ID that we generated
-			qr.update("INSERT INTO session(id, setId) VALUES (?, ?)", 
-					newID.toString(16), setID);			
-		} catch( SQLException e ) {
-			e.printStackTrace();
-		} catch (SessionExpiredException e) {			
-			e.printStackTrace();
-		}
-		
-		return newID;
-	}
 	
 	@Override
-	public boolean sessionExistsInDB(BigInteger sessionID) throws SessionExpiredException {
+	public boolean sessionExistsInDB(String sessionID) throws SessionExpiredException {
 		List<Object[]> results = null;
 		
 		try {
-			results = qr.query("SELECT experimentId FROM session WHERE id=?", 
+			results = qr.query("SELECT experimentId FROM session WHERE hitId=?", 
 					defaultArrayListHandler, 
-					sessionID.toString(16));
+					sessionID);
 		} catch (SQLException e) {			
 			e.printStackTrace();
 		}
@@ -260,7 +235,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	public boolean sessionCompletedInDB(BigInteger sessionID) {		
+	public boolean sessionCompletedInDB(String sessionID) {		
 		SessionRecord sr = getStoredSessionInfo(sessionID);
 		
 		return (sr != null && (sr.getStatus() == SessionStatus.COMPLETED));
@@ -283,13 +258,13 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	public SessionRecord getStoredSessionInfo(BigInteger sessionID) {
+	public SessionRecord getStoredSessionInfo(String sessionID) {
 		List<SessionRecord> result = null;
 		
 		try {
-			result = qr.query("SELECT * FROM session WHERE id=?",
+			result = qr.query("SELECT * FROM session WHERE hitId=?",
 					sessionHandler, 
-					sessionID.toString(16));
+					sessionID);
 		} catch (SQLException e) {			
 			e.printStackTrace();
 		} 
@@ -299,33 +274,32 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	public void saveHITIdForSession(BigInteger sessionID, String hitId) {		
+	public void saveHITId(String hitId) {
 		try {
-			qr.update("UPDATE session SET hitId=? WHERE id=?", 
-					hitId, 
-					sessionID.toString(16));
+			qr.update("INSERT INTO session (hitId, setId) VALUES (?, ?) " +
+					"ON DUPLICATE KEY UPDATE setId=?", hitId, setID, setID);
 		} catch (SQLException e) {			
 			e.printStackTrace();
-		}		
+		} 	
 	}
 
 	@Override
-	public void saveAssignmentForSession(BigInteger sessionID,
+	public void saveAssignmentForSession(String sessionID,
 			String assignmentId, String workerId) {
 		try {
 			// Make sure the worker table contains this workerId first, but ignore if already exists
 			qr.update("INSERT IGNORE INTO worker(id) VALUES (?)", workerId);
 			
-			qr.update("UPDATE session SET assignmentId=?, workerId=? WHERE id=?", 
+			qr.update("UPDATE session SET assignmentId=?, workerId=? WHERE hitId=?", 
 					assignmentId, workerId, 
-					sessionID.toString(16));
+					sessionID);
 		} catch (SQLException e) {			
 			e.printStackTrace();
 		}		
 	}
 
 	@Override
-	public void saveQuizResults(BigInteger sessionID, QuizResults results) throws QuizFailException {
+	public void saveQuizResults(String sessionID, QuizResults results) throws QuizFailException {
 		if( quizMaster == null ) {
 			logger.severe("Got back quiz results with no quiz master?");
 			return;
@@ -333,14 +307,14 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 		
 		String workerId = "unidentified";
 		try {
-			workerId = qr.query("SELECT workerId FROM session WHERE id=?", defaultScalarHandler, sessionID.toString(16)).toString();
+			workerId = qr.query("SELECT workerId FROM session WHERE hitId=?", defaultScalarHandler, sessionID).toString();
 			
 			// Make sure the worker table contains this workerId first, but ignore if already exists
 			qr.update("INSERT IGNORE INTO worker(id) VALUES (?)", workerId);
 			
 			qr.update("INSERT INTO quiz(sessionId, workerId, setId, numCorrect, numTotal) " +
 					"VALUES (?, ?, ?, ?, ?)",
-					sessionID.toString(16), workerId, setID, results.correct, results.total
+					sessionID, workerId, setID, results.correct, results.total
 					);
 		} catch (SQLException e) {			
 			e.printStackTrace();
@@ -356,7 +330,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	protected void saveUsernameForSession(BigInteger sessionId, String username) {		
+	protected void saveUsernameForSession(String sessionId, String username) {		
 		try {
 			// Update with username and the time they entered the lobby
 			// TODO worry about previous users for this session's lobby Time
@@ -364,20 +338,20 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			// TODO automatic truncation right now but we should fix this in frontend
 			if( username.length() > USERNAME_LIMIT ) username = username.substring(0, USERNAME_LIMIT);
 			
-			qr.update("UPDATE session SET username=? WHERE id=?",
+			qr.update("UPDATE session SET username=? WHERE hitId=?",
 					username, 
-					sessionId.toString(16));
+					sessionId);
 		} catch (SQLException e) {			
 			e.printStackTrace();
 		}		
 	}
 
 	@Override
-	public void saveIPForSession(BigInteger id, InetAddress remoteAddress, Date lobbyTime) {
+	public void saveIPForSession(String id, InetAddress remoteAddress, Date lobbyTime) {
 		try {
-			qr.update("UPDATE session SET ipAddr=?, lobbyTime=? WHERE id=?", 
+			qr.update("UPDATE session SET ipAddr=?, lobbyTime=? WHERE hitId=?", 
 					remoteAddress.getHostAddress(), lobbyTime,
-					id.toString(16));
+					id);
 		} catch (SQLException e) {			
 			e.printStackTrace();
 		}		
@@ -395,11 +369,11 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	protected void saveExperimentForSession(BigInteger sessionID,
+	protected void saveExperimentForSession(String sessionID,
 			String experimentID) {
 		try {
-			qr.update("UPDATE session SET experimentId=? WHERE id=?",
-					experimentID, sessionID.toString(16));
+			qr.update("UPDATE session SET experimentId=? WHERE hitId=?",
+					experimentID, sessionID);
 		} catch (SQLException e) {			
 			e.printStackTrace();
 		}
@@ -409,7 +383,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	@Override
 	protected void saveExpEndTime(ExperimentServer<?> exp, Date endTime) {
 		try {
-			qr.update("UPDATE experiment SET endTime=? where id=?",
+			qr.update("UPDATE experiment SET endTime=? where hitId=?",
 					endTime, exp.experimentID);
 		} catch (SQLException e) {			
 			e.printStackTrace();
@@ -418,24 +392,24 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	protected void saveSessionCompleteInfo(BigInteger sessionID,
+	protected void saveSessionCompleteInfo(String sessionID,
 			double inactivePercent) {
 		try {
-			qr.update("UPDATE session SET inactivePercent=? WHERE id=?", 
+			qr.update("UPDATE session SET inactivePercent=? WHERE hitId=?", 
 					inactivePercent, 
-					sessionID.toString(16));
+					sessionID);
 		} catch (SQLException e) {			
 			e.printStackTrace();
 		}		
 	}
 
 	@Override
-	protected void clearWorkerForSession(BigInteger id) {
+	protected void clearWorkerForSession(String id) {
 		try {
-			qr.update("UPDATE session SET workerId=DEFAULT, username=DEFAULT WHERE id=?", id.toString(16));
+			qr.update("UPDATE session SET workerId=DEFAULT, username=DEFAULT WHERE hitId=?", id);
 			
 			logger.info(String.format(
-					"session %s has workerId cleared", id.toString(16)));
+					"session %s has workerId cleared", id));
 		} catch (SQLException e) {			
 			e.printStackTrace();
 		}		

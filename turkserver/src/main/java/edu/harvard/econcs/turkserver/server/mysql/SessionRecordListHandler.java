@@ -6,7 +6,6 @@ package edu.harvard.econcs.turkserver.server.mysql;
 import edu.harvard.econcs.turkserver.server.SessionRecord;
 import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
 
-import java.math.BigInteger;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
@@ -20,11 +19,7 @@ public class SessionRecordListHandler extends AbstractListHandler<SessionRecord>
 
 	@Override
 	protected SessionRecord handleRow(ResultSet rs) throws SQLException {
-		SessionRecord sr = new SessionRecord();		
-				
-		BigInteger id = null;
-		try { id = new BigInteger(rs.getString("id"), 16); }
-		catch( SQLException e ) {}
+		SessionRecord sr = new SessionRecord();								
 		
 		String setId = rs.getString("setId");
 		
@@ -46,8 +41,7 @@ public class SessionRecordListHandler extends AbstractListHandler<SessionRecord>
 		
 		double inactivePercent = rs.getDouble("inactivePercent");		
 		boolean inactiveWasNull = rs.wasNull();
-		
-		sr.setId(id);
+				
 		sr.setSetId(setId);
 		sr.setData(data);
 		sr.setHitId(hitId);
