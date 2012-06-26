@@ -125,6 +125,11 @@
     	<artifactId>guava</artifactId>
     	<version>11.0.2</version>
     </dependency>
+    <dependency>
+    	<groupId>org.slf4j</groupId>
+    	<artifactId>slf4j-simple</artifactId>
+    	<version>1.6.5</version>
+    </dependency>
   </dependencies>
   
   <build>
@@ -158,6 +163,19 @@
           		<target>1.6</target>
         	</configuration>
   		</plugin>
+  		
+  		<plugin>
+    		<groupId>org.apache.maven.plugins</groupId>
+    		<artifactId>maven-jar-plugin</artifactId>
+    		<executions>
+	      		<execution>
+    	    		<phase>package</phase>
+        			<goals>
+          				<goal>test-jar</goal>
+        			</goals>
+      			</execution>
+    		</executions>
+		</plugin>  	
   		
   	</plugins>
   	

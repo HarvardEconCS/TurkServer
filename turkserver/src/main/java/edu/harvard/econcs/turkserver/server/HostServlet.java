@@ -95,9 +95,9 @@ public class HostServlet<T extends ExperimentServer<T>> extends SessionServlet<H
 		}
 		
 		@Listener("/service/experiment/*")
-		public void listenServiceExperiment(ServerSession session, ServerMessage message) {
-			// Deliver this to the appropriate experiment server			
-			theServer.experimentServiceMsg(session.getId(), message.getDataAsMap());
+		public void listenServiceExperiment(ServerSession session, ServerMessage message) {													
+			// Deliver this to the appropriate experiment server
+			theServer.experimentServiceMsg(session.getId(), message.getDataAsMap());			
 		}
 		
 		@Configure("/experiment/*")
@@ -108,9 +108,16 @@ public class HostServlet<T extends ExperimentServer<T>> extends SessionServlet<H
 		}
 		
 		@Listener("/experiment/*")
-		public boolean listenExperiment(ServerSession session, ServerMessage message) {
-			// Deliver this to the appropriate experiment server			
-			return theServer.experimentBroadcastMsg(session.getId(), message.getDataAsMap());
+		public boolean listenExperiment(ServerSession session, ServerMessage message) {			
+			if( session.isLocalSession() ) {
+				// Always forward broadcast messages generated locally
+				return true;				
+			}
+			else {
+				// Deliver this to the appropriate experiment server			
+				return theServer.experimentBroadcastMsg(session.getId(), message.getDataAsMap());
+			}
+			
 		}
 
 	}	

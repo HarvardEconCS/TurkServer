@@ -301,7 +301,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	@Override
 	public void saveQuizResults(String sessionID, QuizResults results) throws QuizFailException {
 		if( quizMaster == null ) {
-			logger.severe("Got back quiz results with no quiz master?");
+			logger.error("Got back quiz results with no quiz master?");
 			return;
 		}
 		

@@ -53,12 +53,15 @@ public abstract class SessionServlet<S extends SessionServer> extends GenericSer
         // Allow anybody to handshake
         bayeux.getChannel(ServerChannel.META_HANDSHAKE).addAuthorizer(GrantAuthorizer.GRANT_PUBLISH);             
                 
-        processor = new ServerAnnotationProcessor(bayeux);
+        processor = new ServerAnnotationProcessor(bayeux) {
+        	
+        };
         
         processor.process(new Monitor());
         processor.process(new UserData());
         
-        bayeux.addListener(theServer.new UserSessionListener());        
+        bayeux.addListener(theServer.new UserSessionListener());
+        
 	}
 	
 	public ServerAnnotationProcessor getProcessor() {
@@ -98,7 +101,9 @@ public abstract class SessionServlet<S extends SessionServer> extends GenericSer
 				catch (NullPointerException e) { Log.getRootLogger().warn("Null workerId for " + clientId);}
 				
 				Log.getRootLogger().info("HIT " + hitId + " assignment " + assignmentId + " accepted by " + workerId);
-				theServer.sessionAccept(clientId, hitId, assignmentId, workerId);
+												
+				theServer.sessionAccept(clientId, hitId, assignmentId, workerId);					
+				
 			}
 			else if( "submit".equals(status) ) {
 				String workerId = null;

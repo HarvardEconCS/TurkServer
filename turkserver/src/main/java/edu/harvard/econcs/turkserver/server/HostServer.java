@@ -31,7 +31,9 @@ import net.andrewmao.misc.ConcurrentBooleanCounter;
  *
  */
 public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
-					
+	
+	private boolean debugMode = false;
+	
 	// Turk crap
 	private final TurkHITManager<String> turkHITManager;
 	private final int completedHITGoal;
@@ -64,7 +66,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
 	 * @param quizFac
 	 * @param userTracker
 	 * @param thm
-	 * @param completedHitGoal
+	 * @param hitGoal
 	 * @param listenPort
 	 * @param rmiPort
 	 */
@@ -72,10 +74,10 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
 			QuizFactory quizFac,
 			ExperimentDataTracker userTracker,
 			TurkHITManager<String> thm,
-			Resource[] resources, int completedHitGoal,
+			Resource[] resources, int hitGoal,
 			int listenPort, String logPath) {
-		// TODO add correct thm, resources, hitGoal to this
-		super(userTracker, thm, resources, 0, listenPort);
+		
+		super(userTracker, thm, resources, hitGoal, listenPort);
 		
         expServlet = context.addServlet(HostServlet.class, "/exp");  
         expServlet.setInitOrder(3);  
@@ -85,7 +87,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
 		this.tracker = userTracker;
 		
 		this.turkHITManager = thm;
-		this.completedHITGoal = completedHitGoal;				
+		this.completedHITGoal = hitGoal;				
 		
 		this.logPath = logPath;
 				
@@ -113,6 +115,16 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
 		this(factory, null, userTracker, thm, null, completedHitGoal, listenPort, logPath); 
 	}	
 	
+	/**
+	 * Sets the debug mode on this HostServer. If true, will connect all clients to 
+	 * a new single-person experiment.
+	 * @param b
+	 */
+	public void setDebugMode(boolean b) {
+		this.debugMode = b;		
+		logger.info("Debug Mode set to: " + b);
+	}
+
 	public String getLogPath() {		
 		return logPath;
 	}
@@ -126,7 +138,11 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
 		ServerSession session = bayeux.getSession(clientId);
 				
 		if( ls == LoginStatus.QUIZ_REQUIRED ) {
-			// Check if we need to do a quiz
+			
+			/* Check if we need to do a quiz
+			 * TODO very hacky
+			 */
+			
 			QuizMaterials qm = quizFactory.getQuiz();
 			if( qm != null ) {
 							
@@ -136,13 +152,13 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
 				session.deliver(session, "/service/user", data, null);				
 			}
 		}
-		else if( ls == LoginStatus.NEW_USER ) {
+		else if( ls == LoginStatus.NEW_USER && !debugMode ) {
 			// Check if we need to get username			
 			data.put("status", Codec.usernameNeeded);
 			
 			session.deliver(session, "/service/user", data, null);
 		}		
-		else if( ls == LoginStatus.REGISTERED ) {			
+		else if( ls == LoginStatus.REGISTERED || debugMode) {			
 			/* Is user already in an experiment?
 			 * already-completed sessions should be caught way before this
 			 */
@@ -150,7 +166,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
 				ExperimentServer<?> exp = tracker.getExperimentForID(hitId);
 				if( exp != null ) {
 					data.put("status", Codec.connectExpAck);
-					data.put("channel", exp.getChannelName());
+					data.put("channel", Codec.expChanPrefix + exp.getChannelName());
 
 					session.deliver(session, "/service/user", data, null);
 
@@ -158,10 +174,19 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
 					exp.clientConnected(hitId);				
 				}
 				else {
-					logger.severe("Unknown experiment but session is in progress: "	+ 
+					logger.error("Unknown experiment but session is in progress: "	+ 
 							hitId );
 				}
 			} 
+			else if( debugMode ) {
+				// single-person debug experiments, so create a new one and skip lobby
+				ConcurrentHashMap<String, Boolean> expClients = new ConcurrentHashMap<String, Boolean>();
+				expClients.put(hitId, true);
+				
+				logger.info("Creating new experiment in debug mode");
+				createNewExperiment(expClients);
+				serverGUI.updateLobbyModel();
+			}
 			else {
 				data.put("status", Codec.connectLobbyAck);				
 				session.deliver(session, "/service/user", data, null);
@@ -173,7 +198,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
 		}
 		else {
 			// TODO should have reuse here, and not reach this
-			logger.warning("Unexpected id tried to connect: " + hitId);
+			logger.warn("Unexpected id tried to connect: " + hitId);
 			data.put("status", Codec.connectErrorAck);				
 			session.deliver(session, "/service/user", data, null);
 		}
@@ -234,8 +259,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
 			if( lobbyStatus.getTrueCount() >= neededPeople ) {
 				
 				// Create a new experiment and assign the ready people to it
-				createNewExperiment();
-				
+				createNewExperiment(null);				
 			}
 			else if( lobbyStatus.size() < neededPeople ) {
 				
@@ -286,22 +310,25 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
 		
 	}
 
-	private void createNewExperiment() {
-		int expSize = expFactory.getExperimentSize();
-		ConcurrentHashMap<String, Boolean> expClients = 
-			new ConcurrentHashMap<String, Boolean>(expSize);
+	private void createNewExperiment(ConcurrentHashMap<String, Boolean> expClients) {
 		
-		// Count up exactly expSize people for the new experiment
-		int counter = 0;
-		for( Map.Entry<String, Boolean> e : lobbyStatus.entrySet() ) {						
-			if( e.getValue() == true ) {							
-				expClients.put(e.getKey(), e.getValue());
-				counter++;
+		// Generate the list of experiment clients
+		if( expClients == null ) {			
+			int expSize = expFactory.getExperimentSize();
+			expClients = new ConcurrentHashMap<String, Boolean>(expSize);
+
+			// Count up exactly expSize people for the new experiment
+			int counter = 0;
+			for( Map.Entry<String, Boolean> e : lobbyStatus.entrySet() ) {						
+				if( e.getValue() == true ) {							
+					expClients.put(e.getKey(), e.getValue());
+					counter++;
+				}
+
+				// Don't put more than the required number of people, even if more are ready
+				if(counter == expSize) break;
 			}
-			
-			// Don't put more than the required number of people, even if more are ready
-			if(counter == expSize) break;
-		}					
+		}
 		
 		T newExp = null;
 		try {
@@ -342,6 +369,16 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
 		// Starting the experiment sends out the appropriate notifications to clients
 		new Thread(newExp, newExp.toString()).start();
 		
+		// Send experiment channel to clients to notify connection
+		Map<String, Object> data = new HashMap<String, Object>();
+		data.put("status", Codec.connectExpAck);
+		data.put("channel", Codec.expChanPrefix + newExp.getChannelName());
+
+		for( String id : expClients.keySet() ) {
+			ServerSession session = bayeux.getSession(clientToId.inverse().get(id));
+			session.deliver(session, "/service/user", data, null);
+		}
+		
 		/* No problem in starting the exp - now can remove from lobby
 		 * everyone in the new exp is removed before lobby is notified 
 		 * due to synchronize over lobbyStatus above
@@ -353,7 +390,8 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
 		for( String id : expClients.keySet()) lobbyStatus.remove(id);
 	}
 
-	public void addInactiveTime(String sessionId, long inactiveTime) {		
+	public void addInactiveTime(String sessionId, long inactiveTime) {
+		// TODO replace with a more principled way of tracking (in)activity
 		ExperimentServer<?> exp = tracker.getExperimentForID(sessionId);
 		exp.addInactiveTime(sessionId, inactiveTime);		
 	}
@@ -398,9 +436,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
 		new Thread(expFactory, expFactory.getClass().getSimpleName()).start();				
 		
 		lobbyBroadcaster = bayeux.newLocalSession("lobby");
-		lobbyBroadcaster.handshake();
-		
-		
+		lobbyBroadcaster.handshake();				
 	}
 	
 	@Override
@@ -448,14 +484,14 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
 	void experimentServiceMsg(String clientId, Map<String, Object> data) {		
 		String sessionId = getSessionForClient(clientId);
 		if( sessionId == null ) {
-			logger.warning("Message from unrecognized client: " + clientId);
+			logger.warn("Message from unrecognized client: " + clientId);							
 		}
 		else {
 			@SuppressWarnings("unchecked")
 			T exp = (T) tracker.getExperimentForID(sessionId);
 			
 			if( exp == null ) {
-				logger.warning("No experiment recorded for client: " + clientId);
+				logger.warn("No experiment recorded for client: " + clientId);
 				return;
 			}
 			
@@ -471,7 +507,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
 	boolean experimentBroadcastMsg(String clientId, Map<String, Object> data) {		
 		String sessionId = getSessionForClient(clientId);
 		if( sessionId == null ) {
-			logger.warning("Message from unrecognized client: " + clientId);
+			logger.warn("Message from unrecognized client: " + clientId);
 			return false;
 		}
 		else {
@@ -479,7 +515,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
 			T exp = (T) tracker.getExperimentForID(sessionId);
 			
 			if( exp == null ) {
-				logger.warning("No experiment recorded for client: " + clientId);
+				logger.warn("No experiment recorded for client: " + clientId);
 				return false;
 			}
 						

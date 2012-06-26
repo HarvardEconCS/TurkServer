@@ -74,6 +74,8 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 		Collection<String> sessions =
 			(Collection<String>) workerIdToSessions.get(workerId);
 		
+		if( sessions == null ) return null;
+		
 		List<SessionRecord> srs = new ArrayList<SessionRecord>(sessions.size());		
 		for( String s : sessions ) srs.add(getStoredSessionInfo(s));
 		
@@ -102,7 +104,7 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 		idToAssignmentId.put(sessionID, assignmentId);		
 		workerIdToSessions.put(workerId, sessionID);
 		
-		logger.info(String.format("session %s has assignment %s by worker %s\n",
+		logger.info(String.format("session %s has assignment %s by worker %s",
 				sessionID, assignmentId, workerId));
 	}
 
@@ -167,7 +169,7 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 
 	@Override
 	public List<SessionRecord> expireUnusedSessions() {
-		logger.warning("Expiring HITs not yet implemented in dummy tracker");
+		logger.warn("Expiring HITs not yet implemented in dummy tracker");
 		return new LinkedList<SessionRecord>();
 	}
 

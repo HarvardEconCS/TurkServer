@@ -11,9 +11,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.logging.Logger;
 
 import org.cometd.bayeux.server.LocalSession;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import edu.harvard.econcs.turkserver.Codec;
 
@@ -26,7 +28,7 @@ import net.andrewmao.misc.Utils;
  */
 public abstract class ExperimentServer<T extends ExperimentServer<T>> implements Runnable {
 	
-	protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
+	protected final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 		
 	protected final HostServer<T> host;	
 	protected final LocalSession expBroadcaster;
@@ -61,6 +63,8 @@ public abstract class ExperimentServer<T extends ExperimentServer<T>> implements
 		for( String id : clients.keySet() ) inactiveTime.put(id, new AtomicLong(0));
 				
 		expBroadcaster = host.bayeux.newLocalSession(getChannelName());
+		logger.info("Exp Server local channel: " + getChannelName());
+		expBroadcaster.handshake();
 	}
 	
 	public Set<String> getClients() { return clients.keySet(); }		
@@ -73,7 +77,7 @@ public abstract class ExperimentServer<T extends ExperimentServer<T>> implements
 	}
 	
 	public String getChannelName() {
-		return experimentID.replace(" ", "");
+		return experimentID.replace(" ", "_");
 	}
 
 	public int size() {
@@ -131,7 +135,7 @@ public abstract class ExperimentServer<T extends ExperimentServer<T>> implements
 			experimentLog = new PrintWriter(new FileWriter(filename), true);
 			logString(toString() + " started");
 		} catch (IOException e) {
-			logger.warning("Couldn't open log file " + filename + " for writing!");			
+			logger.warn("Couldn't open log file " + filename + " for writing!");			
 			e.printStackTrace();
 			experimentLog = null;
 		}		

@@ -62,8 +62,18 @@ public abstract class GUIController<C extends AbstractExpClient> implements Item
 		blankPanel = new JPanel();
 		blankLabel = new JLabel();		
 		blankPanel.add(blankLabel);
-	}
+	}	
 	
+	/**
+	 * Dummy constructor for gc that does nothing
+	 * @param client
+	 */
+	public GUIController(C client) {
+		this.client = client;
+		content = null;
+		host = null;
+	}
+
 	@Override
 	public void itemStateChanged(ItemEvent e) {
 		// From the checkbox

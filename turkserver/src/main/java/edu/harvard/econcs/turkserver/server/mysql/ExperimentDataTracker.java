@@ -9,7 +9,6 @@ import edu.harvard.econcs.turkserver.QuizResults;
 import edu.harvard.econcs.turkserver.SessionCompletedException;
 import edu.harvard.econcs.turkserver.SessionExpiredException;
 import edu.harvard.econcs.turkserver.SessionOverlapException;
-import edu.harvard.econcs.turkserver.SessionUnknownException;
 import edu.harvard.econcs.turkserver.SimultaneousSessionsException;
 import edu.harvard.econcs.turkserver.TooManyFailsException;
 import edu.harvard.econcs.turkserver.TooManySessionsException;
@@ -22,7 +21,9 @@ import java.net.InetAddress;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import net.andrewmao.misc.ConcurrentBooleanCounter;
 
@@ -38,7 +39,7 @@ import net.andrewmao.misc.ConcurrentBooleanCounter;
  */
 public abstract class ExperimentDataTracker implements DataTracker<String> {
 
-	protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());	
+	protected final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());	
 				
 	private final int simultaneousSessionLimit;
 	private final int totalSetLimit;
@@ -168,10 +169,7 @@ public abstract class ExperimentDataTracker implements DataTracker<String> {
 	 */
 	@Override
 	public abstract List<SessionRecord> expireUnusedSessions();
-
-	/* (non-Javadoc)
-	 * @see edu.harvard.econcs.turkserver.server.DataTracker#registerAssignment(java.math.BigInteger, java.lang.String, java.lang.String)
-	 */		
+	
 	@Override
 	public final LoginStatus registerAssignment(String sessionID, String assignmentId, String workerId)
 	throws ExpServerException {
@@ -179,9 +177,16 @@ public abstract class ExperimentDataTracker implements DataTracker<String> {
 			throw new ExpServerException("Session credentials missing!");
 		
 		// TODO fix this to accept workers that return and accept a different HIT for the same game		 
-		
-		// This check is important for expired sessions!
-		if( !sessionExistsInDB(sessionID) )	throw new SessionUnknownException();
+				
+		if( !sessionExistsInDB(sessionID) ) {
+			this.saveHITId(sessionID);
+			
+			/* This has been temporarily replaced to re-use old HITs
+			 * TODO combine the two different types of data trackers
+			 */
+			
+//			throw new SessionUnknownException();
+		}
 		
 		SessionRecord sessionRec = getStoredSessionInfo(sessionID);
 		// This will not be null if this session was disconnected after an experiment
@@ -293,7 +298,7 @@ public abstract class ExperimentDataTracker implements DataTracker<String> {
 			return true;
 		}		
 		else {
-			logger.warning(sessionID + " sent null username");
+			logger.warn(sessionID + " sent null username");
 			return false;
 		}
 	}

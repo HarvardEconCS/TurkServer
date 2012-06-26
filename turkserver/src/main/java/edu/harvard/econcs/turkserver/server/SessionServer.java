@@ -5,17 +5,18 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Logger;
 
 import net.andrewmao.misc.Utils;
 
-import org.cometd.bayeux.server.BayeuxServer;
+import org.cometd.bayeux.server.BayeuxServer.BayeuxServerListener;
 import org.cometd.bayeux.server.BayeuxServer.SessionListener;
 import org.cometd.bayeux.server.ServerSession;
 import org.cometd.java.annotation.AnnotationCometdServlet;
+import org.cometd.server.BayeuxServerImpl;
 import org.cometd.server.CometdServlet;
 import org.cometd.server.DefaultSecurityPolicy;
 import org.cometd.server.JettyJSONContextServer;
+
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.bio.SocketConnector;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
@@ -28,6 +29,9 @@ import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.resource.Resource;
 import org.eclipse.jetty.util.resource.ResourceCollection;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
@@ -48,7 +52,7 @@ import edu.harvard.econcs.turkserver.server.mysql.DataTracker;
 
 public abstract class SessionServer implements Runnable {
 
-	protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
+	protected final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());	
 	
 	public static final String ATTRIBUTE = "turkserver.session";
 	
@@ -59,7 +63,7 @@ public abstract class SessionServer implements Runnable {
 	protected final ServletContextHandler context;
 	protected final CometdServlet cometdServlet;
 	
-	protected BayeuxServer bayeux;	
+	protected BayeuxServerImpl bayeux;	
 	
 	protected BiMap<String, String> clientToId;	
 	
@@ -91,7 +95,7 @@ public abstract class SessionServer implements Runnable {
 		qtp.setMinThreads(5);
         qtp.setMaxThreads(200);
         server.setThreadPool(qtp);
-        
+                
 		server.setGracefulShutdown(1000);
 		server.setStopAtShutdown(true);
         
@@ -107,20 +111,21 @@ public abstract class SessionServer implements Runnable {
         bconnector.setPort(httpPort+1);
         server.addConnector(bconnector);
 		
-        ContextHandlerCollection contexts = new ContextHandlerCollection();
+        ContextHandlerCollection contexts = new ContextHandlerCollection();        
         server.setHandler(contexts);
         
         // Base files servlet
-        context = new ServletContextHandler(contexts,"/",ServletContextHandler.SESSIONS);        
+        context = new ServletContextHandler(contexts,"/",ServletContextHandler.SESSIONS);       
         context.setBaseResource(new ResourceCollection(resources));
-        context.setAliases(true);
+        context.setAliases(true);             
         
         // Default servlet
         ServletHolder dftServlet = context.addServlet(DefaultServlet.class, "/");
         dftServlet.setInitOrder(1);
         
         // Cometd servlet
-        cometdServlet = new AnnotationCometdServlet();        
+        cometdServlet = new AnnotationCometdServlet();
+        
         ServletHolder comet = new ServletHolder(cometdServlet);
         context.addServlet(comet, "/cometd/*");
         
@@ -128,7 +133,7 @@ public abstract class SessionServer implements Runnable {
         comet.setInitParameter("interval", "100");
         comet.setInitParameter("maxInterval", "10000");
         comet.setInitParameter("multiFrameInterval", "5000");
-        comet.setInitParameter("logLevel", "1");
+        comet.setInitParameter("logLevel", "2");
         
         // for registering serialization and deserialization
         comet.setInitParameter("jsonContext", "org.cometd.server.JettyJSONContextServer");
@@ -137,7 +142,7 @@ public abstract class SessionServer implements Runnable {
 //        comet.setInitParameter("transports","org.cometd.server.transport.LongPollingTransport");
         comet.setInitOrder(2);       
         
-        context.setAttribute(ATTRIBUTE, this);
+        context.setAttribute(ATTRIBUTE, this);  
 	}
 
 	public class UserSessionListener implements SessionListener {
@@ -234,7 +239,6 @@ public abstract class SessionServer implements Runnable {
 		if( hitId != null ) {			
 			try {				
 				
-				
 				ls = tracker.registerAssignment(hitId, assignmentId, workerId);
 
 				// Successful registration, save info
@@ -263,7 +267,7 @@ public abstract class SessionServer implements Runnable {
 				else if (e instanceof SessionExpiredException ) {					
 					sendException(clientId, null, Messages.EXPIRED_SESSION);
 					
-					logger.warning("Unexpected connection on expired session: " + hitId.toString());
+					logger.warn("Unexpected connection on expired session: " + hitId.toString());
 				}
 				else if (e instanceof TooManySessionsException) {
 					sendException(clientId, null, "You've already done enough for today. Please return this HIT and come back tomorrow.");
@@ -331,7 +335,11 @@ public abstract class SessionServer implements Runnable {
 		}
 	    
 	    bayeux = cometdServlet.getBayeux();
-		bayeux.setSecurityPolicy(new DefaultSecurityPolicy());		
+		bayeux.setSecurityPolicy(new DefaultSecurityPolicy());
+
+		bayeux.addListener(new BayeuxServerListener() {
+			
+		});
 		
 		if( turkHITs != null ) {
 			new Thread(turkHITs).start();

@@ -1,3 +1,21 @@
+function unescapeURL(s) {
+    return decodeURIComponent(s.replace(/\+/g, "%20"));
+}
+
+function getURLParams() {
+    var params = {}
+    var m = window.location.href.match(/[\\?&]([^=]+)=([^&#]*)/g)
+    if(m) {
+        for(var i = 0; i < m.length; i++) {
+            var a = m[i].match(/.([^=]+)=(.*)/)
+            params[unescapeURL(a[1])] = unescapeURL(a[2])
+        }
+    }
+    return params
+}
+
+// Configure POST parameters
+var params = getURLParams();
 
 // CometD callbacks
 // First time connection
@@ -49,7 +67,24 @@ function _connectionBroken() {
 }
 
 function userData(message) {
-    
+    var data = message.data;
+    var status = data.status;
+
+    console.log("Status: " + status);
+    if( status == "startexp" ) {
+	_subscribeExp(data.channel);
+    }
+}
+
+function expData(message) {
+    experimentData(message.data);
+}
+
+var _expSubscription;
+
+function _subscribeExp(channel) {
+    _expSubscription = $.cometd.subscribe(channel, expData);    
+    console.log("Subscribed to exp channel " + channel);
 }
 
 var _userSubscription;
@@ -64,8 +99,13 @@ function _subscribe() {
 function _unsubscribe() {
     if(_userSubscription) {
         $.cometd.unsubscribe(_userSubscription);
-    }
+    }    
     _userSubscription = null;
+
+    if(_expSubscription) {
+	$.cometd.unsubscribe(_expSubscrption);
+    }
+    _expSubscription = null;
 
     // Unsubscribe to any other channels
     _unsubscribeData();
@@ -99,8 +139,8 @@ function CometHelper(cookieName, contextPath) {
         if(!_wasConnected && _connected) {
             _connectionEstablished();
         } else if(_wasConnected && !_connected) {
-            _connectionBroken();
-        }
+            _connectionBroken(); 
+       }
     });
     
     // handshake listener to report client IDs
@@ -139,7 +179,7 @@ function CometHelper(cookieName, contextPath) {
     $.cometd.websocketEnabled = true;
     $.cometd.init({
         url : cometURL,
-        logLevel : "debug"
+        logLevel : "info"
     });
 
     /* Setup reload extension */
