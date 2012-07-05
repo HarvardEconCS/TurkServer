@@ -72,6 +72,11 @@
     	<version>${jetty-version}</version>
     </dependency>
     <dependency>
+    	<groupId>org.eclipse.jetty</groupId>
+    	<artifactId>jetty-rewrite</artifactId>
+    	<version>${jetty-version}</version>
+    </dependency>
+    <dependency>
     	<groupId>javax.servlet</groupId>
     	<artifactId>javax.servlet-api</artifactId>
     	<version>3.0.1</version>
@@ -147,6 +152,9 @@
                 		<resources>
                     		<resource>
                         		<directory>${project.basedir}/lib/java-aws-mturk</directory>
+                    		</resource>
+                    		<resource>
+                        		<directory>${project.basedir}/lib/not-in-maven</directory>
                     		</resource>
                 		</resources>
             		</configuration>

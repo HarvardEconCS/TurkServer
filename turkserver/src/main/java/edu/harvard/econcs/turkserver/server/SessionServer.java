@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import net.andrewmao.misc.Utils;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.cometd.bayeux.server.BayeuxServer.BayeuxServerListener;
 import org.cometd.bayeux.server.BayeuxServer.SessionListener;
 import org.cometd.bayeux.server.ServerSession;
@@ -17,8 +18,10 @@ import org.cometd.server.CometdServlet;
 import org.cometd.server.DefaultSecurityPolicy;
 import org.cometd.server.JettyJSONContextServer;
 
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.bio.SocketConnector;
+import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.server.nio.SelectChannelConnector;
 import org.eclipse.jetty.servlet.DefaultServlet;
@@ -59,7 +62,9 @@ public abstract class SessionServer implements Runnable {
 	private final DataTracker<String> tracker;
 	protected final TurkHITManager<String> turkHITs;
 	protected final int hitGoal;
-	protected final Server server;
+	
+	protected final Server server;	
+	protected final ContextHandlerCollection contexts;
 	protected final ServletContextHandler context;
 	protected final CometdServlet cometdServlet;
 	
@@ -111,13 +116,13 @@ public abstract class SessionServer implements Runnable {
         bconnector.setPort(httpPort+1);
         server.addConnector(bconnector);
 		
-        ContextHandlerCollection contexts = new ContextHandlerCollection();        
+        contexts = new ContextHandlerCollection();        
         server.setHandler(contexts);
         
         // Base files servlet
-        context = new ServletContextHandler(contexts,"/",ServletContextHandler.SESSIONS);       
+        context = new ServletContextHandler(contexts, "/" ,ServletContextHandler.SESSIONS);       
         context.setBaseResource(new ResourceCollection(resources));
-        context.setAliases(true);             
+        context.setAliases(true);              
         
         // Default servlet
         ServletHolder dftServlet = context.addServlet(DefaultServlet.class, "/");
@@ -143,6 +148,22 @@ public abstract class SessionServer implements Runnable {
         comet.setInitOrder(2);       
         
         context.setAttribute(ATTRIBUTE, this);  
+	}
+	
+	/**
+	 * Add custom handlers to the server.
+	 * For advanced users that have custom dynamic content.
+	 * @param handler
+	 */
+	public void addCustomHandler(Handler handler, String contextPath) {
+        // Additional custom handlers
+		
+		ContextHandler ch = new ContextHandler(contextPath);
+		ch.setHandler(handler);
+		
+		// Add this to the beginning of the collection of handlers
+		Handler[] handlers = contexts.getHandlers();
+		contexts.setHandlers((Handler[]) ArrayUtils.addAll(new Handler[] {ch}, handlers));		
 	}
 
 	public class UserSessionListener implements SessionListener {
