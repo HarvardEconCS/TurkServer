@@ -9,6 +9,7 @@ import edu.harvard.econcs.turkserver.QuizResults;
 import edu.harvard.econcs.turkserver.SessionCompletedException;
 import edu.harvard.econcs.turkserver.SessionExpiredException;
 import edu.harvard.econcs.turkserver.SessionOverlapException;
+import edu.harvard.econcs.turkserver.SessionUnknownException;
 import edu.harvard.econcs.turkserver.SimultaneousSessionsException;
 import edu.harvard.econcs.turkserver.TooManyFailsException;
 import edu.harvard.econcs.turkserver.TooManySessionsException;
@@ -183,9 +184,13 @@ public abstract class ExperimentDataTracker implements DataTracker<String> {
 			
 			/* This has been temporarily replaced to re-use old HITs
 			 * TODO combine the two different types of data trackers
-			 */
-			
-//			throw new SessionUnknownException();
+			 */			
+		}
+		else if( sessionCompletedInDB(sessionID) ) {
+			// Prevent bugs from old, completed but 
+			// still-circulating HITs from being reused
+			// TODO delete this, because sessionView was probably causing this bug
+			throw new SessionUnknownException();			
 		}
 		
 		SessionRecord sessionRec = getStoredSessionInfo(sessionID);

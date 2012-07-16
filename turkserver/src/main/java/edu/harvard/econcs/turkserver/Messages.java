@@ -9,7 +9,7 @@ public class Messages {
 	
 	public static final String UNRECOGNIZED_SESSION = 
 		"The server does not recognize this session.\n" +
-		"You may be working on a HIT for games that are already completed.\n" +
+		"You may have taken a HIT that was already completed but not submitted.\n" +
 		"Please return the HIT, and accept a different HIT in this group.\n";
 
 	public static final String SIMULTANEOUS_SESSIONS = 

@@ -233,20 +233,27 @@ public abstract class SessionServer implements Runnable {
 	}
 
 	protected String logFlush(String logId) {				
-			logString(logId, "finished");		
-			
-			StringBuffer log = sessionLogs.get(logId);
-			if( log != null ) {
-				return log.toString();				
-			}					
-			
-			return null;
-		}
+		logString(logId, "finished");		
+
+		StringBuffer log = sessionLogs.get(logId);
+		if( log != null ) {
+			return log.toString();				
+		}					
+
+		return null;
+	}
 
 	public void sessionView(String clientId, String hitId) {
 		if( hitId != null ) {						
 			clientToId.forcePut(clientId, hitId);
-			tracker.saveHITId(hitId);
+			
+			try {
+				// Try to add hitIds that we have no record of (clean reuse)
+				if( !tracker.sessionExistsInDB(hitId) )
+					tracker.saveHITId(hitId);
+			} catch (SessionExpiredException e) {				
+				logger.info("Expired session is being viewed...");
+			}
 		}
 		else {
 			System.out.println("Client " + clientId + " sent null hitId");

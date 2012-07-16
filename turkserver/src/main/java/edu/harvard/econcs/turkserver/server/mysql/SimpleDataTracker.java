@@ -13,6 +13,7 @@ import net.andrewmao.misc.ConcurrentBooleanCounter;
 import edu.harvard.econcs.turkserver.ExpServerException;
 import edu.harvard.econcs.turkserver.SessionCompletedException;
 import edu.harvard.econcs.turkserver.SessionOverlapException;
+import edu.harvard.econcs.turkserver.SessionUnknownException;
 import edu.harvard.econcs.turkserver.SimultaneousSessionsException;
 import edu.harvard.econcs.turkserver.TooManySessionsException;
 import edu.harvard.econcs.turkserver.Codec.LoginStatus;
@@ -62,6 +63,12 @@ public abstract class SimpleDataTracker implements DataTracker<String> {
 			// This check is important for old sessions!
 			// re-registers this session for this set
 			this.saveHITId(hitID);			
+		}
+		else if( sessionCompletedInDB(hitID) ) {
+			// Prevent bugs from old, completed but 
+			// still-circulating HITs from being reused
+			// TODO delete this, because sessionView was probably causing this bug
+			throw new SessionUnknownException();
 		}
 
 		SessionRecord sessionRec = getStoredSessionInfo(hitID);
