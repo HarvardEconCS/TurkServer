@@ -1,0 +1,28 @@
+{
+  "main": "index.js",
+  "public": "test/public",
+  "paths": [ "src" ],
+  "libs": [
+    "lib/cometd/cometd.js",
+    "lib/cometd/AckExtension.js",
+    "lib/cometd/ReloadExtension.js",
+    "lib/cometd/TimeStampExtension.js",
+    "lib/cometd/TimeSyncExtension.js",
+    "lib/cometd-jquery/jquery.cometd.js",
+    "lib/cometd-jquery/jquery.cometd-ack.js",
+    "lib/cometd-jquery/jquery.cometd-reload.js",
+    "lib/cometd-jquery/jquery.cometd-timestamp.js",
+    "lib/cometd-jquery/jquery.cometd-timesync.js",
+    "lib/cometd-jquery/jquery.cookie.js"
+  ],
+  "dependencies": [
+    "es5-shimify", 
+    "json2ify", 
+    "jqueryify", 
+    "spine",
+    "spine/lib/local",
+    "spine/lib/ajax",
+    "spine/lib/route",
+    "spine/lib/manager"
+  ]
+}
