@@ -206,7 +206,7 @@
   										addjars-maven-plugin
   									</artifactId>
   									<versionRange>
-  										[1.0.3,)
+  										[1.0.4,)
   									</versionRange>
   									<goals>
   										<goal>add-jars</goal>
