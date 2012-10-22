@@ -1,19 +1,19 @@
 {
   "main": "index.js",
   "public": "test/public",
-  "paths": [ "src" ],
+  "paths": [ "lib" ],
   "libs": [
-    "lib/cometd/cometd.js",
-    "lib/cometd/AckExtension.js",
-    "lib/cometd/ReloadExtension.js",
-    "lib/cometd/TimeStampExtension.js",
-    "lib/cometd/TimeSyncExtension.js",
-    "lib/cometd-jquery/jquery.cometd.js",
-    "lib/cometd-jquery/jquery.cometd-ack.js",
-    "lib/cometd-jquery/jquery.cometd-reload.js",
-    "lib/cometd-jquery/jquery.cometd-timestamp.js",
-    "lib/cometd-jquery/jquery.cometd-timesync.js",
-    "lib/cometd-jquery/jquery.cookie.js"
+    "include/cometd/cometd.js",
+    "include/cometd/AckExtension.js",
+    "include/cometd/ReloadExtension.js",
+    "include/cometd/TimeStampExtension.js",
+    "include/cometd/TimeSyncExtension.js",
+    "include/cometd-jquery/jquery.cometd.js",
+    "include/cometd-jquery/jquery.cometd-ack.js",
+    "include/cometd-jquery/jquery.cometd-reload.js",
+    "include/cometd-jquery/jquery.cometd-timestamp.js",
+    "include/cometd-jquery/jquery.cometd-timesync.js",
+    "include/cometd-jquery/jquery.cookie.js"
   ],
   "dependencies": [
     "es5-shimify", 
