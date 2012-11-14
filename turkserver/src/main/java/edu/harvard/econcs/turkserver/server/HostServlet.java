@@ -7,9 +7,9 @@ import javax.servlet.ServletException;
 import org.cometd.bayeux.server.ConfigurableServerChannel;
 import org.cometd.bayeux.server.ServerMessage;
 import org.cometd.bayeux.server.ServerSession;
-import org.cometd.java.annotation.Configure;
-import org.cometd.java.annotation.Listener;
-import org.cometd.java.annotation.Service;
+import org.cometd.annotation.Configure;
+import org.cometd.annotation.Listener;
+import org.cometd.annotation.Service;
 import org.cometd.server.authorizer.GrantAuthorizer;
 
 import edu.harvard.econcs.turkserver.QuizResults;

@@ -9,10 +9,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import net.andrewmao.misc.Utils;
 
 import org.apache.commons.lang.ArrayUtils;
+import org.cometd.annotation.AnnotationCometdServlet;
 import org.cometd.bayeux.server.BayeuxServer.BayeuxServerListener;
 import org.cometd.bayeux.server.BayeuxServer.SessionListener;
 import org.cometd.bayeux.server.ServerSession;
-import org.cometd.java.annotation.AnnotationCometdServlet;
 import org.cometd.server.BayeuxServerImpl;
 import org.cometd.server.CometdServlet;
 import org.cometd.server.DefaultSecurityPolicy;

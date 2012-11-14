@@ -4,13 +4,10 @@ import java.util.Map;
 
 import javax.servlet.ServletException;
 
+import org.cometd.annotation.*;
 import org.cometd.bayeux.server.ConfigurableServerChannel;
 import org.cometd.bayeux.server.ServerMessage;
 import org.cometd.bayeux.server.ServerSession;
-import org.cometd.java.annotation.Configure;
-import org.cometd.java.annotation.Listener;
-import org.cometd.java.annotation.Service;
-import org.cometd.java.annotation.Session;
 import org.cometd.server.authorizer.GrantAuthorizer;
 import org.eclipse.jetty.util.log.Log;
 

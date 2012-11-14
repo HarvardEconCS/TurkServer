@@ -2,36 +2,37 @@ Util = require './util'
 
 class TSClient
 
-  constructor: ->
-    # Pass-in parameters for constructor
-    @connect_callback ?= undefined
-    @disconnect_callback ?= undefined
-    @error_callback ?= undefined
-    
-    @experimentData ?= undefined
-    
-    @logLevel ?= "info"
-  
-    # Setup values
-    @params = Util.getURLParams()
-    @localMode = false
-    
-    @connected = false
-    @wasConnected = false
-    
-    @clientId = undefined
-    
-    @expSubscription = null
-    @userSubscription = null
+  # Pass-in parameters prior to init
+  @connect_callback = undefined
+  @disconnect_callback = undefined
+  @error_callback = undefined  
+  @experimentData = undefined  
+  @logLevel = "info"
 
-  hitIsViewing: ->
+  # Setup values
+  @params = Util.getURLParams()
+  @localMode = false
+  
+  @connected = false
+  @wasConnected = false
+  
+  @clientId = undefined
+  
+  @expSubscription = null
+  @userSubscription = null
+
+  @hitIsViewing: ->
     @params.assignmentId and @params.assignmentId is "ASSIGNMENT_ID_NOT_AVAILABLE"
 
-  initLocal: ->
+  @initLocal: ->
     # Fake init for running demoes
     @localMode = true
+    
+    @params.hitId = "DEMO_HIT"
+    @params.assignmentId = "DEMO_ASSIGNMENT"
+    @params.workerId = "DEMO_WORKER"
 
-  init: (cookieName, contextPath) ->          
+  @init: (cookieName, contextPath) ->          
     # Check for old state information
     stateCookie = (if org.cometd.COOKIE then org.cometd.COOKIE.get(cookieName) else null)
     state = (if stateCookie then org.cometd.JSON.fromJSON(stateCookie) else null)
@@ -88,11 +89,11 @@ class TSClient
 
   # CometD callbacks
   # First time connection
-  connectionInitialized: ->
+  @connectionInitialized: ->
     console.log "handshake successful"
 
   # (Re-)established connection, possibly first time
-  connectionEstablished: ->
+  @connectionEstablished: ->
     @connect_callback?()
     
     console.log "beginning connect"
@@ -117,30 +118,30 @@ class TSClient
             hitId: hitId
 
   # Broken connection
-  connectionBroken: ->
+  @connectionBroken: ->
     @disconnect_callback?()
     # alert("It appears that we lost the connection to the server."
     # + "If this persists, please return the HIT.");
     
-  userData: (message) =>
+  @userData: (message) =>
     data = message.data
     status = data.status
     console.log "Status: " + status
     @subscribeExp data.channel if status is "startexp"
     
-  expData: (message) =>
+  @expData: (message) =>
     @experimentData?(message.data)
     
-  subscribeExp: (channel) ->
+  @subscribeExp: (channel) ->
     @expSubscription = $.cometd.subscribe(channel, @expData)
     console.log "Subscribed to exp channel " + channel
     
-  subscribe: ->
+  @subscribe: ->
     @userSubscription = $.cometd.subscribe("/service/user", @userData)        
     # Subscribe to any other necessary channels
     @subscribeData()
     
-  unsubscribe: ->
+  @unsubscribe: ->
     $.cometd.unsubscribe @userSubscription  if @userSubscription
     @userSubscription = null
     $.cometd.unsubscribe @expSubscrption  if @expSubscription
@@ -148,5 +149,11 @@ class TSClient
     
     # Unsubscribe to any other channels
     @unsubscribeData()
+  
+  @channelSend: (channel, msg) ->
+    unless @localMode
+      $.cometd.publish channel, msg
+    else
+      console.log "Would send on channel " + channel + " messsage " + msg
 
 module.exports = TSClient

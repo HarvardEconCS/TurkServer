@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 
+import org.cometd.annotation.*;
 import org.cometd.bayeux.Channel;
 import org.cometd.bayeux.Message;
 import org.cometd.bayeux.client.ClientSession;
@@ -11,11 +12,6 @@ import org.cometd.client.BayeuxClient;
 import org.cometd.client.ext.AckExtension;
 import org.cometd.client.ext.TimesyncClientExtension;
 import org.cometd.client.transport.LongPollingTransport;
-import org.cometd.java.annotation.ClientAnnotationProcessor;
-import org.cometd.java.annotation.Listener;
-import org.cometd.java.annotation.Service;
-import org.cometd.java.annotation.Session;
-import org.cometd.java.annotation.Subscription;
 
 public abstract class SessionClient<T> implements Runnable {
 	

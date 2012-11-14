@@ -9,9 +9,9 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletResponse;
 
+import org.cometd.annotation.*;
 import org.cometd.bayeux.Message;
 import org.cometd.bayeux.server.*;
-import org.cometd.java.annotation.*;
 import org.cometd.server.BayeuxServerImpl;
 import org.cometd.server.authorizer.GrantAuthorizer;
 import org.cometd.server.ext.AcknowledgedMessagesExtension;

@@ -7,13 +7,11 @@ import java.util.Map;
 import java.util.TreeMap;
 import javax.swing.JOptionPane;
 
+import org.cometd.annotation.*;
 import org.cometd.bayeux.Message;
 import org.cometd.bayeux.client.ClientSession;
 import org.cometd.bayeux.client.ClientSessionChannel;
 import org.cometd.bayeux.client.ClientSessionChannel.MessageListener;
-import org.cometd.java.annotation.Service;
-import org.cometd.java.annotation.Session;
-import org.cometd.java.annotation.Subscription;
 
 public abstract class NetExpClient extends SessionClient<String> implements AbstractExpClient {
 	
