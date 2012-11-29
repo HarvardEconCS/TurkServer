@@ -6,6 +6,6 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface ServiceMessage {
-	String[] keys() default {};
-	String[] values() default {};
+	String[] key() default {};
+	String[] value() default {};
 }

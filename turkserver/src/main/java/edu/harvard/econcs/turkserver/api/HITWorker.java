@@ -20,8 +20,13 @@ public interface HITWorker {
 	
 	InetAddress getIPAddress();
 	
-	boolean isConnected();	
+	void sendExperimentMessage(Object msg);
+
+	boolean isConnected();
 	
-	void sendMessage(Object msg);
+	int getNumDisconnects();
 	
+	double getInactivePercent();
+	
+	String getInactiveDescriptor();
 }

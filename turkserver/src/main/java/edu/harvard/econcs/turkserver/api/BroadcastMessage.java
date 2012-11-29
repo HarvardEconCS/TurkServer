@@ -14,6 +14,6 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface BroadcastMessage {
-	String[] keys() default {};
-	String[] values() default {};
+	String[] key() default {};
+	String[] value() default {};
 }
