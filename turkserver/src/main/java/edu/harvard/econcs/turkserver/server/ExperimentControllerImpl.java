@@ -24,6 +24,7 @@ public class ExperimentControllerImpl implements ExperimentController {
 	final Experiments experiments;	
 	
 	private String experimentId;
+	String inputData;
 	String expChannel;
 	private LocalSession source;
 	
@@ -42,13 +43,16 @@ public class ExperimentControllerImpl implements ExperimentController {
 		this.experiments = experiments;
 	}
 	
-	void initialize(long startTime, String expId, String expChannel, LocalSession source) {
+	void initialize(long startTime, String expId, String inputData, 
+			String expChannel, LocalSession source) {
 		/*
 		 * TODO move this into a Guice provider?
 		 * when the injection thing is fixed
 		 */
 		
 		this.experimentId = expId;
+		this.inputData = inputData;
+		
 		this.expChannel = expChannel;
 		this.source = source;
 						
@@ -117,4 +121,12 @@ public class ExperimentControllerImpl implements ExperimentController {
 		return experimentId;
 	}
 
+	public String getInputData() {
+		if( inputData == null ) throw new RuntimeException("Not initialized with input!");
+		return inputData;
+	}
+
+	public HITWorkerGroup getGroup() {
+		return group;
+	}
 }

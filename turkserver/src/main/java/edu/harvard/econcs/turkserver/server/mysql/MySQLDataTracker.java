@@ -1,32 +1,19 @@
 package edu.harvard.econcs.turkserver.server.mysql;
 
-import edu.harvard.econcs.turkserver.QuizFailException;
 import edu.harvard.econcs.turkserver.QuizResults;
-import edu.harvard.econcs.turkserver.SessionExpiredException;
-import edu.harvard.econcs.turkserver.TooManyFailsException;
 import edu.harvard.econcs.turkserver.schema.*;
-import edu.harvard.econcs.turkserver.server.HITWorkerImpl;
-import edu.harvard.econcs.turkserver.server.QuizPolicy;
-import edu.harvard.econcs.turkserver.server.SessionRecord;
-import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
 
-import java.net.InetAddress;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.util.Date;
 import java.util.List;
-
-import org.apache.commons.dbutils.QueryRunner;
-import org.apache.commons.dbutils.handlers.ArrayListHandler;
-import org.apache.commons.dbutils.handlers.ColumnListHandler;
-import org.apache.commons.dbutils.handlers.ScalarHandler;
 
 import com.mysema.query.QueryFlag.Position;
 import com.mysema.query.sql.MySQLTemplates;
 import com.mysema.query.sql.SQLQuery;
 import com.mysema.query.sql.SQLQueryImpl;
 import com.mysema.query.sql.SQLTemplates;
+import com.mysema.query.sql.dml.SQLDeleteClause;
 import com.mysema.query.sql.dml.SQLInsertClause;
 import com.mysema.query.sql.dml.SQLUpdateClause;
 import com.mysema.query.types.TemplateExpressionImpl;
@@ -56,21 +43,15 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	
 	private final String setID;		
 	
-	// TODO remove this and pool connections with C3P0
-	private final QueryRunner qr;
+	// TODO pool connections with C3P0
 	
 	private Connection conn;
-	private final SQLTemplates dialect;
-		
-	static final ScalarHandler defaultScalarHandler = new ScalarHandler();
-	static final ArrayListHandler defaultArrayListHandler = new ArrayListHandler();		
-	static final ColumnListHandler hitIDHandler = new ColumnListHandler("hitId");	
+	private final SQLTemplates dialect;	
 
 	public MySQLDataTracker(MysqlConnectionPoolDataSource ds, String setID) {
 		super();
 				
-		this.setID = setID;		
-		this.qr = new QueryRunner(ds);
+		this.setID = setID;				
 				
 		dialect = new MySQLTemplates();
 		
@@ -166,16 +147,25 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	@Override
 	public void saveAssignmentForSession(String hitId,
 			String assignmentId, String workerId) {
-		try {
-			// Make sure the worker table contains this workerId first, but ignore if already exists
-			qr.update("INSERT IGNORE INTO worker(id) VALUES (?)", workerId);
-			
-			qr.update("UPDATE session SET assignmentId=?, workerId=? WHERE hitId=?", 
-					assignmentId, workerId, 
-					hitId);
-		} catch (SQLException e) {			
-			e.printStackTrace();
-		}		
+		// Make sure the worker table contains this workerId first, but ignore if already exists
+		/*
+		 * INSERT IGNORE INTO worker(id) VALUES (?)
+		 */
+		new SQLInsertClause(conn, dialect, _worker)
+		.columns(_worker.id)
+		.values(workerId)
+		.addFlag(Position.START_OVERRIDE, "INSERT IGNORE INTO ")
+		.execute();
+		
+		/*
+		 * UPDATE session SET assignmentId=?, workerId=? WHERE hitId=?
+		 */
+		new SQLUpdateClause(conn, dialect, _session)
+		.set(_session.assignmentId, assignmentId)
+		.set(_session.workerId, workerId)
+		.where(_session.hitId.eq(hitId))
+		.execute();
+				
 	}
 
 	@Override
@@ -202,7 +192,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	protected void saveExpStartTime(String expId, long startTime) {
+	protected void saveExpStartTime(String expId, int size, String inputdata, long startTime) {
 		
 		new SQLInsertClause(conn, dialect, _experiment)
 		.columns(_experiment.id, _experiment.setId, _experiment.participants, _experiment.inputdata, _experiment.startTime)
@@ -229,37 +219,42 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	protected void clearWorkerForSession(String id) {
-		try {
-			qr.update("UPDATE session SET workerId=DEFAULT, username=DEFAULT WHERE hitId=?", id);
-			
-			logger.info(String.format(
-					"session %s has workerId cleared", id));
-		} catch (SQLException e) {			
-			e.printStackTrace();
-		}		
+	public void clearWorkerForSession(String hitId) {
+		/*
+		 * TODO this used to be set to default but not sure how to do with QueryDSL
+		 * UPDATE session SET workerId=DEFAULT, username=DEFAULT WHERE hitId=?
+		 */
+		new SQLUpdateClause(conn, dialect, _session)
+		.setNull(_session.workerId)
+		.setNull(_session.username)
+		.where(_session.hitId.eq(hitId))
+		.execute();
+		
+		logger.info(String.format("HIT %s has workerId cleared", hitId));
+		
 	}
 	
 	@Override
-	public List<Session> expireUnusedSessions() {		
-		List<Session> expired = null;
+	public List<Session> expireUnusedSessions() {
+		/*
+		 * SELECT * FROM session WHERE setId=? AND experimentId IS NULL
+		 */
+		List<Session> expired = new SQLQueryImpl(conn, dialect)
+		.from(_session)
+		.where(_session.setId.eq(setID), _session.experimentId.isNull())
+		.list(_session);
+			
+		logger.info("Found " + expired.size() + " unused sessions");
 		
-		// TODO replace this with better sql
-		try {
-			// Get the list first
-			expired = qr.query(
-					"SELECT hitId FROM session WHERE setId=? AND experimentId IS NULL", 
-					sessionHandler, setID);
-			
-			// Now update
-			qr.update("UPDATE session SET experimentId='EXPIRED' WHERE setId=? AND experimentId IS NULL", 
-					setID);
-			
-			logger.info("Found " + expired.size() + " unused sessions");
-
-		} catch (SQLException e) {			
-			e.printStackTrace();
-		}
+		/* 
+		 * TODO this used to set to EXPIRED, but now we reuse,
+		 * so we can just delete them. Verify that this is okay.  
+		 * 
+		 * UPDATE session SET experimentId='EXPIRED' WHERE setId=? AND experimentId IS NULL
+		 */		
+		new SQLDeleteClause(conn, dialect, _session)
+		.where(_session.setId.eq(setID), _session.experimentId.isNull())
+		.execute();
 		
 		return expired;
 	}

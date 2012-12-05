@@ -3,36 +3,21 @@
  */
 package edu.harvard.econcs.turkserver.server.mysql;
 
-import edu.harvard.econcs.turkserver.ExpServerException;
-import edu.harvard.econcs.turkserver.QuizFailException;
 import edu.harvard.econcs.turkserver.QuizResults;
-import edu.harvard.econcs.turkserver.SessionCompletedException;
-import edu.harvard.econcs.turkserver.SessionExpiredException;
-import edu.harvard.econcs.turkserver.SessionOverlapException;
-import edu.harvard.econcs.turkserver.SessionUnknownException;
-import edu.harvard.econcs.turkserver.SimultaneousSessionsException;
-import edu.harvard.econcs.turkserver.TooManyFailsException;
-import edu.harvard.econcs.turkserver.TooManySessionsException;
 import edu.harvard.econcs.turkserver.api.HITWorker;
-import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
 import edu.harvard.econcs.turkserver.schema.Experiment;
 import edu.harvard.econcs.turkserver.schema.Quiz;
 import edu.harvard.econcs.turkserver.schema.Session;
-import edu.harvard.econcs.turkserver.server.HITWorkerGroupImpl;
+import edu.harvard.econcs.turkserver.server.ExperimentControllerImpl;
 import edu.harvard.econcs.turkserver.server.HITWorkerImpl;
-import edu.harvard.econcs.turkserver.server.SessionRecord;
-import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
 
 import java.net.InetAddress;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import net.andrewmao.misc.ConcurrentBooleanCounter;
 
 /**
  * A class to keep track of users and HITs. Must be thread safe.
@@ -159,9 +144,11 @@ public abstract class ExperimentDataTracker {
 	/**
 	 * Saves an experiment start time in the db
 	 * @param expId
+	 * @param size
+	 * @param inputdata
 	 * @param startTime
 	 */
-	protected abstract void saveExpStartTime(String expId, long startTime);
+	protected abstract void saveExpStartTime(String expId, int size, String inputdata, long startTime);
 
 	/**
 	 * Saves an experiment end time in the db
@@ -191,7 +178,7 @@ public abstract class ExperimentDataTracker {
 	 * which is reset when someone else connects
 	 * @param id
 	 */
-	protected abstract void clearWorkerForSession(String id);
+	public abstract void clearWorkerForSession(String id);
 
 	/**
 	 * Sets all sessions with NULL experiment in the DB to expired, and returns the HIT IDs
@@ -205,59 +192,25 @@ public abstract class ExperimentDataTracker {
 	 * @param group TODO
 	 * @param startTime TODO
 	 */
-	public void newExperimentStarted(String expId, HITWorkerGroup group, long startTime) {				
-		saveExpStartTime(expId, startTime);
+	public void newExperimentStarted(ExperimentControllerImpl expCont) {
+		String expId = expCont.getExpId();
+		saveExpStartTime(expId, expCont.getGroup().groupSize(), expCont.getInputData(), expCont.getStartTime());
 		
-		for( HITWorker session : group.getHITWorkers() ) {			
+		for( HITWorker session : expCont.getGroup().getHITWorkers() ) {			
 			saveExperiment((HITWorkerImpl) session, expId);
 		}			
 	}
 
-	public void experimentFinished(String expId, HITWorkerGroup group, long endTime) {
+	public void experimentFinished(ExperimentControllerImpl expCont) {
+		String expId = expCont.getExpId();
 		// Doing DB commits first so there is no limbo state
-		saveExpEndTime(expId, endTime);
+		saveExpEndTime(expId, expCont.getFinishTime());
 		
 		// store final client info, with inactive time measured properly for disconnections
-		for( HITWorker session : group.getHITWorkers() ) {
+		for( HITWorker session : expCont.getGroup().getHITWorkers() ) {
 			saveSessionCompleteInfo((HITWorkerImpl) session);
 		}		
 
 	}	
-
-	/**
-	 * Called when the user with this ID disconnects, so appropriate cleanup can be done
-	 * @param id
-	 */	
-	public final void sessionDisconnected(String id) {											
-		/* 
-		 * TODO user can accept a hit then close window, but this is the same thing as 
-		 * accepting multiple hits, holding and refreshing
-		 * Fix with a notification receptor later.  
-		 */
-		if( !(hitIsInProgress(id) || hitCompletedInDB(id)) ) {
-			/* If disconnected from lobby, clear session from worker Id list
-			 * also clear the username that was stored from worker
-			 * 
-			 * BUT if in experiment, they need to wait	
-			 */
-			clearWorkerForSession(id);
-			idToUsername.remove(id);
-		}
-		
-	}	
-
-	/**
-	 * Get the user name for a session
-	 * User name doesn't change unless HIT returned, so store the value
-	 * 
-	 * @param session
-	 * @return garbage if the user has no name
-	 */
-	public final String getUsername(HITWorkerImpl session) {
-		String username = session.getUsername();
-		if( username != null ) return username;
-				
-		return "User for " + session.getHitId();
-	}
 	
 }

@@ -5,6 +5,9 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.cometd.bayeux.server.ServerSession;
 
@@ -17,6 +20,10 @@ public class HITWorkerImpl implements HITWorker, HITWorkerGroup {
 	volatile WeakReference<ServerSession> cometdSession;
 	volatile Session record;
 	volatile ExperimentControllerImpl expCont;
+	
+	final AtomicInteger numDisconnects = new AtomicInteger();
+	final AtomicReference<Long> lastDisconnectTime = new AtomicReference<Long>();
+	final AtomicLong inactiveMillis = new AtomicLong();
 	
 	public HITWorkerImpl(ServerSession cometdSession, Session dbSession) {
 		this.cometdSession = new WeakReference<ServerSession>(cometdSession);
@@ -45,10 +52,13 @@ public class HITWorkerImpl implements HITWorker, HITWorkerGroup {
 	public String getWorkerId() {		
 		return record.getWorkerId();
 	}
-
+	
 	@Override
 	public String getUsername() {		
-		return record.getUsername();
+		String username = record.getUsername();				 
+		if( username != null ) return username;
+		
+		return "User for " + record.getHitId();
 	}
 
 	@Override
@@ -83,20 +93,66 @@ public class HITWorkerImpl implements HITWorker, HITWorkerGroup {
 		session.deliver(session, "/service/user", msg, null);
 	}
 
-	public void addInactiveTime(long inactiveTime) {
-		// TODO Auto-generated method stub		
+	/**
+	 * call when this worker has disconnected previous and reconnects
+	 * records the time since last disconnection, if any
+	 */
+	void reconnected() {
+		Long lastDisc = lastDisconnectTime.getAndSet(null);
+		
+		if( lastDisc == null ) {
+			System.out.println("reconnected but don't have record of last disconnect");
+			return;
+		}
+		
+		addInactiveTime( System.currentTimeMillis() - lastDisc );
+	}
+	
+	/**
+	 * call when this worker disconnects
+	 * records the time
+	 */
+	void disconnected() {
+		lastDisconnectTime.set(System.currentTimeMillis());
+		numDisconnects.incrementAndGet();
+	}
+	
+	/**
+	 * Add milliseconds of inactive time
+	 * @param millis
+	 */
+	void addInactiveTime(long millis) {
+		this.inactiveMillis.addAndGet(millis);	
+	}	
+	
+	/**
+	 * Call at the end of an experiment to finish any uncomputed values
+	 */
+	void finalizeActivity() {
+		if( !isConnected() ) {
+			Long lastDisc = lastDisconnectTime.get();
+			if( lastDisc == null ) {
+				System.out.println("not connected but don't have record of last disconnect");
+				return;
+			}
+			else if( lastDisc > expCont.expFinishTime ) {
+				System.out.println("ignoring last disconnect after experiment end");
+				return;
+			}
+			
+			addInactiveTime(expCont.expFinishTime - lastDisc);
+		}
+	}
+	
+	@Override
+	public int getLiveNumDisconnects() {		
+		return numDisconnects.get();
 	}
 
 	@Override
-	public int getLiveNumDisconnects() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
-	public double getLiveInactivePercent() {
-		// TODO Auto-generated method stub
-		return 0;
+	public double getLiveInactivePercent() {		
+		long totalTime = System.currentTimeMillis() - expCont.expStartTime;
+		return 1.0d * inactiveMillis.get() / totalTime;
 	}
 
 	@Override

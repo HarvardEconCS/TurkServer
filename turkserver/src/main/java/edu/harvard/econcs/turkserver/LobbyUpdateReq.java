@@ -9,6 +9,7 @@ import java.math.BigInteger;
  * @author mao
  *
  */
+@Deprecated
 public class LobbyUpdateReq extends UpdateReq {
 	private static final long serialVersionUID = -7376155581194101028L;
 	

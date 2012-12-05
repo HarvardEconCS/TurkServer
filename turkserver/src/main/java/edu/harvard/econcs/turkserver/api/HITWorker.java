@@ -17,7 +17,12 @@ public interface HITWorker {
 	String getAssignmentId();
 	
 	String getWorkerId();
-	
+		
+	/**
+	 * Get the user name for a session
+	 * User name doesn't change unless HIT returned, so value is stored
+	 * @return user name or a descriptor
+	 */
 	String getUsername();
 	
 	InetAddress getIPAddress();
@@ -31,7 +36,7 @@ public interface HITWorker {
 	int getLiveNumDisconnects();
 	
 	/**
-	 * Gets the amount of time inactive since the worker has started the time.
+	 * Gets the amount of time inactive since the worker has started an experiment.
 	 * @return
 	 */
 	double getLiveInactivePercent();

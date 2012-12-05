@@ -9,6 +9,7 @@ import java.util.Date;
 import java.util.List;
 
 import edu.harvard.econcs.turkserver.ExpServerException;
+import edu.harvard.econcs.turkserver.schema.Session;
 import edu.harvard.econcs.turkserver.server.SessionRecord;
 
 import org.apache.commons.configuration.ConfigurationException;
@@ -34,7 +35,7 @@ public class MySQLDataTrackerTest {
 		// To avoid unexpected lost data
 		ds.setStrictUpdates(false);	
 		
-		dt = new MySQLDataTracker(ds, "test", null, 2, 2);
+		dt = new MySQLDataTracker(ds, "test");
 		
 	}
 	
@@ -61,7 +62,7 @@ public class MySQLDataTrackerTest {
 		assertFalse(dt.hitCompletedInDB(hitID));		
 		
 		// Check that sessionIDs stored properly 
-		List<SessionRecord> srs = dt.getSetSessionInfoForWorker(workerId);
+		List<Session> srs = dt.getSetSessionInfoForWorker(workerId);
 		assertTrue(srs.size() == 1);
 		assertEquals(srs.iterator().next().getHitId(), hitID);
 		

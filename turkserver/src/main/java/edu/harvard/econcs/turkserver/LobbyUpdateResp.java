@@ -6,6 +6,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
+@Deprecated
 public class LobbyUpdateResp extends SrvUpdate {
 	private static final long serialVersionUID = 6705096860630116385L;
 		

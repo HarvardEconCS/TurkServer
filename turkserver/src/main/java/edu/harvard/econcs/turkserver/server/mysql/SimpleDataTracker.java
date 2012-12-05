@@ -17,10 +17,14 @@ import edu.harvard.econcs.turkserver.SessionOverlapException;
 import edu.harvard.econcs.turkserver.SessionUnknownException;
 import edu.harvard.econcs.turkserver.SimultaneousSessionsException;
 import edu.harvard.econcs.turkserver.TooManySessionsException;
+import edu.harvard.econcs.turkserver.schema.Session;
 import edu.harvard.econcs.turkserver.server.SessionRecord;
 import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
 
 /**
+ * deprecated in favor of single data tracker.
+ * kept here as a reference of authentication method.
+ * 
  * @author mao
  *
  */
@@ -57,7 +61,7 @@ public abstract class SimpleDataTracker {
 	public abstract void saveSessionLog(String hitId, String data);
 
 	
-	public final LoginStatus registerAssignment(String hitID,
+	public final void registerAssignment(String hitID,
 			String assignmentId, String workerId) throws ExpServerException {
 		
 		if( !sessionExistsInDB(hitID) )	{
@@ -72,11 +76,11 @@ public abstract class SimpleDataTracker {
 			throw new SessionUnknownException();
 		}
 
-		SessionRecord sessionRec = getStoredSessionInfo(hitID);
+		Session sessionRec = getStoredSessionInfo(hitID);
 		// This will not be null if this session was disconnected after already accepting
 		String prevWorkerId = sessionRec.getWorkerId();
 
-		List<SessionRecord> allWorkerSessions = getSetSessionInfoForWorker(workerId);
+		List<Session> allWorkerSessions = getSetSessionInfoForWorker(workerId);
 
 		/*
 		 * Check if this person has taken too many assignments for this set
@@ -84,8 +88,9 @@ public abstract class SimpleDataTracker {
 		if( allWorkerSessions != null && allWorkerSessions.size() > 0 ) {
 			// Count how many sessions they have taken so far
 			int currentlyAssigned = 0;			
-			for( SessionRecord otherRec : allWorkerSessions ) {								
-				if ( otherRec.getStatus() != SessionStatus.COMPLETED ) currentlyAssigned++;
+			for( Session otherRec : allWorkerSessions ) {								
+				if ( SessionRecord.status(otherRec) != SessionStatus.COMPLETED ) 
+					currentlyAssigned++;
 			}				
 
 			logger.info(
@@ -110,13 +115,14 @@ public abstract class SimpleDataTracker {
 			/* This session already had a previous assignment and 
 			 * it was assigned to this worker, must be a reconnect
 			 */				
-			if( sessionRec.getStatus() == SessionStatus.COMPLETED ) 
+			if( SessionRecord.status(sessionRec) == SessionStatus.COMPLETED ) 
 				throw new SessionCompletedException();
 
 			logger.info(String.format("HIT %s (with assignment %s) by worker %s is reconnecting",
 					hitID, assignmentId, workerId));
 			
-			return LoginStatus.REGISTERED;
+			
+			return; // LoginStatus.REGISTERED;
 		}			
 		else {
 			// Not reconnection from the same person
@@ -124,7 +130,7 @@ public abstract class SimpleDataTracker {
 			if( prevWorkerId != null ) {
 				// Connection was from someone else 
 
-				if( sessionRec.getStatus() == SessionStatus.COMPLETED ) {
+				if( SessionRecord.status(sessionRec) == SessionStatus.COMPLETED ) {
 					// TODO we can probably just re-appropriate the HIT here
 
 					logger.info(String.format("HIT %s was completed with worker %s," +
@@ -145,7 +151,7 @@ public abstract class SimpleDataTracker {
 
 			// First connection	for this assignment (but multiple from worker should be caught above)		
 			saveAssignmentForSession(hitID, assignmentId, workerId);
-			return LoginStatus.NEW_USER;
+			return; // LoginStatus.NEW_USER;
 		}
 	}
 
@@ -153,9 +159,9 @@ public abstract class SimpleDataTracker {
 	protected abstract void saveAssignmentForSession(String hitID, String assignmentId,
 			String workerId);
 
-	protected abstract List<SessionRecord> getSetSessionInfoForWorker(String workerId);
+	protected abstract List<Session> getSetSessionInfoForWorker(String workerId);
 
-	protected abstract SessionRecord getStoredSessionInfo(String hitID);
+	protected abstract Session getStoredSessionInfo(String hitID);
 
 	protected abstract boolean sessionCompletedInDB(String hitID);
 
@@ -171,6 +177,6 @@ public abstract class SimpleDataTracker {
 	}
 
 	
-	public abstract List<SessionRecord> expireUnusedSessions();
+	public abstract List<Session> expireUnusedSessions();
 
 }

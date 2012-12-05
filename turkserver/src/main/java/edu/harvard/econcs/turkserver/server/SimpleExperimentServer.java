@@ -41,16 +41,21 @@ public final class SimpleExperimentServer extends SessionServer {
 	}	
 
 	@Override
-	protected HITWorkerImpl sessionAccept(ServerSession client, 
+	protected HITWorkerImpl sessionAccept(ServerSession session, 
 			String hitId, String assignmentId, String workerId) {
 		
 		/*
 		 * At this point, the session is successfully authenticated, so we create an experiment
 		 * TODO match up with in-progress experiments at some point 
 		 */
-		HITWorkerImpl hitw = super.sessionAccept(client, hitId, assignmentId, workerId);
+		HITWorkerImpl hitw = super.sessionAccept(session, hitId, assignmentId, workerId);
 
-		ExperimentControllerImpl exp = experiments.startSingle(hitw, bayeux);
+		if( experiments.workerIsInProgress(hitw) ) {
+			super.sessionReconnect(session, hitw);			
+		}
+		else {
+			ExperimentControllerImpl exp = experiments.startSingle(hitw);	
+		}				
 		
 		return hitw;
 	}

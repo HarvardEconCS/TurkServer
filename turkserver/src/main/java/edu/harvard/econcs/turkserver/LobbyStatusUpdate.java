@@ -4,7 +4,7 @@ import java.math.BigInteger;
 
 import edu.harvard.econcs.turkserver.Update.CliUpdate;
 
-
+@Deprecated
 public class LobbyStatusUpdate extends CliUpdate {	
 
 	private static final long serialVersionUID = -1975999707703711064L;

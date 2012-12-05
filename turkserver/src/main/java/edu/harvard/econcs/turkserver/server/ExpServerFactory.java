@@ -21,7 +21,7 @@ public abstract class ExpServerFactory<T> implements Runnable {
 	 * @return
 	 * @throws ExperimentFactoryException
 	 */
-	public abstract T getNewExperiment(HostServer host, ConcurrentHashMap<String, Boolean> clients)
+	public abstract T getNewExperiment(GroupServer host, ConcurrentHashMap<String, Boolean> clients)
 	throws ExperimentFactoryException;
 		
 	public abstract int getExperimentSize();
@@ -30,7 +30,7 @@ public abstract class ExpServerFactory<T> implements Runnable {
 	 * Init method which can register serializers, etc
 	 * @param host
 	 */
-	public abstract void doInit(HostServer host);
+	public abstract void doInit(GroupServer host);
 	
 	/**
 	 * Default run method, which does nothing.

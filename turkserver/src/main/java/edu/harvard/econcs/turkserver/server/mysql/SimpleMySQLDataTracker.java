@@ -4,11 +4,13 @@
 package edu.harvard.econcs.turkserver.server.mysql;
 
 import java.net.InetAddress;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Date;
 import java.util.List;
 
 import org.apache.commons.dbutils.QueryRunner;
+import org.apache.commons.dbutils.handlers.AbstractListHandler;
 import org.apache.commons.dbutils.handlers.ArrayListHandler;
 import org.apache.commons.dbutils.handlers.ColumnListHandler;
 import org.apache.commons.dbutils.handlers.ScalarHandler;
@@ -16,6 +18,7 @@ import org.apache.commons.dbutils.handlers.ScalarHandler;
 import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 
 import edu.harvard.econcs.turkserver.SessionExpiredException;
+import edu.harvard.econcs.turkserver.schema.Session;
 import edu.harvard.econcs.turkserver.server.SessionRecord;
 import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
 
@@ -23,6 +26,7 @@ import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
  * @author mao
  *
  */
+@Deprecated
 public class SimpleMySQLDataTracker extends SimpleDataTracker {
 	
 	private final String setID;	
@@ -36,7 +40,13 @@ public class SimpleMySQLDataTracker extends SimpleDataTracker {
 	static final StringListHandler defaultIdHandler = new StringListHandler("hitId");
 	static final StringListHandler defaultDataHandler = new StringListHandler("data");
 		
-	static final SessionRecordListHandler sessionHandler = new SessionRecordListHandler();
+	static final AbstractListHandler<Session> sessionHandler = new AbstractListHandler<Session>() {
+		@Override
+		protected Session handleRow(ResultSet rs) throws SQLException {
+			// TODO remove all this stuff
+			return null;
+		}		
+	};
 	
 	public SimpleMySQLDataTracker(MysqlConnectionPoolDataSource ds, String setID,
 			int simultaneousSessionLimit, int totalSetLimit) {
@@ -144,14 +154,14 @@ public class SimpleMySQLDataTracker extends SimpleDataTracker {
 
 	@Override
 	public boolean sessionCompletedInDB(String hitID) {
-		SessionRecord sr = getStoredSessionInfo(hitID);
+		Session sr = getStoredSessionInfo(hitID);
 		
-		return (sr != null && (sr.getStatus() == SessionStatus.COMPLETED));
+		return (sr != null && (SessionRecord.status(sr) == SessionStatus.COMPLETED));
 	}
 
 	@Override
-	public List<SessionRecord> getSetSessionInfoForWorker(String workerId) {
-		List<SessionRecord> results = null;
+	public List<Session> getSetSessionInfoForWorker(String workerId) {
+		List<Session> results = null;
 		
 		try {
 			// This should be quick because workerId is indexed as a foreign key
@@ -188,8 +198,8 @@ public class SimpleMySQLDataTracker extends SimpleDataTracker {
 	}
 	
 	@Override
-	public SessionRecord getStoredSessionInfo(String hitID) {
-		List<SessionRecord> result = null;
+	public Session getStoredSessionInfo(String hitID) {
+		List<Session> result = null;
 		
 		try {
 			result = qr.query("SELECT * FROM session WHERE hitId=?",
@@ -258,8 +268,8 @@ public class SimpleMySQLDataTracker extends SimpleDataTracker {
 	}
 
 	@Override
-	public List<SessionRecord> expireUnusedSessions() {		
-		List<SessionRecord> expired = null;
+	public List<Session> expireUnusedSessions() {		
+		List<Session> expired = null;
 		
 		// TODO replace this with better sql
 		try {

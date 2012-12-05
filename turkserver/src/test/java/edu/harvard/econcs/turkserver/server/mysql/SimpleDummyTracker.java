@@ -14,8 +14,9 @@ import net.andrewmao.misc.ConcurrentBooleanCounter;
 import org.apache.commons.collections.map.MultiValueMap;
 
 import edu.harvard.econcs.turkserver.SessionExpiredException;
-import edu.harvard.econcs.turkserver.server.SessionRecord;
+import edu.harvard.econcs.turkserver.schema.Session;
 
+@Deprecated
 public class SimpleDummyTracker extends SimpleDataTracker {
 
 	private ConcurrentBooleanCounter<String> usedIDs;	
@@ -47,12 +48,12 @@ public class SimpleDummyTracker extends SimpleDataTracker {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public List<SessionRecord> getSetSessionInfoForWorker(String workerId) {
+	public List<Session> getSetSessionInfoForWorker(String workerId) {
 		Collection<String> sessions =
 				(Collection<String>) workerIdToSessions.get(workerId);
 		if( sessions == null ) return null;
 		
-		List<SessionRecord> srs = new ArrayList<SessionRecord>(sessions.size());		
+		List<Session> srs = new ArrayList<Session>(sessions.size());		
 		for( String bi : sessions ) srs.add(getStoredSessionInfo(bi));
 
 		return srs;
@@ -65,9 +66,9 @@ public class SimpleDummyTracker extends SimpleDataTracker {
 	}
 
 	@Override
-	public SessionRecord getStoredSessionInfo(String sessionID) {
+	public Session getStoredSessionInfo(String sessionID) {
 		// Obviously, this is missing most of the stuff, but who cares for now
-		SessionRecord sr = new SessionRecord();
+		Session sr = new Session();
 		
 		sr.setHitId(sessionID);
 		sr.setAssignmentId(idToAssignmentId.get(sessionID));		
@@ -109,9 +110,9 @@ public class SimpleDummyTracker extends SimpleDataTracker {
 	}
 
 	@Override
-	public List<SessionRecord> expireUnusedSessions() {
+	public List<Session> expireUnusedSessions() {
 		logger.warning("Expiring HITs not yet implemented in dummy tracker");
-		return new LinkedList<SessionRecord>();
+		return new LinkedList<Session>();
 	}
 
 }

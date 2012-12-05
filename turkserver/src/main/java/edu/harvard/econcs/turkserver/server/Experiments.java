@@ -5,10 +5,11 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
-import org.cometd.bayeux.server.BayeuxServer;
 import org.cometd.bayeux.server.ConfigurableServerChannel;
+import org.cometd.bayeux.server.LocalSession;
 import org.cometd.bayeux.server.ServerChannel;
 import org.cometd.bayeux.server.ConfigurableServerChannel.Initializer;
+import org.cometd.server.BayeuxServerImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +34,9 @@ import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 public class Experiments {
 	// Injector for creating bean classes
 	@Inject Injector injector;
+		
+	@Inject BayeuxServerImpl bayeux;	
+	@Inject SessionServer server;
 	
 	protected final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 	
@@ -83,7 +87,7 @@ public class Experiments {
 		return 0;
 	}
 
-	ExperimentControllerImpl startSingle(final HITWorkerImpl hitw, BayeuxServer bayeux) {
+	ExperimentControllerImpl startSingle(final HITWorkerImpl hitw) {
 
 		/*
 		 * TODO fix this injection pattern to work properly!
@@ -117,19 +121,22 @@ public class Experiments {
 		manager.processExperiment(expId, experimentBean);
 				
 		// Initialize controller, which also initializes the log
-		cont.initialize(startTime, expId, expChannel, bayeux.newLocalSession(expId));		
+		LocalSession ls = bayeux.newLocalSession(expId);
+		ls.handshake();
+		cont.initialize(startTime, expId, inputData, expChannel, ls);
 		
 		// Start experiment and record time
 		mapWorkers(hitw, expId);
-		tracker.newExperimentStarted(expId, hitw, cont.getStartTime());
+		tracker.newExperimentStarted(cont);
 		manager.triggerStart(expId);				
 		
 		return cont;
 	}
 	
-	ExperimentControllerImpl startGroup(final HITWorkerGroupImpl group, BayeuxServer bayeux) {
+	ExperimentControllerImpl startGroup(final HITWorkerGroupImpl group) {
 		
 		// TODO initialize bean
+		ExperimentControllerImpl cont = null;
 		Object experimentBean = null;
 		
 		// Create a unique ID for an experiment, based on current timestamp
@@ -151,7 +158,7 @@ public class Experiments {
 		/* Update tracking information for experiment
 		 * TODO does this start directing requests to the server before it's started?
 		 */
-		tracker.newExperimentStarted(expId, group, startTime);
+		tracker.newExperimentStarted(cont);
 		
 		// Starting the experiment sends out the appropriate notifications to clients
 		manager.triggerStart(expId);		
@@ -269,10 +276,10 @@ public class Experiments {
 	
 	void finishExperimentOld(ExperimentControllerImpl cont) {
 		
-		tracker.experimentFinished(cont.getExpId(), cont.group, cont.expFinishTime);
+		tracker.experimentFinished(cont);
 		
 		// TODO notify the GUI stuff		
-		serverGUI.finishedExperiment(cont);				
+//		serverGUI.finishedExperiment(cont);				
 		
 		// unsubscribe from and/or remove channels
 		ServerChannel toRemove = null;
@@ -283,20 +290,15 @@ public class Experiments {
 			toRemove.setPersistent(false);
 		}
 		
+		/*
+		 * TODO fix all this old-ass code and merge with above 
+		 */
+		
 		// Tell clients they are done!
 		for( HITWorker id : cont.group.getHITWorkers() )			
-			sendStatus(id, Codec.doneExpMsg);	
+			SessionUtils.sendStatus(((HITWorkerImpl) id).cometdSession.get(), Codec.doneExpMsg);	
 		
-		if( completedHITs.addAndGet(expServer.clients.keySet().size()) >= hitGoal ) {
-			logger.info("Goal of " + hitGoal + " users reached!");
-			
-			if( turkHITs != null ) turkHITs.expireRemainingHITs();
-			
-			// Only notify people in experiment, not lobby (experiment people need to submit)
-			for( String id : lobbyStatus.keySet() )
-				sendStatus(id, Codec.batchFinishedMsg);
-			
-			// TODO quit the thread in this case
-		}
+		// TODO remove this dependency
+		server.groupCompleted(cont.group);				
 	}
 }

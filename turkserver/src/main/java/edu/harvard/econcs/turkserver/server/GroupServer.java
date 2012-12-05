@@ -27,7 +27,7 @@ import net.andrewmao.misc.ConcurrentBooleanCounter;
  *
  */
 @Singleton
-public final class HostServer extends SessionServer {
+public final class GroupServer extends SessionServer {
 	
 	final boolean requireUsernames;
 	final boolean debugMode;
@@ -49,7 +49,7 @@ public final class HostServer extends SessionServer {
 	private ServerFrame serverGUI;
 	
 	@Inject
-	public HostServer(			
+	public GroupServer(			
 			ExperimentDataTracker tracker,
 			TurkHITManager thm,
 			WorkerAuthenticator workerAuth,
@@ -64,7 +64,7 @@ public final class HostServer extends SessionServer {
 		this.debugMode = config.getBoolean(TSConfig.SERVER_DEBUGMODE);
 		this.lobbyEnabled = config.getBoolean(TSConfig.SERVER_LOBBY);
 		
-        lobbyServlet = context.addServlet(HostServlet.class, "/exp");  
+        lobbyServlet = context.addServlet(GroupServlet.class, "/exp");  
         lobbyServlet.setInitOrder(3);  										
 				
 		lobbyStatus = new ConcurrentBooleanCounter<HITWorkerImpl>();				
@@ -88,21 +88,13 @@ public final class HostServer extends SessionServer {
 					"status", Codec.usernameNeeded
 					);			
 			
-			super.sendServiceMsg(session, data);
+			SessionUtils.sendServiceMsg(session, data);
 		}		
 		
 		// Check if we should reconnect this HITWorker to an existing experiment
 		if( experiments.workerIsInProgress(hitw) ) {
 									
-			Map<String, String> data = ImmutableMap.of(
-					"status", Codec.connectExpAck,
-					"channel", Codec.expChanPrefix + hitw.expCont.expChannel
-					);
-
-			super.sendServiceMsg(session, data);							
-
-			// experiment should send state to user with this callback
-			experiments.workerReconnected(hitw);
+			sessionReconnect(session, hitw);
 			
 		} 
 		else if( debugMode ) {
@@ -119,13 +111,25 @@ public final class HostServer extends SessionServer {
 					"status", Codec.connectLobbyAck					
 					);
 			
-			super.sendServiceMsg(session, data);
+			SessionUtils.sendServiceMsg(session, data);
 			
 			logger.info(String.format("%s (%s) connected to lobby",	
 					hitId, hitw.getUsername()));
 		}
 		
 		return hitw;
+	}
+
+	@Override
+	void sessionReconnect(ServerSession session, HITWorkerImpl hitw) {
+		Map<String, String> data = ImmutableMap.of(
+				"status", Codec.connectExpAck,
+				"channel", Codec.expChanPrefix + hitw.expCont.expChannel
+				);
+
+		SessionUtils.sendServiceMsg(session, data);							
+
+		super.sessionReconnect(session, hitw);
 	}
 
 	/**
@@ -234,7 +238,7 @@ public final class HostServer extends SessionServer {
 			}
 		}		
 		
-		ExperimentControllerImpl exp = experiments.startGroup(expClients, bayeux);
+		ExperimentControllerImpl exp = experiments.startGroup(expClients);
 		
 		serverGUI.newExperiment(exp);	
 		
@@ -249,7 +253,20 @@ public final class HostServer extends SessionServer {
 		for( HITWorker id : expClients.getHITWorkers()) 
 			lobbyStatus.remove((HITWorkerImpl) id);
 	}
-	
+		
+	@Override
+	boolean groupCompleted(HITWorkerGroup group) {
+		boolean completed;
+		
+		if ( completed = super.groupCompleted(group) ) {
+			// Only notify people in lobby, not (experiment people need to submit)
+			for( HITWorkerImpl worker : lobbyStatus.keySet() )
+				SessionUtils.sendStatus(worker.cometdSession.get(), Codec.batchFinishedMsg);
+		}
+		
+		return completed;
+	}
+
 	@Override
 	protected void runServerInit() {		
 		lobbyBroadcaster = bayeux.newLocalSession("lobby");

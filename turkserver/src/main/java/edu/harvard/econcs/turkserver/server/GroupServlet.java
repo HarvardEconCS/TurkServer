@@ -14,17 +14,17 @@ import org.cometd.server.authorizer.GrantAuthorizer;
 
 import edu.harvard.econcs.turkserver.Codec;
 
-public class HostServlet extends SessionServlet {
+public class GroupServlet extends SessionServlet {
 
 	private static final long serialVersionUID = 8755450296324273985L;
 	
-	protected HostServer theServer;
+	protected GroupServer theServer;
 	
 	@Override
 	public void init() throws ServletException {		
 		super.init();
 		
-		theServer = (HostServer) getServletContext().getAttribute(SessionServer.ATTRIBUTE);
+		theServer = (GroupServer) getServletContext().getAttribute(SessionServer.ATTRIBUTE);
 		
 		processor.process(new LobbyService());
 		
@@ -81,9 +81,6 @@ public class HostServlet extends SessionServlet {
 			
 		}
 		
-
-
 	}	
-
 
 }

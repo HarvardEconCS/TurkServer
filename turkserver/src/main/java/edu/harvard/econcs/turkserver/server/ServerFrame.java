@@ -36,7 +36,7 @@ public class ServerFrame extends JFrame implements ActionListener {
 	private static final String runningExpsText = "Running Experiments: ";
 	private static final String doneExpsText = "Completed Experiments: ";
 	
-	private final HostServer hostServer;
+	private final GroupServer hostServer;
 	
 	private JTextField statusMsg;
 	
@@ -54,7 +54,7 @@ public class ServerFrame extends JFrame implements ActionListener {
 	
 	private Timer timeTicker;
 	
-	public ServerFrame(HostServer host) {
+	public ServerFrame(GroupServer host) {
 		super("Experiment Monitor");
 		this.hostServer = host;
 		

@@ -1,7 +1,6 @@
 package edu.harvard.econcs.turkserver.server;
 
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -53,8 +52,10 @@ import edu.harvard.econcs.turkserver.SessionOverlapException;
 import edu.harvard.econcs.turkserver.SimultaneousSessionsException;
 import edu.harvard.econcs.turkserver.TooManyFailsException;
 import edu.harvard.econcs.turkserver.TooManySessionsException;
+import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
 import edu.harvard.econcs.turkserver.mturk.TurkHITManager;
 import edu.harvard.econcs.turkserver.schema.Session;
+import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 
 @Singleton
@@ -263,23 +264,23 @@ public abstract class SessionServer implements Runnable {
 			workerAuth.checkHITValid(hitId, workerId);				
 		}
 		catch (SessionCompletedException e) {
-			sendStatus(session, "completed", Messages.SESSION_COMPLETED);
+			SessionUtils.sendStatus(session, "completed", Messages.SESSION_COMPLETED);
 			logger.info("Client connected to experiment after completion: "	+ hitId.toString());
 			return null;
 		} catch (SessionOverlapException e) {
-			sendStatus(session, null, Messages.SESSION_OVERLAP);
+			SessionUtils.sendStatus(session, null, Messages.SESSION_OVERLAP);
 			return null;
 		}
 		
 		try {
 			workerAuth.checkWorkerLimits(hitId, assignmentId, workerId);
 		} catch (SimultaneousSessionsException e) {			
-			sendStatus(session, null, 
+			SessionUtils.sendStatus(session, null, 
 					"There is another HIT registered to you right now. Look for it in your dashboard. " +
 					"If you returned that HIT, please try participating later.");
 			return null;
 		} catch (TooManySessionsException e) {			
-			sendStatus(session, null, 
+			SessionUtils.sendStatus(session, null, 
 					"You've already done enough for today. " +
 					"Please return this HIT and come back tomorrow.");
 			return null;
@@ -295,12 +296,12 @@ public abstract class SessionServer implements Runnable {
 							"quiz", qm.toData()
 							);			
 					
-					sendServiceMsg(session, data);									
+					SessionUtils.sendServiceMsg(session, data);									
 				}				
 				return null;
 			}
 		} catch (TooManyFailsException e) {			
-			sendStatus(session, null, 
+			SessionUtils.sendStatus(session, null, 
 					"Sorry, you've failed the quiz too many times. " +
 					"Please return this HIT and try again later.");
 			return null;
@@ -336,16 +337,16 @@ public abstract class SessionServer implements Runnable {
 		} catch (ExpServerException e) {		
 
 			if (e instanceof SessionExpiredException ) {					
-				sendStatus(session, null, Messages.EXPIRED_SESSION);
+				SessionUtils.sendStatus(session, null, Messages.EXPIRED_SESSION);
 
 				logger.warn("Unexpected connection on expired session: " + hitId.toString());
 			}
 			else if (e instanceof SessionOverlapException ) {
-				sendStatus(session, null, Messages.SESSION_OVERLAP);
+				SessionUtils.sendStatus(session, null, Messages.SESSION_OVERLAP);
 			}
 
 			else {
-				sendStatus(session, null, "Unknown Error: " + e.toString());
+				SessionUtils.sendStatus(session, null, "Unknown Error: " + e.toString());
 			}				
 		}
 		
@@ -365,22 +366,43 @@ public abstract class SessionServer implements Runnable {
 		
 		if( workerId != null ) {
 			int additional = workerAuth.getSetLimit() - tracker.getSetSessionInfoForWorker(workerId).size();		
-			sendStatus(session, "completed", "Thanks for your work! You may do " + additional + " more HITs in this session.");
+			SessionUtils.sendStatus(session, "completed", 
+					"Thanks for your work! You may do " + additional + " more HITs in this session.");
 		}
 		else {
 			logger.warn("No workerId metadata recorded for completed session {}", session.getId());
 		}
 	}
 
+	void sessionReconnect(ServerSession session, HITWorkerImpl hitw) {
+		// experiment should send state to user with this callback
+		experiments.workerReconnected(hitw);
+		hitw.reconnected();
+	}
+	
 	void sessionDisconnect(ServerSession session) {
 		HITWorkerImpl worker = clientToHITWorker.get(session);				
 		if( worker != null ) {
 			experiments.workerDisconnected(worker);
+			worker.disconnected();
 		}
 		
 		String workerHitId = worker == null ? null : worker.getHitId(); 				
 		if( workerHitId != null ) {
-			tracker.sessionDisconnected(workerHitId);
+			/* 
+			 * TODO user can accept a hit then close window, but this is the same thing as 
+			 * accepting multiple hits, holding and refreshing
+			 * Fix with a notification receptor later.  
+			 */
+			if( !(experiments.workerIsInProgress(worker) || 
+					SessionRecord.status(worker.record) == SessionStatus.COMPLETED) ) {
+				/* If disconnected from lobby or earlier, clear session from worker Id list
+				 * also clear the username that was stored from worker
+				 * 
+				 * BUT if in experiment, they need to wait	
+				 */
+				tracker.clearWorkerForSession(workerHitId);
+			}
 		}
 		
 		String sessionHitId = (String) session.getAttribute("hitId");		
@@ -389,32 +411,6 @@ public abstract class SessionServer implements Runnable {
 			logger.error("Session and worker HIT IDs don't match for {}", session.getId());
 		}
 		
-	}
-
-	void sendStatus(ServerSession session, String status, String msg) {
-		Map<String, Object> errorMap = new HashMap<String, Object>();
-		
-		if( status != null ) errorMap.put("status", status);
-		else errorMap.put("status", Codec.connectErrorAck);
-		
-		errorMap.put("msg", msg);
-						
-		sendServiceMsg(session, errorMap);
-	}
-	
-	void sendStatus(ServerSession session, String status) {
-		Map<String, String> data = null;
-		
-		if( status != null ) 
-			data = ImmutableMap.of("status", status);
-		else
-			data = ImmutableMap.of("status", Codec.connectErrorAck);				
-						
-		sendServiceMsg(session, data);
-	}
-	
-	void sendServiceMsg(ServerSession session, Object data) {
-		session.deliver(session, "/service/user", data, null);
 	}
 	
 	void rcvQuizResults(ServerSession session, QuizResults qr) {
@@ -432,10 +428,10 @@ public abstract class SessionServer implements Runnable {
 			/* TODO quiz passed? allow lobby login
 			 * careful - this assumes that quiz always precedes username
 			 */
-			sendStatus(session, "username");	
+			SessionUtils.sendStatus(session, "username");	
 		}
 		else {
-			sendStatus(session, "quizfail");	
+			SessionUtils.sendStatus(session, "quizfail");	
 		}		
 	}
 
@@ -463,6 +459,24 @@ public abstract class SessionServer implements Runnable {
 		
 		if( worker != null ) return experiments.rcvBroadcastMsg(worker, dataAsMap);
 		else logger.warn("Message from unrecognized client: {}", session.getId());
+		
+		return false;
+	}
+
+	/**
+	 * A group of workers has completed their tasks.
+	 * @param group
+	 * @return whether the server should shut down
+	 */
+	boolean groupCompleted(HITWorkerGroup group) {
+		if( completedHITs.addAndGet(group.groupSize()) >= hitGoal ) {
+			logger.info("Goal of " + hitGoal + " users reached!");
+			
+			if( turkHITs != null ) turkHITs.expireRemainingHITs();			
+			
+			// TODO quit the thread in this case
+			return true;
+		}
 		
 		return false;
 	}

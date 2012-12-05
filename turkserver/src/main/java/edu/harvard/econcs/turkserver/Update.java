@@ -10,7 +10,7 @@ import java.math.BigInteger;
  * @author Mao
  *
  */
-
+@Deprecated
 public abstract class Update implements Serializable {	
 	private static final long serialVersionUID = -6290198687173188123L;
 	

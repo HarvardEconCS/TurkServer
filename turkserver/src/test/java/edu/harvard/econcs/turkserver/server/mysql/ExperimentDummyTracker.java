@@ -1,10 +1,10 @@
 package edu.harvard.econcs.turkserver.server.mysql;
 
 import edu.harvard.econcs.turkserver.QuizResults;
-import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
 import edu.harvard.econcs.turkserver.schema.Experiment;
 import edu.harvard.econcs.turkserver.schema.Quiz;
 import edu.harvard.econcs.turkserver.schema.Session;
+import edu.harvard.econcs.turkserver.server.ExperimentControllerImpl;
 import edu.harvard.econcs.turkserver.server.HITWorkerImpl;
 
 import java.math.BigInteger;
@@ -18,7 +18,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import net.andrewmao.misc.ConcurrentBooleanCounter;
-import net.andrewmao.misc.Utils;
 
 import org.apache.commons.collections.map.MultiValueMap;
 
@@ -55,17 +54,17 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 	}
 	
 	@Override
-	public void newExperimentStarted(String expId, HITWorkerGroup group, long startTime) {
-		experiments.put(expId, false);
+	public void newExperimentStarted(ExperimentControllerImpl cont) {
+		experiments.put(cont.getExpId(), false);
 		
-		super.newExperimentStarted(expId, group, startTime);
+		super.newExperimentStarted(cont);
 	}
 	
 	@Override
-	public void experimentFinished(String expId, HITWorkerGroup group, long endTime) {
-		super.experimentFinished(expId, group, endTime);
+	public void experimentFinished(ExperimentControllerImpl cont) {
+		super.experimentFinished(cont);
 		
-		experiments.put(expId, true);
+		experiments.put(cont.getExpId(), true);
 	}
 
 	@Override
@@ -132,13 +131,13 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	public void saveQuizResults(HITWorkerImpl session, QuizResults qr) {
+	public void saveQuizResults(String hitId, String workerId, QuizResults qr) {		
 		logger.info(String.format("Session %s got %d out of %d correct", 
-				session, qr.correct, qr.total));
+				hitId, qr.correct, qr.total));
 	}
 
 	@Override
-	protected void saveUsername(HITWorkerImpl session, String username) {
+	public void saveUsername(HITWorkerImpl session, String username) {
 		super.saveUsername(session, username);
 		
 		logger.info(String.format("test: %s registered username '%s'", 
@@ -154,8 +153,9 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	protected void saveExpStartTime(String expId, long startTime) {
-		logger.info(String.format(expId + " started at " + new Date(startTime)));		
+	protected void saveExpStartTime(String expId, int groupsize, String inputData, long startTime) {
+		logger.info(
+				String.format("%s(%d), %s, started at %s", expId, groupsize, inputData, new Date(startTime)));		
 	}
 
 	@Override
@@ -182,7 +182,7 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 	
 	@SuppressWarnings("rawtypes")
 	@Override
-	protected void clearWorkerForSession(String id) {
+	public void clearWorkerForSession(String id) {
 		// TODO Make this more efficient, although it is so in the DB implementation
 		
 		for( Object worker : workerIdToSessions.keySet() ) {
