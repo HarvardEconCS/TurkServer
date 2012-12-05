@@ -9,6 +9,8 @@ import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Comparator;
+
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
@@ -34,11 +36,11 @@ public class ServerFrame extends JFrame implements ActionListener {
 	private static final String runningExpsText = "Running Experiments: ";
 	private static final String doneExpsText = "Completed Experiments: ";
 	
-	private final HostServer<?> hostServer;
+	private final HostServer hostServer;
 	
 	private JTextField statusMsg;
 	
-	private SortedListModel<String> userListModel;
+	private SortedListModel<HITWorkerImpl> userListModel;
 	
 	private DefaultListModel runningExpModel;
 	private JList runningExpList;
@@ -52,7 +54,7 @@ public class ServerFrame extends JFrame implements ActionListener {
 	
 	private Timer timeTicker;
 	
-	public ServerFrame(HostServer<?> host) {
+	public ServerFrame(HostServer host) {
 		super("Experiment Monitor");
 		this.hostServer = host;
 		
@@ -86,7 +88,7 @@ public class ServerFrame extends JFrame implements ActionListener {
 		
 		currentUsers = new JLabel();
 		lobbyPanel.add(currentUsers);
-		userListModel = new SortedListModel<String>(host.new UsernameComparator());
+		userListModel = new SortedListModel<HITWorkerImpl>(new UsernameComparator());
 		JList userList = new JList(userListModel);
 		userList.setCellRenderer(new ServerLobbyCellRenderer());
 		lobbyPanel.add(new JScrollPane(userList));
@@ -173,9 +175,9 @@ public class ServerFrame extends JFrame implements ActionListener {
 			Boolean b = hostServer.lobbyStatus.get(value); 
 			if( b != null) setIcon( b == true ? Lobby.ready : Lobby.notReady );
 			
-			String id = (String) value;
+			HITWorkerImpl id = (HITWorkerImpl) value;
 			
-			setText( hostServer.tracker.getUsername(id) );
+			setText( id.getUsername() );
 			// TODO render textual messages
 			
 			setEnabled(true); // not list.isEnabled()); otherwise the icon won't draw
@@ -186,10 +188,10 @@ public class ServerFrame extends JFrame implements ActionListener {
 		}		
 	}
 
-	public void newExperiment(final ExperimentServer<?> exp) {
+	public void newExperiment(final ExperimentControllerImpl exp) {
 		SwingUtilities.invokeLater(new Runnable() {
 			public void run() {				
-				runningExpsLabel.setText(runningExpsText + hostServer.tracker.getNumExpsRunning());
+				runningExpsLabel.setText(runningExpsText + hostServer.experiments.getNumInProgress());
 				runningExpModel.addElement(exp);				
 			}			
 		});
@@ -201,11 +203,11 @@ public class ServerFrame extends JFrame implements ActionListener {
 		@Override
 		public Component getListCellRendererComponent(JList list, Object value,
 				int index, boolean isSelected, boolean cellHasFocus) {
-			ExperimentServer<?> exp = (ExperimentServer<?>) value;
+			ExperimentControllerImpl exp = (ExperimentControllerImpl) value;
 			
 			setText( String.format("%s %s (%d)",
 					Utils.paddedClockString(System.currentTimeMillis() - exp.expStartTime), 
-					exp.toString(), exp.clients.size()
+					exp.toString(), exp.group.groupSize()
 					));			
 			
 			setEnabled(true); // not list.isEnabled()); otherwise the icon won't draw
@@ -217,16 +219,30 @@ public class ServerFrame extends JFrame implements ActionListener {
 	
 	}
 
-	public void finishedExperiment(final ExperimentServer<?> exp) {
+	public void finishedExperiment(final ExperimentControllerImpl exp) {
 		SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
-				runningExpsLabel.setText(runningExpsText + hostServer.tracker.getNumExpsRunning());
+				runningExpsLabel.setText(runningExpsText + hostServer.experiments.getNumInProgress());
 				runningExpModel.removeElement(exp);
 				
-				doneExpsLabel.setText(doneExpsText + hostServer.tracker.getNumExpsFinished());
+				doneExpsLabel.setText(doneExpsText + hostServer.experiments.getNumFinished());
 				doneExpModel.addElement(exp);
 			}			
 		});	
 	}
 	
+	public class UsernameComparator implements Comparator<HITWorkerImpl> {	
+		@Override
+		public int compare(HITWorkerImpl o1, HITWorkerImpl o2) {
+			String u1 = o1.getUsername();
+			String u2 = o1.getUsername();
+
+			if( u1 != null ) {
+				int comp = u1.compareTo(u2);
+				if( comp != 0 ) return comp;				
+			}
+			
+			return o1.getHitId().compareTo(o2.getHitId());
+		}	
+	}
 }

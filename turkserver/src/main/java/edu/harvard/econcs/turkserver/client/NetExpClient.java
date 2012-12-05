@@ -51,7 +51,7 @@ public abstract class NetExpClient extends SessionClient<String> implements Abst
 		private ClientSession session;
 		
 		@Subscription("/service/user")
-		public void serviceUser(Message service) {
+		public void serviceUser(Message service) {			
 			Map<String, Object> m = service.getDataAsMap();
 			Object status = m.get("status");
 			

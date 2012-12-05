@@ -1,76 +1,28 @@
 package edu.harvard.econcs.turkserver.server;
 
+import edu.harvard.econcs.turkserver.schema.Session;
+
 public class SessionRecord {
 
 	public enum SessionStatus { UNASSIGNED, ASSIGNED, LOBBY, EXPERIMENT, COMPLETED };
 	
-	private SessionStatus status;
+	public static SessionStatus status(Session session) {
 		
-	private String setId;
-	private String data;
-
-	private String hitId;
-	private String assignmentId;
-	private String workerId;
-	
-	private String username;
-	
-	private String experimentId;
-	private double inactivePercent;
-
-	public void setStatus(SessionStatus status) {
-		this.status = status;
+		// What's the status of this session?
+		if( session.getInactivePercent() != null ) {
+			// Check that inactivePercent has been set
+			// TODO in the future maybe link this up with experiment end time
+			return SessionStatus.COMPLETED ;
+		} 
+		else if( session.getExperimentId() != null ) {
+			return SessionStatus.EXPERIMENT;
+		}
+		else if( session.getWorkerId() != null ) {
+			return SessionStatus.LOBBY;
+		}
+		else {
+			return SessionStatus.UNASSIGNED;
+		}	
 	}
-	public SessionStatus getStatus() {
-		return status;
-	}	
-	public String getSetId() {
-		return setId;
-	}
-	public void setSetId(String setId) {
-		this.setId = setId;
-	}
-	public String getData() {
-		return data;
-	}
-	public void setData(String data) {
-		this.data = data;		
-	}
-	public String getHitId() {
-		return hitId;
-	}
-	public void setHitId(String hitId) {
-		this.hitId = hitId;
-	}
-	public String getAssignmentId() {
-		return assignmentId;
-	}
-	public void setAssignmentId(String assignmentId) {
-		this.assignmentId = assignmentId;
-	}
-	public String getWorkerId() {
-		return workerId;
-	}
-	public void setWorkerId(String workerId) {
-		this.workerId = workerId;
-	}
-	public String getUsername() {
-		return username;
-	}
-	public void setUsername(String username) {
-		this.username = username;
-	}
-	public String getExperimentId() {
-		return experimentId;
-	}
-	public void setExperimentId(String experimentId) {
-		this.experimentId = experimentId;
-	}
-	public double getInactivePercent() {
-		return inactivePercent;
-	}
-	public void setInactivePercent(double inactivePercent) {
-		this.inactivePercent = inactivePercent;
-	}	
 	
 }

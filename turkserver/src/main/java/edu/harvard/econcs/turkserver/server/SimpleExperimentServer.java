@@ -3,12 +3,15 @@
  */
 package edu.harvard.econcs.turkserver.server;
 
-import org.eclipse.jetty.servlet.ServletHolder;
+import org.apache.commons.configuration.Configuration;
+import org.cometd.bayeux.server.ServerSession;
 import org.eclipse.jetty.util.resource.Resource;
 
-import edu.harvard.econcs.turkserver.Codec.LoginStatus;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+
 import edu.harvard.econcs.turkserver.mturk.TurkHITManager;
-import edu.harvard.econcs.turkserver.server.mysql.SimpleDataTracker;
+import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 
 /**
  * @author mao
@@ -19,55 +22,43 @@ import edu.harvard.econcs.turkserver.server.mysql.SimpleDataTracker;
  * Useful for experiments that don't require interaction between clients
  *
  */
-public abstract class SimpleExperimentServer extends SessionServer implements Runnable {	
+@Singleton
+public final class SimpleExperimentServer extends SessionServer {	
 				
-	protected SimpleDataTracker tracker;
-	
-	public SimpleExperimentServer(
-			SimpleDataTracker userTracker,
-			TurkHITManager<String> thm,
-			Class<? extends SessionServlet<?>> servletClass,
+	@Inject
+	public SimpleExperimentServer(			
+			ExperimentDataTracker tracker, 
+			TurkHITManager thm,
+			WorkerAuthenticator workerAuth,
+			Experiments experiments,
 			Resource[] resources,
-			int hitGoal,
-			int httpPort) throws Exception {
+			Configuration config
+			) throws Exception {
 		
-		super(userTracker, thm, resources, hitGoal, httpPort);
-		
-		this.tracker = userTracker;		
-								
-        ServletHolder experiment = context.addServlet(servletClass, "/exp");  
-        experiment.setInitOrder(3);
-        
+		super(tracker, thm, workerAuth, experiments, resources, config);		
+								       
         // TODO init server extensions
-	}
-	
-	@Override
-	protected String logFlush(String logId) {
-		// TODO Auto-generated method stub
-		String data = super.logFlush(logId);
-		
-//		Save to file
-//		String path = NPuzzleSettings.config.getString(NPuzzleSettings.RESULT_DIR);
-//		String filename = path + "/" + sessionId.toString(16) + ".log.gz";
-//		FileObjUtils.writeToGZIP(filename, data);
-		
-		// Save to db
-		tracker.saveSessionLog(logId, data);
-		
-		return data;
-	}
-
-	protected abstract int getTotalPuzzles();
+	}	
 
 	@Override
-	protected LoginStatus sessionAccept(String clientId, String hitId,
-			String assignmentId, String workerId) {
-		LoginStatus status = super.sessionAccept(clientId, hitId, assignmentId, workerId);
+	protected HITWorkerImpl sessionAccept(ServerSession client, 
+			String hitId, String assignmentId, String workerId) {
 		
-		if( status != LoginStatus.ERROR ) super.logReset(hitId);
+		/*
+		 * At this point, the session is successfully authenticated, so we create an experiment
+		 * TODO match up with in-progress experiments at some point 
+		 */
+		HITWorkerImpl hitw = super.sessionAccept(client, hitId, assignmentId, workerId);
+
+		ExperimentControllerImpl exp = experiments.startSingle(hitw, bayeux);
 		
-		return status;
-	}		
+		return hitw;
+	}
+
+	@Override
+	protected void runServerInit() {
+		logger.info("Simple server...nothing to do here");		
+	}
 	
 	
 }

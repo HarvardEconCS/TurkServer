@@ -12,6 +12,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.inject.Inject;
+
 import org.cometd.bayeux.server.LocalSession;
 
 import org.slf4j.Logger;
@@ -26,11 +28,10 @@ import net.andrewmao.misc.Utils;
  * @author Mao
  *
  */
-public abstract class ExperimentServer<T extends ExperimentServer<T>> implements Runnable {
-	
-	protected final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
+@Deprecated
+public abstract class ExperimentServer {	
 		
-	protected final HostServer<T> host;	
+	protected final HostServer host;	
 	protected final LocalSession expBroadcaster;
 	
 	// Keeps track of whether clients are connected
@@ -42,14 +43,12 @@ public abstract class ExperimentServer<T extends ExperimentServer<T>> implements
 	
 	protected final long timeLimit;
 	
-	protected volatile long expStartTime;
-	protected volatile long expFinishTime;
-	
 	public final String experimentID;	
-	
-	private PrintWriter experimentLog = null;
-	
-	public ExperimentServer(HostServer<T> host, ConcurrentHashMap<String, Boolean> clients, long timeLimit) {				
+		
+	public ExperimentServer(
+			HostServer host, 
+			ConcurrentHashMap<String, Boolean> clients, 
+			long timeLimit) {				
 		this.host = host;	
 		this.clients = clients;
 		this.timeLimit = timeLimit;
@@ -119,80 +118,6 @@ public abstract class ExperimentServer<T extends ExperimentServer<T>> implements
 			it.remove();
 		}
 	}
-
-	protected void logReset(String expFile) {		
-		String path = host.getLogPath();
-		
-		// Close any previous log if it was open
-		if( experimentLog != null ) logFlush();
-		
-		String filename = String.format("%s/%s %d.log", path, expFile, clients.size());
-		logger.info("Trying to open file " + filename);
-		
-		expStartTime = System.currentTimeMillis();
-		
-		try {
-			experimentLog = new PrintWriter(new FileWriter(filename), true);
-			logString(toString() + " started");
-		} catch (IOException e) {
-			logger.warn("Couldn't open log file " + filename + " for writing!");			
-			e.printStackTrace();
-			experimentLog = null;
-		}		
-	}
-	
-	protected synchronized void logString(String msg) {
-		if( experimentLog != null) experimentLog.printf("%s %s\n", 
-				Utils.clockStringMillis(System.currentTimeMillis() - expStartTime), msg);
-		else System.out.println("Log discarded: " + msg);
-	}
-	
-	protected void logFlush() {
-		logString(toString() + " finished");
-		expFinishTime = System.currentTimeMillis();
-		
-		try {
-			experimentLog.flush();
-			experimentLog.close();
-		} catch(NullPointerException e) {
-			e.printStackTrace();
-		}
-			
-		experimentLog = null;
-	}
-	
-	/**
-	 * Send a message to a particular user
-	 * @param sessionId
-	 * @param data
-	 */
-	protected void sendServiceMsg(String sessionId, Object data) {
-		host.bayeux.getSession(host.clientToId.inverse().get(sessionId)).deliver(
-				expBroadcaster, Codec.expSvcPrefix + getChannelName(), data, null);
-	}
-	
-	/**
-	 * Broadcast a message to everyone
-	 * @param data
-	 */
-	protected void sendBroadcastMsg(Object data) {		
-		host.bayeux.getChannel(Codec.expChanPrefix + getChannelName()).publish(expBroadcaster, data, null);
-	}
-	
-	/**
-	 * service message from client 
-	 * @param sessionId
-	 * @param data
-	 */
-	protected abstract void rcvServiceMsg(String sessionId, Map<String, Object> data);
-	
-	/**
-	 * 
-	 * @param sessionId
-	 * @param data
-	 * @return true if the message should be relayed to other clients
-	 */
-	protected abstract boolean rcvBroadcastMsg(String sessionId, Map<String, Object> data);
 	
 	/**
 	 * Puts the client in a connected time and records the time since last disconnection, if any
@@ -219,6 +144,5 @@ public abstract class ExperimentServer<T extends ExperimentServer<T>> implements
 		// Record disconnect time
 		disconnectTime.put(id, System.currentTimeMillis());
 	}
-	
-	abstract public void run();
+
 }

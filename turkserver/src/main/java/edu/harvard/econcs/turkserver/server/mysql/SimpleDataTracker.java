@@ -12,11 +12,11 @@ import net.andrewmao.misc.ConcurrentBooleanCounter;
 
 import edu.harvard.econcs.turkserver.ExpServerException;
 import edu.harvard.econcs.turkserver.SessionCompletedException;
+import edu.harvard.econcs.turkserver.SessionExpiredException;
 import edu.harvard.econcs.turkserver.SessionOverlapException;
 import edu.harvard.econcs.turkserver.SessionUnknownException;
 import edu.harvard.econcs.turkserver.SimultaneousSessionsException;
 import edu.harvard.econcs.turkserver.TooManySessionsException;
-import edu.harvard.econcs.turkserver.Codec.LoginStatus;
 import edu.harvard.econcs.turkserver.server.SessionRecord;
 import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
 
@@ -24,7 +24,8 @@ import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
  * @author mao
  *
  */
-public abstract class SimpleDataTracker implements DataTracker<String> {
+@Deprecated
+public abstract class SimpleDataTracker {
 	
 	protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());	
 	
@@ -43,7 +44,7 @@ public abstract class SimpleDataTracker implements DataTracker<String> {
 		return totalSetLimit;
 	}
 	
-	@Override
+	
 	public boolean sessionIsInProgress(String hitID) {
 		Boolean status = sessionStatus.get(hitID);
 		return status != null && status == false;
@@ -55,7 +56,7 @@ public abstract class SimpleDataTracker implements DataTracker<String> {
 
 	public abstract void saveSessionLog(String hitId, String data);
 
-	@Override
+	
 	public final LoginStatus registerAssignment(String hitID,
 			String assignmentId, String workerId) throws ExpServerException {
 		
@@ -148,15 +149,28 @@ public abstract class SimpleDataTracker implements DataTracker<String> {
 		}
 	}
 
-	@Override
+	
+	protected abstract void saveAssignmentForSession(String hitID, String assignmentId,
+			String workerId);
+
+	protected abstract List<SessionRecord> getSetSessionInfoForWorker(String workerId);
+
+	protected abstract SessionRecord getStoredSessionInfo(String hitID);
+
+	protected abstract boolean sessionCompletedInDB(String hitID);
+
+	protected abstract void saveHITId(String hitID);
+
+	protected abstract boolean sessionExistsInDB(String hitID) throws SessionExpiredException;
+
 	public abstract void saveIPForSession(String hitID, InetAddress remoteAddress, Date lobbyTime);
 
-	@Override
+	
 	public final void sessionDisconnected(String hitID) {											
 		// Don't need to do anything here, new worker will be automatically replaced when joining
 	}
 
-	@Override
+	
 	public abstract List<SessionRecord> expireUnusedSessions();
 
 }

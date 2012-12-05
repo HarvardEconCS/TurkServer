@@ -19,7 +19,8 @@ import edu.harvard.econcs.turkserver.server.SessionRecord;
 public class SimpleDummyTracker extends SimpleDataTracker {
 
 	private ConcurrentBooleanCounter<String> usedIDs;	
-	private ConcurrentHashMap<String, String> idToAssignmentId;		
+	private ConcurrentHashMap<String, String> idToAssignmentId;
+	
 	private MultiValueMap workerIdToSessions;
 	
 	public SimpleDummyTracker(int simultaneousSessionLimit, int totalSetLimit) {
@@ -30,7 +31,7 @@ public class SimpleDummyTracker extends SimpleDataTracker {
 		
 		// TODO double-check the concurrency of this if it becomes important
 		workerIdToSessions = MultiValueMap.decorate(
-				new ConcurrentHashMap<String, String>(), ConcurrentLinkedQueue.class);
+				new ConcurrentHashMap<String, String>(), ConcurrentLinkedQueue.class);		
 	}
 	
 	@Override

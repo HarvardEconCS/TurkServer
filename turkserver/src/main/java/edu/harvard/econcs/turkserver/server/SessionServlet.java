@@ -18,21 +18,23 @@ import org.cometd.server.ext.AcknowledgedMessagesExtension;
 import org.cometd.server.ext.TimesyncExtension;
 import org.eclipse.jetty.util.log.Log;
 
-public abstract class SessionServlet<S extends SessionServer> extends GenericServlet {
+import edu.harvard.econcs.turkserver.Codec;
+import edu.harvard.econcs.turkserver.QuizResults;
+
+public abstract class SessionServlet extends GenericServlet {
 
 	private static final long serialVersionUID = -3882966106597782108L;	
 	
-	protected S theServer;
+	protected SessionServer theServer;
 	
 	protected BayeuxServerImpl bayeux;
 	protected ServerAnnotationProcessor processor;
-	
-	@SuppressWarnings("unchecked")
+		
 	@Override
 	public void init() throws ServletException {
 		super.init();
 		
-		theServer = (S) getServletContext().getAttribute(SessionServer.ATTRIBUTE);
+		theServer = (SessionServer) getServletContext().getAttribute(SessionServer.ATTRIBUTE);
 		
 		bayeux = (BayeuxServerImpl) 
 				getServletContext().getAttribute(BayeuxServer.ATTRIBUTE);		
@@ -53,15 +55,16 @@ public abstract class SessionServlet<S extends SessionServer> extends GenericSer
         // Allow anybody to handshake
         bayeux.getChannel(ServerChannel.META_HANDSHAKE).addAuthorizer(GrantAuthorizer.GRANT_PUBLISH);             
                 
-        processor = new ServerAnnotationProcessor(bayeux) {
-        	
-        };
+        processor = new ServerAnnotationProcessor(bayeux);
         
+        // Debugging service
         processor.process(new Monitor());
+        
         processor.process(new UserData());
+        processor.process(new ExperimentData());
         
-        bayeux.addListener(theServer.new UserSessionListener());
-        
+        // Watch for connect/disconnects
+        bayeux.addListener(theServer.new UserSessionListener());        
 	}
 	
 	public ServerAnnotationProcessor getProcessor() {
@@ -84,14 +87,21 @@ public abstract class SessionServlet<S extends SessionServer> extends GenericSer
 			String status = data.get("status").toString();
 						
 			String clientId = session.getId();
+			
+			/* 
+			 * TODO compare this hitId with the session metadata
+			 * Remove requirements for client to send hitId every time
+			 */
+			
 			String hitId = null;			
 			try { hitId = data.get("hitId").toString(); } catch (NullPointerException e) {}
 			
-			if( "view".equals(status) ) {				
+			if( Codec.hitView.equals(status) ) {				
 				Log.getRootLogger().info("HIT " + hitId + " is being viewed by " + clientId);
-				theServer.sessionView(session.getId(), hitId);
+				
+				theServer.sessionView(session, hitId);
 			}
-			else if( "accept".equals(status)) {
+			else if( Codec.hitAccept.equals(status)) {
 				String assignmentId = null, workerId = null;
 				
 				try { assignmentId = data.get("assignmentId").toString(); }	
@@ -102,20 +112,61 @@ public abstract class SessionServlet<S extends SessionServer> extends GenericSer
 				
 				Log.getRootLogger().info("HIT " + hitId + " assignment " + assignmentId + " accepted by " + workerId);
 												
-				theServer.sessionAccept(clientId, hitId, assignmentId, workerId);					
-				
+				theServer.sessionAccept(session, hitId, assignmentId, workerId);									
 			}
-			else if( "submit".equals(status) ) {
-				String workerId = null;
-				try { workerId = data.get("workerId").toString(); }	
-				catch (NullPointerException e) { Log.getRootLogger().warn("Null workerId for " + clientId);}
-				
+			else if( Codec.quizResults.equals(status) ) {
+				QuizResults qr = new QuizResults();
+				qr.correct = Integer.parseInt(data.get("correct").toString());
+				qr.total = Integer.parseInt(data.get("total").toString());
+								
+				theServer.rcvQuizResults(session, qr);				
+			}
+			else if( "inactive".equals(status) ) {
+				long inactiveTime = Long.parseLong(data.get("time").toString());
+				theServer.rcvInactiveTime(session, inactiveTime);
+			}
+			else if( Codec.hitSubmit .equals(status) ) {								
 				Log.getRootLogger().info("HIT " + hitId + " submitting");
-				theServer.sessionSubmit(clientId, hitId, workerId);
-			}						
+				
+				theServer.sessionSubmit(session);
+			}									
+		}				
+	}
+	
+	@Service("experiment")
+	public class ExperimentData {
+		
+		@Configure("/service/experiment/*")
+		public void configureServiceExperiment(ConfigurableServerChannel channel) {
+			// TODO only allow pub/sub for clients that are part of this experiment
+			channel.addAuthorizer(GrantAuthorizer.GRANT_SUBSCRIBE_PUBLISH);			
+		}
+		
+		@Listener("/service/experiment/*")
+		public void listenServiceExperiment(ServerSession session, ServerMessage message) {													
+			// Deliver this to the appropriate experiment server
+			theServer.rcvExperimentServiceMsg(session, message.getDataAsMap());			
+		}
+		
+		@Configure("/experiment/*")
+		public void configureExperiment(ConfigurableServerChannel channel) {
+			// TODO only allow pub/sub for clients that are part of this experiment
+			// No need for persistent, leaves when last client is gone
+			channel.addAuthorizer(GrantAuthorizer.GRANT_SUBSCRIBE_PUBLISH);			
+		}
+		
+		@Listener("/experiment/*")
+		public boolean listenExperiment(ServerSession session, ServerMessage message) {			
+			if( session.isLocalSession() ) {
+				// Always forward broadcast messages generated locally
+				return true;				
+			}
+			else {
+				// Deliver this to the appropriate experiment server			
+				return theServer.rcvExperimentBroadcastMsg(session, message.getDataAsMap());
+			}
 			
 		}
-				
 	}
 
 	@Service("monitor")

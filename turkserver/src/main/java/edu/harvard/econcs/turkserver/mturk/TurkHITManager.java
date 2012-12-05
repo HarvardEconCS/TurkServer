@@ -1,7 +1,7 @@
 package edu.harvard.econcs.turkserver.mturk;
 
-import edu.harvard.econcs.turkserver.server.SessionRecord;
-import edu.harvard.econcs.turkserver.server.mysql.DataTracker;
+import edu.harvard.econcs.turkserver.schema.Session;
+import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -21,7 +21,7 @@ import com.amazonaws.mturk.service.exception.ServiceException;
  * @author mao
  *
  */
-public class TurkHITManager<T> implements Runnable {
+public class TurkHITManager implements Runnable {
 
 	private static final int HIT_SLEEP_MILLIS = 200;
 	private static final int SERVICE_UNAVAILABLE_MILLIS = 5000;
@@ -29,7 +29,7 @@ public class TurkHITManager<T> implements Runnable {
 	protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 	
 	private final RequesterServiceExt requester;
-	private final DataTracker<T> tracker;
+	private final ExperimentDataTracker tracker;
 	
 	private final int initialAmount;
 	private final int additionalDelay;
@@ -51,7 +51,9 @@ public class TurkHITManager<T> implements Runnable {
 	 * @param additionalDelay the amount to wait before each additional hit
 	 * @param totalAmount
 	 */
-	public TurkHITManager(RequesterServiceExt req, DataTracker<T> tracker, int initialAmount, 
+	public TurkHITManager(
+			RequesterServiceExt req, 
+			ExperimentDataTracker tracker, int initialAmount, 
 			int additionalDelay, int totalAmount) {
 		this.requester = req;
 		this.tracker = tracker;
@@ -157,9 +159,9 @@ public class TurkHITManager<T> implements Runnable {
 		}
 		
 		logger.info("Disabling leftover hits");
-		List<SessionRecord> unusedHITs = tracker.expireUnusedSessions();
+		List<Session> unusedHITs = tracker.expireUnusedSessions();
 		
-		for( SessionRecord session : unusedHITs ) {
+		for( Session session : unusedHITs ) {
 			String hitId = session.getHitId();
 			// TODO fix this ugly ass code
 			do {			

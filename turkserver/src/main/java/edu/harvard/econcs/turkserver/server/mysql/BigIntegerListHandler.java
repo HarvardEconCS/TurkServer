@@ -6,6 +6,7 @@ import java.sql.SQLException;
 
 import org.apache.commons.dbutils.handlers.AbstractListHandler;
 
+@Deprecated
 public class BigIntegerListHandler extends AbstractListHandler<BigInteger> {
 
 	private final String idKey;

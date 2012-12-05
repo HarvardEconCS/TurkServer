@@ -5,6 +5,7 @@ import java.sql.SQLException;
 
 import org.apache.commons.dbutils.handlers.AbstractListHandler;
 
+@Deprecated
 public class StringListHandler extends AbstractListHandler<String> {
 
 	private final String idKey;

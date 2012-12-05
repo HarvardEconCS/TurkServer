@@ -4,267 +4,169 @@
 package edu.harvard.econcs.turkserver.server;
 
 import edu.harvard.econcs.turkserver.*;
-import edu.harvard.econcs.turkserver.Codec.LoginStatus;
+import edu.harvard.econcs.turkserver.api.*;
 import edu.harvard.econcs.turkserver.mturk.TurkHITManager;
-import edu.harvard.econcs.turkserver.server.ExpServerFactory.ExperimentFactoryException;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 
-import java.math.BigInteger;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.cometd.bayeux.server.ConfigurableServerChannel;
-import org.cometd.bayeux.server.ConfigurableServerChannel.Initializer;
+import org.apache.commons.configuration.Configuration;
 import org.cometd.bayeux.server.LocalSession;
-import org.cometd.bayeux.server.ServerChannel;
 import org.cometd.bayeux.server.ServerSession;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.resource.Resource;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import net.andrewmao.misc.ConcurrentBooleanCounter;
-
 
 /**
  * @author Mao
  *
  */
-public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
+@Singleton
+public final class HostServer extends SessionServer {
 	
-	private boolean debugMode = false;
+	final boolean requireUsernames;
+	final boolean debugMode;
+	final boolean lobbyEnabled;
 	
 	// Turk crap
-	private final TurkHITManager<String> turkHITManager;
-	private final int completedHITGoal;
 	
-	// Experiment and user information
-	private final QuizFactory quizFactory;
-	private final ExpServerFactory<T> expFactory;	
-	final ExperimentDataTracker tracker;
+	// Experiment and user information					
+	final ConcurrentBooleanCounter<HITWorkerImpl> lobbyStatus;	
 	
-	private final String logPath;
-		
-	final ConcurrentBooleanCounter<String> lobbyStatus;	
-	
-	final AtomicReference<String> serverMessage;
-	
-	private final AtomicInteger completedHITs;
+	final AtomicReference<String> serverMessage;	
 	
 	private LocalSession lobbyBroadcaster;
 	
 	// Servlet stuff
-	private ServletHolder expServlet;
+	private ServletHolder lobbyServlet;
 
 	// GUI
 	private ServerFrame serverGUI;
 	
-	/**
-	 * Constructs a server
-	 * 
-	 * @param factory
-	 * @param quizFac
-	 * @param userTracker
-	 * @param thm
-	 * @param hitGoal
-	 * @param listenPort
-	 * @param rmiPort
-	 */
-	public HostServer(ExpServerFactory<T> factory,
-			QuizFactory quizFac,
-			ExperimentDataTracker userTracker,
-			TurkHITManager<String> thm,
-			Resource[] resources, int hitGoal,
-			int listenPort, String logPath) {
+	@Inject
+	public HostServer(			
+			ExperimentDataTracker tracker,
+			TurkHITManager thm,
+			WorkerAuthenticator workerAuth,
+			Experiments experiments,
+			Resource[] resources,
+			Configuration config
+			) throws ClassNotFoundException {
 		
-		super(userTracker, thm, resources, hitGoal, listenPort);
+		super(tracker, thm, workerAuth, experiments, resources, config);
 		
-        expServlet = context.addServlet(HostServlet.class, "/exp");  
-        expServlet.setInitOrder(3);  
-						
-		this.quizFactory = quizFac;
-		this.expFactory = factory;
-		this.tracker = userTracker;
+		this.requireUsernames = config.getBoolean(TSConfig.SERVER_USERNAME);
+		this.debugMode = config.getBoolean(TSConfig.SERVER_DEBUGMODE);
+		this.lobbyEnabled = config.getBoolean(TSConfig.SERVER_LOBBY);
 		
-		this.turkHITManager = thm;
-		this.completedHITGoal = hitGoal;				
-		
-		this.logPath = logPath;
+        lobbyServlet = context.addServlet(HostServlet.class, "/exp");  
+        lobbyServlet.setInitOrder(3);  										
 				
-		lobbyStatus = new ConcurrentBooleanCounter<String>();				
-		
-		completedHITs = new AtomicInteger(0);
+		lobbyStatus = new ConcurrentBooleanCounter<HITWorkerImpl>();				
+				
 		serverMessage = new AtomicReference<String>("");
 		
 		serverGUI = new ServerFrame(this);
 				
 	}
-
-	/**
-	 * Constructs a server with the default port
-	 * 
-	 * @param factory
-	 * @param userTracker
-	 * @param thm
-	 * @param completedHitGoal
-	 * @param listenPort
-	 */
-	public HostServer(ExpServerFactory<T> factory, ExperimentDataTracker userTracker,
-			TurkHITManager<String> thm, int completedHitGoal,
-			int listenPort, String logPath) {
-		this(factory, null, userTracker, thm, null, completedHitGoal, listenPort, logPath); 
-	}	
 	
-	/**
-	 * Sets the debug mode on this HostServer. If true, will connect all clients to 
-	 * a new single-person experiment.
-	 * @param b
-	 */
-	public void setDebugMode(boolean b) {
-		this.debugMode = b;		
-		logger.info("Debug Mode set to: " + b);
-	}
-
-	public String getLogPath() {		
-		return logPath;
-	}
-
 	@Override
-	protected LoginStatus sessionAccept(String clientId, String hitId,
-			String assignmentId, String workerId) {		
-		LoginStatus ls = super.sessionAccept(clientId, hitId, assignmentId, workerId);
+	protected HITWorkerImpl sessionAccept(ServerSession session,
+			String hitId, String assignmentId, String workerId) {
 		
-		Map<String, Object> data = new HashMap<String, Object>();
-		ServerSession session = bayeux.getSession(clientId);
-				
-		if( ls == LoginStatus.QUIZ_REQUIRED ) {
+		HITWorkerImpl hitw = super.sessionAccept(session, hitId, assignmentId, workerId);
+		if( hitw == null ) return null;
+		
+		// Ask for username if we require it or somehow didn't get it last time		
+		if( this.requireUsernames && hitw.getUsername() == null ) {
+			Map<String, String> data = ImmutableMap.of(
+					"status", Codec.usernameNeeded
+					);			
 			
-			/* Check if we need to do a quiz
-			 * TODO very hacky
-			 */
-			
-			QuizMaterials qm = quizFactory.getQuiz();
-			if( qm != null ) {
-							
-				data.put("status", Codec.quizNeeded);
-				data.put("quiz", qm.toData());
-				
-				session.deliver(session, "/service/user", data, null);				
-			}
-		}
-		else if( ls == LoginStatus.NEW_USER && !debugMode ) {
-			// Check if we need to get username			
-			data.put("status", Codec.usernameNeeded);
-			
-			session.deliver(session, "/service/user", data, null);
+			super.sendServiceMsg(session, data);
 		}		
-		else if( ls == LoginStatus.REGISTERED || debugMode) {			
-			/* Is user already in an experiment?
-			 * already-completed sessions should be caught way before this
-			 */
-			if( tracker.sessionIsInProgress(hitId) ) {
-				ExperimentServer<?> exp = tracker.getExperimentForID(hitId);
-				if( exp != null ) {
-					data.put("status", Codec.connectExpAck);
-					data.put("channel", Codec.expChanPrefix + exp.getChannelName());
+		
+		// Check if we should reconnect this HITWorker to an existing experiment
+		if( experiments.workerIsInProgress(hitw) ) {
+									
+			Map<String, String> data = ImmutableMap.of(
+					"status", Codec.connectExpAck,
+					"channel", Codec.expChanPrefix + hitw.expCont.expChannel
+					);
 
-					session.deliver(session, "/service/user", data, null);
+			super.sendServiceMsg(session, data);							
 
-					// TODO experiment should send state to user (?)
-					exp.clientConnected(hitId);				
-				}
-				else {
-					logger.error("Unknown experiment but session is in progress: "	+ 
-							hitId );
-				}
-			} 
-			else if( debugMode ) {
-				// single-person debug experiments, so create a new one and skip lobby
-				ConcurrentHashMap<String, Boolean> expClients = new ConcurrentHashMap<String, Boolean>();
-				expClients.put(hitId, true);
-				
-				logger.info("Creating new experiment in debug mode");
-				createNewExperiment(expClients);
-				serverGUI.updateLobbyModel();
-			}
-			else {
-				data.put("status", Codec.connectLobbyAck);				
-				session.deliver(session, "/service/user", data, null);
-				
-				logger.info(String.format("%s (%s) connected to lobby",	
-						hitId, tracker.getUsername(hitId)));
-			}								
+			// experiment should send state to user with this callback
+			experiments.workerReconnected(hitw);
 			
+		} 
+		else if( debugMode ) {
+			// single-person debug experiments, so create a new one and skip lobby
+			HITWorkerGroupImpl single = new HITWorkerGroupImpl();
+			single.add(hitw);			
+			
+			logger.info("Creating new experiment in debug mode");
+			createNewExperiment(single);
+			serverGUI.updateLobbyModel();
 		}
 		else {
-			// TODO should have reuse here, and not reach this
-			logger.warn("Unexpected id tried to connect: " + hitId);
-			data.put("status", Codec.connectErrorAck);				
-			session.deliver(session, "/service/user", data, null);
+			Map<String, String> data = ImmutableMap.of(
+					"status", Codec.connectLobbyAck					
+					);
+			
+			super.sendServiceMsg(session, data);
+			
+			logger.info(String.format("%s (%s) connected to lobby",	
+					hitId, hitw.getUsername()));
 		}
 		
-		return ls;
+		return hitw;
 	}
 
-	//	@Override
-	public QuizMaterials getQuizMaterials(BigInteger sessionID,
-			String assignmentId, String workerId) {		
-		if( quizFactory != null ) 
-			return quizFactory.getQuiz();
-		else
-			return null;
-	}
-
-//	@Override
-	public void sendQuizResults(String sessionID, QuizResults qr) {		
-		try {
-			tracker.saveQuizResults(sessionID, qr);
-			
-			/* TODO quiz passed? allow lobby login
-			 * careful - this assumes that quiz always precedes username
-			 */
-			sendStatus(sessionID, "username");
-			
-		} catch (QuizFailException e) {
-			sendStatus(sessionID, "quizfail");
-		}		
-	}
-
-	public void sendStatus(String sessionID, String status) {
-		Map<String, Object> data = new HashMap<String, Object>();		
-		ServerSession session = bayeux.getSession(clientToId.inverse().get(sessionID));
-		data.put("status", status);		
-		session.deliver(session, "/service/user", data, null);
-	}
-
-	public boolean lobbyLogin(String sessionID, String username) {		
-		if( ! tracker.lobbyLogin(sessionID, username) )  {
-			// some error, request it again.
-			sendStatus(sessionID, "username");
-			
-			// Don't broadcast this username
+	/**
+	 * 
+	 * @param session
+	 * @param username
+	 * @return true if this should be sent to the whole lobby
+	 */
+	public boolean lobbyLogin(ServerSession session, String username) {
+		HITWorkerImpl hitw = clientToHITWorker.get(session);
+		
+		if( hitw == null ) {
+			logger.error("Can't accept username for unknown session {}", session.getId());
 			return false;
 		}
+		
+		tracker.saveUsername(hitw, username);		
 		return true;
 	}
 
-	public boolean lobbyUpdate(String sessionID, boolean isReady) {
-		lobbyStatus.put(sessionID, isReady);				
+	public boolean lobbyUpdate(ServerSession session, boolean isReady) {
+		HITWorkerImpl hitw = clientToHITWorker.get(session);
+		if( hitw == null ) {
+			logger.error("Can't accept update status for unknown session {}", session.getId());
+			return false;
+		}
 		
-		int neededPeople = expFactory.getExperimentSize();
+		lobbyStatus.put(hitw, isReady);				
+		
+		int neededPeople = experiments.getMinGroupSize();
 		
 		// are there enough people ready to start?
 		synchronized(lobbyStatus) {	
 			logger.info("Lobby has " + lobbyStatus.getTrueCount() + " ready people");				
-			if( lobbyStatus.getTrueCount() >= neededPeople ) {
-				
+			if( lobbyStatus.getTrueCount() >= neededPeople ) {				
 				// Create a new experiment and assign the ready people to it
 				createNewExperiment(null);				
 			}
-			else if( lobbyStatus.size() < neededPeople ) {
-				
+			else if( lobbyStatus.size() < neededPeople ) {				
 				// Make sure everyone's ready is disabled
-				for( String id : lobbyStatus.keySet() ) {
+				for( HITWorkerImpl id : lobbyStatus.keySet() ) {
 					lobbyStatus.put(id, false);
 				}
 			}
@@ -282,7 +184,7 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
 		Map<String, Object> data = new TreeMap<String, Object>();
 		
 		int usersInLobby = lobbyStatus.size();
-		int usersNeeded = expFactory.getExperimentSize();
+		int usersNeeded = experiments.getMinGroupSize();
 		
 		data.put("status", "update");
 		
@@ -291,17 +193,19 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
 		data.put("joinenabled", usersInLobby >= usersNeeded);
 		
 		data.put("servermsg", serverMessage.get());
-		data.put("currentexps", tracker.getNumExpsRunning());
+		data.put("currentexps", experiments.getNumInProgress());
 		data.put("totalusers", bayeux.getSessions().size());
 		
 		// TODO could be some race conditions here if lobby size changes?
 		Object[] users = new Object[lobbyStatus.size()];		
 		int i = 0;
-		for( Map.Entry<String, Boolean> e : lobbyStatus.entrySet() ) {
-			String id = e.getKey();
+		for( Map.Entry<HITWorkerImpl, Boolean> e : lobbyStatus.entrySet() ) {
+			HITWorkerImpl user = e.getKey();
+			ServerSession session = user.cometdSession.get();
+			if( session == null ) continue;
 			
 			// clientId, username, and status
-			users[i++]= new Object[] { clientToId.inverse().get(id), tracker.getUsername(id), e.getValue() };
+			users[i++]= new Object[] { session.getId(),	user.getUsername(), e.getValue() };
 		}
 		data.put("users", users);
 		
@@ -310,74 +214,29 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
 		
 	}
 
-	private void createNewExperiment(ConcurrentHashMap<String, Boolean> expClients) {
+	private void createNewExperiment(HITWorkerGroupImpl expClients) {
 		
 		// Generate the list of experiment clients
 		if( expClients == null ) {			
-			int expSize = expFactory.getExperimentSize();
-			expClients = new ConcurrentHashMap<String, Boolean>(expSize);
+			int expSize = experiments.getMinGroupSize();
+			expClients = new HITWorkerGroupImpl();
 
 			// Count up exactly expSize people for the new experiment
 			int counter = 0;
-			for( Map.Entry<String, Boolean> e : lobbyStatus.entrySet() ) {						
+			for( Map.Entry<HITWorkerImpl, Boolean> e : lobbyStatus.entrySet() ) {						
 				if( e.getValue() == true ) {							
-					expClients.put(e.getKey(), e.getValue());
+					expClients.add(e.getKey());
 					counter++;
 				}
 
 				// Don't put more than the required number of people, even if more are ready
 				if(counter == expSize) break;
 			}
-		}
+		}		
 		
-		T newExp = null;
-		try {
-			newExp = expFactory.getNewExperiment(this, expClients);															
-		} catch (ExperimentFactoryException e) {
-			/* Something wrong with generating the experiment, 
-			 * put everyone back in the lobby as not ready
-			 * and send an error message
-			 */
-			e.printStackTrace();
-			for( String id : expClients.keySet()) {
-				lobbyStatus.put(id, false);
-				sendStatus(id, Codec.startExpError);
-			}
-			return;
-		}
+		ExperimentControllerImpl exp = experiments.startGroup(expClients, bayeux);
 		
-		/* Create necessary channels for this experiment
-		 * Note that hostServlet automatically routes these already
-		 */
-		Initializer persistent = new Initializer() {
-			@Override
-			public void configureChannel(ConfigurableServerChannel channel) {
-				channel.setPersistent(true);
-			}			
-		};
-		
-		bayeux.createIfAbsent(Codec.expChanPrefix + newExp.getChannelName(), persistent);
-		bayeux.createIfAbsent(Codec.expSvcPrefix + newExp.getChannelName(), persistent);
-		
-		serverGUI.newExperiment(newExp);	
-		
-		/* Update tracking information for experiment
-		 * TODO does this start directing requests to the server before it's started?
-		 */
-		tracker.newExperimentStarted(newExp);
-		
-		// Starting the experiment sends out the appropriate notifications to clients
-		new Thread(newExp, newExp.toString()).start();
-		
-		// Send experiment channel to clients to notify connection
-		Map<String, Object> data = new HashMap<String, Object>();
-		data.put("status", Codec.connectExpAck);
-		data.put("channel", Codec.expChanPrefix + newExp.getChannelName());
-
-		for( String id : expClients.keySet() ) {
-			ServerSession session = bayeux.getSession(clientToId.inverse().get(id));
-			session.deliver(session, "/service/user", data, null);
-		}
+		serverGUI.newExperiment(exp);	
 		
 		/* No problem in starting the exp - now can remove from lobby
 		 * everyone in the new exp is removed before lobby is notified 
@@ -387,140 +246,39 @@ public class HostServer<T extends ExperimentServer<T>> extends SessionServer {
 		 * So that they are in experiment before being out of lobby - limbo state 
 		 * since experiment is checked first
 		 */			
-		for( String id : expClients.keySet()) lobbyStatus.remove(id);
-	}
-
-	public void addInactiveTime(String sessionId, long inactiveTime) {
-		// TODO replace with a more principled way of tracking (in)activity
-		ExperimentServer<?> exp = tracker.getExperimentForID(sessionId);
-		exp.addInactiveTime(sessionId, inactiveTime);		
-	}
-
-	public void experimentFinished(T expServer) {
-		tracker.experimentFinished(expServer);		
-		serverGUI.finishedExperiment(expServer);				
-		
-		// unsubscribe from and/or remove channels
-		ServerChannel toRemove = null;
-		if( (toRemove = bayeux.getChannel(Codec.expChanPrefix + expServer.getChannelName())) != null ) {
-			toRemove.setPersistent(false);
-		}
-		if( (toRemove = bayeux.getChannel(Codec.expSvcPrefix + expServer.getChannelName())) != null ) {
-			toRemove.setPersistent(false);
-		}
-		
-		// Tell clients they are done!
-		for( String id : expServer.clients.keySet() )
-			sendStatus(id, Codec.doneExpMsg);	
-		
-		if( completedHITs.addAndGet(expServer.clients.keySet().size()) >= completedHITGoal ) {
-			logger.info("Goal of " + completedHITGoal + " users reached!");
-			
-			if( turkHITManager != null ) turkHITManager.expireRemainingHITs();
-			
-			// Only notify people in experiment, not lobby (experiment people need to submit)
-			for( String id : lobbyStatus.keySet() )
-				sendStatus(id, Codec.batchFinishedMsg);
-			
-			// TODO quit the thread in this case
-		}
-		
-		
+		for( HITWorker id : expClients.getHITWorkers()) 
+			lobbyStatus.remove((HITWorkerImpl) id);
 	}
 	
-	protected void runServerInit() {
-		expFactory.doInit(this);
-		
-		// Start the generating factory if it needs to do work
-		// TODO have this quit properly
-		new Thread(expFactory, expFactory.getClass().getSimpleName()).start();				
-		
+	@Override
+	protected void runServerInit() {		
 		lobbyBroadcaster = bayeux.newLocalSession("lobby");
 		lobbyBroadcaster.handshake();				
 	}
 	
 	@Override
-	public void sessionDisconnect(String clientId, String hitId) {
+	public void sessionDisconnect(ServerSession clientId) {
+		HITWorkerImpl worker = clientToHITWorker.get(clientId);
 		
 		// Was this dude in the lobby? If so remove him from the lobby and notify lobby ppl		
-		if( lobbyStatus.remove(hitId) != null ) {			
+		if( worker != null && lobbyStatus.remove(worker) != null ) {			
 			logger.info(String.format("%s (%s) removed from lobby",
-					hitId, tracker.getUsername(hitId)));			
+					worker.getHitId(), worker.getUsername()));			
+			ServerSession session = worker.cometdSession.get();
 			
-			// TODO check on this quit message to lobby
+			// TODO check on this quit message to lobby, be more robust 
+			
 			Map<String, Object> data = new TreeMap<String, Object>();
 			
 			data.put("status", "quit");
-			data.put("username", tracker.getUsername(hitId));
+			if( session != null ) data.put("id", session.getId());
+			data.put("username", worker.getUsername());
 			
-			bayeux.getChannel("/lobby").publish(bayeux.getSession(clientId), data, null);
+			bayeux.getChannel("/lobby").publish(clientId, data, null);
 		}
 		
 		// This takes care of disconnecting in the tracker
-		super.sessionDisconnect(clientId, hitId);
-	}
-
-	public class UsernameComparator implements Comparator<String> {	
-		@Override
-		public int compare(String o1, String o2) {
-			String u1 = tracker.getUsername(o1);
-			String u2 = tracker.getUsername(o2);
-
-			if( u1 != null ) {
-				int comp = u1.compareTo(u2);
-				if( comp != 0 ) return comp;				
-			}
-			
-			return o1.compareTo(o2);
-		}	
-	}
-
-	/**
-	 * 
-	 * @param clientId
-	 * @param data
-	 * @return
-	 */
-	void experimentServiceMsg(String clientId, Map<String, Object> data) {		
-		String sessionId = getSessionForClient(clientId);
-		if( sessionId == null ) {
-			logger.warn("Message from unrecognized client: " + clientId);							
-		}
-		else {
-			@SuppressWarnings("unchecked")
-			T exp = (T) tracker.getExperimentForID(sessionId);
-			
-			if( exp == null ) {
-				logger.warn("No experiment recorded for client: " + clientId);
-				return;
-			}
-			
-			exp.rcvServiceMsg(sessionId, data);						
-		}		
-	}
-	
-	/**
-	 * Deliver a message to an experiment. Can be broadcast (automatically routed to other clients) or private 
-	 * @param clientId
-	 * @param data 
-	 */
-	boolean experimentBroadcastMsg(String clientId, Map<String, Object> data) {		
-		String sessionId = getSessionForClient(clientId);
-		if( sessionId == null ) {
-			logger.warn("Message from unrecognized client: " + clientId);
-			return false;
-		}
-		else {
-			@SuppressWarnings("unchecked")
-			T exp = (T) tracker.getExperimentForID(sessionId);
-			
-			if( exp == null ) {
-				logger.warn("No experiment recorded for client: " + clientId);
-				return false;
-			}
-						
-			return exp.rcvBroadcastMsg(sessionId, data);			
-		}		
+		super.sessionDisconnect(clientId);
 	}
 
 }

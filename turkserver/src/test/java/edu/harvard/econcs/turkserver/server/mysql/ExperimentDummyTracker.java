@@ -1,10 +1,11 @@
 package edu.harvard.econcs.turkserver.server.mysql;
 
-
 import edu.harvard.econcs.turkserver.QuizResults;
-import edu.harvard.econcs.turkserver.TooManyFailsException;
-import edu.harvard.econcs.turkserver.server.ExperimentServer;
-import edu.harvard.econcs.turkserver.server.SessionRecord;
+import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
+import edu.harvard.econcs.turkserver.schema.Experiment;
+import edu.harvard.econcs.turkserver.schema.Quiz;
+import edu.harvard.econcs.turkserver.schema.Session;
+import edu.harvard.econcs.turkserver.server.HITWorkerImpl;
 
 import java.math.BigInteger;
 import java.net.InetAddress;
@@ -28,9 +29,7 @@ import org.apache.commons.collections.map.MultiValueMap;
  * @author mao
  *
  */
-public class ExperimentDummyTracker extends ExperimentDataTracker {
-	
-	private final boolean requireQuiz;
+public class ExperimentDummyTracker extends ExperimentDataTracker {		
 	
 	private ConcurrentBooleanCounter<String> usedIDs;
 	
@@ -38,10 +37,10 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 	
 	private MultiValueMap workerIdToSessions;
 	
-	public ExperimentDummyTracker(int simultaneousSessionLimit, int totalSetLimit, boolean requireQuiz) {
-		super(simultaneousSessionLimit, totalSetLimit);
-		
-		this.requireQuiz = requireQuiz;
+	// Experiment tracking - FALSE if in progress and TRUE if finished
+	protected final ConcurrentBooleanCounter<String> experiments; 
+	
+	public ExperimentDummyTracker() {				
 		
 		usedIDs = new ConcurrentBooleanCounter<String>();
 				
@@ -50,42 +49,66 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 		// TODO double-check the concurrency of this if it becomes important
 		workerIdToSessions = MultiValueMap.decorate(
 				new ConcurrentHashMap<String, BigInteger>(), ConcurrentLinkedQueue.class);
+		
+		// Experiment trackers
+		experiments = new ConcurrentBooleanCounter<String>();
+	}
+	
+	@Override
+	public void newExperimentStarted(String expId, HITWorkerGroup group, long startTime) {
+		experiments.put(expId, false);
+		
+		super.newExperimentStarted(expId, group, startTime);
+	}
+	
+	@Override
+	public void experimentFinished(String expId, HITWorkerGroup group, long endTime) {
+		super.experimentFinished(expId, group, endTime);
+		
+		experiments.put(expId, true);
 	}
 
 	@Override
-	public boolean sessionExistsInDB(String sessionID) {
+	protected void saveSession(Session record) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public boolean hitExistsInDB(String sessionID) {
 		return usedIDs.containsKey(sessionID);
 	}
 
 	@Override
-	protected boolean userRequiresQuiz(String workerId)
-			throws TooManyFailsException {		
-		return requireQuiz;
+	public List<Experiment> getSetExperiments() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 	@Override
-	public boolean sessionCompletedInDB(String id) {		
-		return (usedIDs.containsKey(id) && (usedIDs.get(id) == true));
+	public List<Quiz> getSetQuizRecords(String workerId) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public List<SessionRecord> getSetSessionInfoForWorker(String workerId) {		
+	public List<Session> getSetSessionInfoForWorker(String workerId) {		
 		Collection<String> sessions =
 			(Collection<String>) workerIdToSessions.get(workerId);
 		
 		if( sessions == null ) return null;
 		
-		List<SessionRecord> srs = new ArrayList<SessionRecord>(sessions.size());		
+		List<Session> srs = new ArrayList<Session>(sessions.size());		
 		for( String s : sessions ) srs.add(getStoredSessionInfo(s));
 		
 		return srs;
 	}
 
 	@Override
-	public SessionRecord getStoredSessionInfo(String sessionID) {
+	public Session getStoredSessionInfo(String sessionID) {
 		// Obviously, this is missing most of the stuff, but who cares for now
-		SessionRecord sr = new SessionRecord();
+		Session sr = new Session();
 		
 		sr.setHitId(sessionID);
 		sr.setAssignmentId(idToAssignmentId.get(sessionID));
@@ -99,56 +122,61 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	public void saveAssignmentForSession(String sessionID,
+	public void saveAssignmentForSession(String hitId,
 			String assignmentId, String workerId) {
-		idToAssignmentId.put(sessionID, assignmentId);		
-		workerIdToSessions.put(workerId, sessionID);
+		idToAssignmentId.put(hitId, assignmentId);		
+		workerIdToSessions.put(workerId, hitId);
 		
 		logger.info(String.format("session %s has assignment %s by worker %s",
-				sessionID, assignmentId, workerId));
+				hitId, assignmentId, workerId));
 	}
 
 	@Override
-	public void saveQuizResults(String sessionID, QuizResults qr) {
+	public void saveQuizResults(HITWorkerImpl session, QuizResults qr) {
 		logger.info(String.format("Session %s got %d out of %d correct", 
-				sessionID, qr.correct, qr.total));
+				session, qr.correct, qr.total));
 	}
 
 	@Override
-	protected void saveUsernameForSession(String sessionId, String username) {		
+	protected void saveUsername(HITWorkerImpl session, String username) {
+		super.saveUsername(session, username);
+		
 		logger.info(String.format("test: %s registered username '%s'", 
-				sessionId, username));
+				session, username));
 	}
 
 	@Override
-	public void saveIPForSession(String id, InetAddress remoteAddress, Date lobbyTime) {
-		logger.info(id + " connected from IP " + remoteAddress.getHostAddress() +
+	public void saveIP(HITWorkerImpl session, InetAddress remoteAddress, Date lobbyTime) {
+		super.saveIP(session, remoteAddress, lobbyTime);
+		
+		logger.info(session + " connected from IP " + remoteAddress.getHostAddress() +
 				" at time " + lobbyTime.toString());		
 	}
 
 	@Override
-	protected void saveExpStartTime(ExperimentServer<?> exp, Date startTime) {
-		logger.info(String.format(exp + " started at " + Utils.getTimeStringFromDate(startTime)));		
+	protected void saveExpStartTime(String expId, long startTime) {
+		logger.info(String.format(expId + " started at " + new Date(startTime)));		
 	}
 
 	@Override
-	protected void saveExperimentForSession(String clientID,
-			String experimentID) {
-		// TODO Auto-generated method stub
+	protected void saveExperiment(HITWorkerImpl session, String experimentID) {
+		super.saveExperiment(session, experimentID);
 		
+		logger.info("{} joined experiment {}", session, experimentID);	
 	}
 
 	@Override
-	protected void saveExpEndTime(ExperimentServer<?> exp, Date endTime) {
-		logger.info(String.format(exp + " ended at " + Utils.getTimeStringFromDate(endTime)));		
+	protected void saveExpEndTime(String expId, long endTime) {
+		logger.info(String.format(expId + " ended at " + new Date(endTime)));		
 	}
 
 	@Override
-	protected void saveSessionCompleteInfo(String sessionID,
-			double inactivePercent) {
-		usedIDs.put(sessionID, true);
+	protected void saveSessionCompleteInfo(HITWorkerImpl session) {
+		super.saveSessionCompleteInfo(session);
+		
+		usedIDs.put(session.getHitId(), true);
 		logger.info(String.format("session %s was inactive for fraction %.02f",
-				sessionID, inactivePercent));		
+				session, session.getLiveInactivePercent()));		
 	}
 
 	
@@ -168,9 +196,9 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	public List<SessionRecord> expireUnusedSessions() {
+	public List<Session> expireUnusedSessions() {
 		logger.warn("Expiring HITs not yet implemented in dummy tracker");
-		return new LinkedList<SessionRecord>();
+		return new LinkedList<Session>();
 	}
 
 }

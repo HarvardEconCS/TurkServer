@@ -11,7 +11,7 @@ import org.cometd.bayeux.server.ServerSession;
 import org.cometd.server.authorizer.GrantAuthorizer;
 import org.eclipse.jetty.util.log.Log;
 
-public class DemoServlet extends SessionServlet<SimpleExperimentServer> {
+public class DemoServlet extends SessionServlet {
 	
 	private static final long serialVersionUID = 3128535146982507267L;
 	

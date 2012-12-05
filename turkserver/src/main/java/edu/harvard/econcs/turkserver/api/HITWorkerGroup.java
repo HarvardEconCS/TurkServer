@@ -1,12 +1,13 @@
 package edu.harvard.econcs.turkserver.api;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface HITWorkerGroup {
 	
-	int size();
+	int groupSize();
 		
-	List<HITWorker> getHITWorkers();
+	Collection<? extends HITWorker> getHITWorkers();
 	
 	/**
 	 * Convenience method to get the HIT IDs for this group of workers.
@@ -25,12 +26,6 @@ public interface HITWorkerGroup {
 	 * @param hitId
 	 * @return
 	 */
-	HITWorker findByHITId(String hitId);
-	
-	/**
-	 * Send a JSON-encoded message to the entire group.
-	 * @param msg
-	 */
-	void sendExperimentBroadcast(Object msg);
+	HITWorker findByHITId(String hitId);	
 	
 }

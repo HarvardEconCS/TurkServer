@@ -12,8 +12,10 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>    
     <cometd-version>2.5.0</cometd-version>
     <jetty-version>7.6.7.v20120910</jetty-version>
-    <slf4j-version>1.6.6</slf4j-version>
+    <slf4j-version>1.6.6</slf4j-version>    
     <!-- Use the corresponding version of jetty/slf4j for CometD above. -->
+    <querydsl-version>2.9.0</querydsl-version>
+    <mysql-connector-version>5.1.21</mysql-connector-version>
     <guava-version>13.0.1</guava-version>
   </properties>
   
@@ -84,6 +86,11 @@
     	<version>${slf4j-version}</version>
     </dependency>
     <dependency>
+    	<groupId>org.slf4j</groupId>
+    	<artifactId>slf4j-log4j12</artifactId>
+    	<version>${slf4j-version}</version>
+    </dependency>
+    <dependency>
     	<groupId>javax.servlet</groupId>
     	<artifactId>javax.servlet-api</artifactId>
     	<version>3.0.1</version>
@@ -94,11 +101,20 @@
     	<artifactId>xalan</artifactId>
     	<version>2.7.1</version>
     </dependency>
-
+    <dependency>
+    	<groupId>com.mysema.querydsl</groupId>
+    	<artifactId>querydsl-sql</artifactId>
+    	<version>${querydsl-version}</version>
+    </dependency>
+    <dependency>
+    	<groupId>com.mysema.querydsl</groupId>
+    	<artifactId>querydsl-sql-codegen</artifactId>
+    	<version>${querydsl-version}</version>
+    </dependency>
     <dependency>
     	<groupId>mysql</groupId>
     	<artifactId>mysql-connector-java</artifactId>
-    	<version>5.1.18</version>
+    	<version>${mysql-connector-version}</version>
     </dependency>        
     <dependency>
     	<groupId>junit</groupId>
@@ -142,6 +158,11 @@
     	<groupId>com.google.guava</groupId>
     	<artifactId>guava</artifactId>
     	<version>13.0.1</version>
+    </dependency>
+    <dependency>
+    	<groupId>com.google.inject</groupId>
+    	<artifactId>guice</artifactId>
+    	<version>3.0</version>
     </dependency>
   </dependencies>
   
@@ -192,7 +213,46 @@
       			</execution>
     		</executions>
 		</plugin>  	
-  		
+		
+  		<plugin>
+  			<groupId>com.mysema.querydsl</groupId>
+  			<artifactId>querydsl-maven-plugin</artifactId>
+  			<version>${querydsl-version}</version>
+  			<executions>
+    			<execution>
+      				<goals>      				
+        				<!-- <goal>export</goal> -->
+      				</goals>
+    			</execution>            
+  			</executions>
+  			<configuration>
+    			<jdbcDriver>com.mysql.jdbc.Driver</jdbcDriver>
+    			<jdbcUrl>jdbc:mysql://localhost:3306/turkserver</jdbcUrl>
+    			<jdbcUser>turkserver</jdbcUser>    			
+    			<packageName>edu.harvard.econcs.turkserver.schema</packageName>
+    			<targetFolder>${project.basedir}/src/main/java</targetFolder>
+    			<exportBeans>true</exportBeans>
+				<!--
+      				optional elements :      
+      				* jdbcUser = connection user
+      				* jdbcPassword = connection password
+      				* namePrefix = name prefix for generated query classes (default: Q)
+      				* schemaPattern = ant style pattern to restrict code generation to certain schemas (default: null)
+      				* tableNamePattern = ant style pattern to restrict code generation to certain tables (default: null)
+      				* exportBeans = set to true to generate beans as well, see section 2.14.13 (default: false)
+      				* innerClassesForKeys = set to true to generate inner classes for keys (default: false)
+      				* validationAnnotations = set to false to disable serialization of validation annotations (default: true)
+    			-->     
+  			</configuration>
+  			<dependencies>
+    			<dependency>
+            		<groupId>mysql</groupId>
+            		<artifactId>mysql-connector-java</artifactId>
+            		<version>${mysql-connector-version}</version>
+    			</dependency>
+  			</dependencies>
+		</plugin>  
+		
   	</plugins>
   	
   	<pluginManagement>

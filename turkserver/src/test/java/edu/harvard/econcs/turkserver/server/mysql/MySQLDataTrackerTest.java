@@ -12,8 +12,7 @@ import edu.harvard.econcs.turkserver.ExpServerException;
 import edu.harvard.econcs.turkserver.server.SessionRecord;
 
 import org.apache.commons.configuration.ConfigurationException;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 
 import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 
@@ -23,6 +22,8 @@ public class MySQLDataTrackerTest {
 		
 	@Before
 	public void init() throws ConfigurationException {		
+		
+		// TODO import default schema into database
 		
 		MysqlConnectionPoolDataSource ds = new MysqlConnectionPoolDataSource();
 		
@@ -34,7 +35,7 @@ public class MySQLDataTrackerTest {
 		ds.setStrictUpdates(false);	
 		
 		dt = new MySQLDataTracker(ds, "test", null, 2, 2);
-		dt.createSchema(true);
+		
 	}
 	
 	/**
@@ -55,9 +56,9 @@ public class MySQLDataTrackerTest {
 		// Add shit to database
 		dt.registerAssignment(hitID, assignmentId, workerId);
 		// Test for uniqueness (code copied from tracker)		
-		assertTrue(dt.sessionExistsInDB(hitID));		
+		assertTrue(dt.hitExistsInDB(hitID));		
 		// Test that session is not completed
-		assertFalse(dt.sessionCompletedInDB(hitID));		
+		assertFalse(dt.hitCompletedInDB(hitID));		
 		
 		// Check that sessionIDs stored properly 
 		List<SessionRecord> srs = dt.getSetSessionInfoForWorker(workerId);
@@ -68,13 +69,13 @@ public class MySQLDataTrackerTest {
 		assertEquals(dt.getStoredSessionInfo(hitID).getAssignmentId(), assignmentId);
 		
 		dt.lobbyLogin(hitID, username);
-		dt.saveIPForSession(hitID, InetAddress.getLocalHost(), new Date());
+		dt.saveIP(hitID, InetAddress.getLocalHost(), new Date());
 		// Check that username cached correctly
 		assertEquals(dt.getUsername(hitID), username);
-		assertFalse(dt.sessionCompletedInDB(hitID));
+		assertFalse(dt.hitCompletedInDB(hitID));
 		
 		// Test inactivePercent completion detection
-		dt.saveSessionCompleteInfo(hitID, 0.02);		
-		assertTrue(dt.sessionCompletedInDB(hitID));
+		dt.saveSessionCompleteInfo(hitID);		
+		assertTrue(dt.hitCompletedInDB(hitID));
 	}
 }

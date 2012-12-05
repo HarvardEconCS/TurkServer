@@ -4,13 +4,16 @@ import edu.harvard.econcs.turkserver.QuizFailException;
 import edu.harvard.econcs.turkserver.QuizResults;
 import edu.harvard.econcs.turkserver.SessionExpiredException;
 import edu.harvard.econcs.turkserver.TooManyFailsException;
-import edu.harvard.econcs.turkserver.server.ExperimentServer;
-import edu.harvard.econcs.turkserver.server.QuizMaster;
+import edu.harvard.econcs.turkserver.schema.*;
+import edu.harvard.econcs.turkserver.server.HITWorkerImpl;
+import edu.harvard.econcs.turkserver.server.QuizPolicy;
 import edu.harvard.econcs.turkserver.server.SessionRecord;
 import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
 
 import java.net.InetAddress;
+import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
 
@@ -19,255 +22,127 @@ import org.apache.commons.dbutils.handlers.ArrayListHandler;
 import org.apache.commons.dbutils.handlers.ColumnListHandler;
 import org.apache.commons.dbutils.handlers.ScalarHandler;
 
+import com.mysema.query.QueryFlag.Position;
+import com.mysema.query.sql.MySQLTemplates;
+import com.mysema.query.sql.SQLQuery;
+import com.mysema.query.sql.SQLQueryImpl;
+import com.mysema.query.sql.SQLTemplates;
+import com.mysema.query.sql.dml.SQLInsertClause;
+import com.mysema.query.sql.dml.SQLUpdateClause;
+import com.mysema.query.types.TemplateExpressionImpl;
 import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 
 /**
  * Connects to a mysql database for persistent users across sessions
+ * 
+ * schema for turk experiments
+ * 
+ * HIT ID 30 characters
+ * Assignment ID 30 characters
+ * Worker ID 14 characters
+ * 
+ * username 40 characters
+ * 
  * @author mao
  *
  */
-public class MySQLDataTracker extends ExperimentDataTracker {
+public class MySQLDataTracker extends ExperimentDataTracker {	
 	
-	public static final int USERNAME_LIMIT = 40;
+	QSets _sets = QSets.sets;
+	QExperiment _experiment = QExperiment.experiment;
+	QSession _session = QSession.session;	
+	QQuiz _quiz = QQuiz.quiz;
+	QWorker _worker = QWorker.worker;
 	
-	private final String setID;	
+	private final String setID;		
 	
-	private final QuizMaster quizMaster;
-	
+	// TODO remove this and pool connections with C3P0
 	private final QueryRunner qr;
+	
+	private Connection conn;
+	private final SQLTemplates dialect;
 		
 	static final ScalarHandler defaultScalarHandler = new ScalarHandler();
 	static final ArrayListHandler defaultArrayListHandler = new ArrayListHandler();		
-	static final ColumnListHandler hitIDHandler = new ColumnListHandler("hitId");
-	static final SessionRecordListHandler sessionHandler = new SessionRecordListHandler();
+	static final ColumnListHandler hitIDHandler = new ColumnListHandler("hitId");	
 
-	public MySQLDataTracker(MysqlConnectionPoolDataSource ds, String setID, 
-			QuizMaster qm, int simultaneousSessionLimit, int totalSetLimit) {
-		super(simultaneousSessionLimit, totalSetLimit);
-		
-		this.setID = setID;
-		this.quizMaster = qm;
+	public MySQLDataTracker(MysqlConnectionPoolDataSource ds, String setID) {
+		super();
+				
+		this.setID = setID;		
 		this.qr = new QueryRunner(ds);
-		
-		// TODO ensure this setId exists
-	}	
-
-	/**
-	 * Creates a new schema for turk experiments
-	 * 
-	 * Session ID 40 characters
-	 * HIT ID 30 characters
-	 * Assignment ID 30 characters
-	 * Worker ID 14 characters
-	 * 
-	 * username 40 characters
-	 * 
-	 * @param dropOld whether to drop the old database
-	 */
-	public void createSchema(boolean dropOld) {
-		String query;
-		
-		try {
-			if( dropOld ) {
-				query = "DROP TABLE IF EXISTS quiz, qual, session, experiment, worker"; 
-				debugUpdate(query);
-			}
-			
-			// Workers table
-			query = 
-				"CREATE TABLE IF NOT EXISTS worker (" +
-				"id VARCHAR(14) NOT NULL PRIMARY KEY," +
-				"notify ENUM('off', 'on')" +				
-				") ENGINE = InnoDB";
-			debugUpdate(query);
-			
-			// Sets table
-			query = 
-				"CREATE TABLE IF NOT EXISTS sets (" +
-				"id INT NOT NULL AUTO_INCREMENT PRIMARY KEY," +
-				"name VARCHAR(24) NOT NULL UNIQUE KEY," +
-				"descript TEXT" +
-				") ENGINE = InnoDB";
-			debugUpdate(query);
-			
-			// Make sure set exists already for FK constraints
-			query =
-				"INSERT IGNORE INTO sets (name) VALUES (?)";
-			debugUpdate(query, setID);
-			
-			// Experiments table
-			query = 
-				"CREATE TABLE IF NOT EXISTS experiment (" +
-				"id VARCHAR(24) NOT NULL PRIMARY KEY," +
-				"setId VARCHAR(24)," +
-				"players INT," +
-				"file VARCHAR(24)," +
-				"startTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
-				"endTime TIMESTAMP DEFAULT 0," +
-				"FOREIGN KEY(setId) REFERENCES sets(name) ON UPDATE CASCADE" +				
-				") ENGINE = InnoDB";
-			debugUpdate(query);
-			
-			// Special key for expired sessions
-			query = 
-				"INSERT IGNORE INTO experiment (id, startTime) VALUES (\"EXPIRED\", 0)";
-			debugUpdate(query);
-			
-			// Session table - use innodb for row locking
-			query = 
-				"CREATE TABLE IF NOT EXISTS session (" +
-				"hitId VARCHAR(30) NOT NULL PRIMARY KEY," +
-				"setId VARCHAR(24)," +				
-				"assignmentId VARCHAR(30) UNIQUE," +
-				"workerId VARCHAR(14)," +
-				"username VARCHAR(40)," +
-				"lobbyTime TIMESTAMP DEFAULT 0," +
-				"ipAddr VARCHAR(16)," +
-				"experimentId VARCHAR(24)," +
-				"inactivePercent DOUBLE," +
-				"paid DECIMAL(10,2)," +
-				"bonusPaid DECIMAL(10,2)," +
-				"hitStatus VARCHAR(16)," +
-				"comment TEXT," +
-				"FOREIGN KEY(setId) REFERENCES sets(name) ON UPDATE CASCADE," +
-				"FOREIGN KEY(workerId) REFERENCES worker(id)," +
-				"FOREIGN KEY(experimentId) REFERENCES experiment(id)" +
-				") ENGINE = InnoDB";
-			debugUpdate(query);
-			
-			// Quiz results table
-			query = 
-				"CREATE TABLE IF NOT EXISTS quiz (" +
-				"id INT NOT NULL AUTO_INCREMENT PRIMARY KEY," +
-				"sessionId VARCHAR(40)," +
-				"workerId VARCHAR(14)," +
-				"setId VARCHAR(24)," +
-				"numCorrect INT DEFAULT 0," +
-				"numTotal INT DEFAULT 0," +
-				"FOREIGN KEY(sessionId) REFERENCES session(id) ON DELETE CASCADE," +
-				"FOREIGN KEY(workerId) REFERENCES worker(id)" +
-				") ENGINE = InnoDB";
-			debugUpdate(query);
-			
-			query = 
-				"CREATE TABLE IF NOT EXISTS qual (" +
-				"id INT NOT NULL AUTO_INCREMENT PRIMARY KEY," +
-				"workerId VARCHAR(40)," +
-				"qual VARCHAR(30)," +
-				"value INT NOT NULL," +
-				"FOREIGN KEY(workerId) REFERENCES worker(id), " +
-				"UNIQUE (workerId, qual) " +
-				") ENGINE = InnoDB";
-			debugUpdate(query);
-			
-			logger.info("Created new schema");		
-		} catch (SQLException e) {			
-			e.printStackTrace();
-		}				
-	}
-	
-	private void debugUpdate(String query, Object... params) throws SQLException {
-		System.out.println(query);		
-		System.out.println(qr.update(query, params) + " rows updated");
-	}
-	
-	@Override
-	public boolean sessionExistsInDB(String sessionID) throws SessionExpiredException {
-		List<Object[]> results = null;
-		
-		try {
-			results = qr.query("SELECT experimentId FROM session WHERE hitId=?", 
-					defaultArrayListHandler, 
-					sessionID);
-		} catch (SQLException e) {			
-			e.printStackTrace();
-		}
 				
-		if( results != null && results.size() > 0) {
-			Object experimentId = results.get(0)[0];			
-			if( experimentId != null && "EXPIRED".equals(experimentId.toString()) ) 
-				throw new SessionExpiredException();
-			return true;
+		dialect = new MySQLTemplates();
+		
+		// TODO make a proper connection		
+		try {
+			conn = ds.getConnection();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			conn = null;
 		}
-		else return false;
-	}
+		
+		// ensure this setId exists
+		new SQLInsertClause(conn, dialect, _sets)
+		.columns(_sets.name)
+		.values(setID)
+		.addFlag(Position.START_OVERRIDE, "INSERT IGNORE INTO ")
+		.execute();
+	}		
 	
 	@Override
-	protected boolean userRequiresQuiz(String workerId)
-			throws TooManyFailsException {
-		if( quizMaster == null ) return false;
-		
-		Object result = null;
-		List<Object[]> results = null;
-		
-		// See if there are any perfect scores in this set
-		try {
-			result = qr.query("SELECT COUNT(*) FROM quiz WHERE numCorrect = numTotal " +
-					"AND workerId=? AND setId=?", defaultScalarHandler, workerId, setID);
-		} catch (SQLException e) {			
-			e.printStackTrace();
-		}
-		
-		if( result != null && Integer.parseInt(result.toString()) > 0) return false;
-		
-		// See if we should let them have another try
-		try {
-			results = qr.query("SELECT sum(numCorrect), sum(numTotal) FROM quiz WHERE workerId=? AND setId=?", 
-					defaultArrayListHandler, workerId, setID);
-		} catch (SQLException e) {			
-			e.printStackTrace();
-		}
+	public List<Experiment> getSetExperiments() {		
+		return new SQLQueryImpl(conn, dialect)
+		.from(_experiment)
+		.where(_experiment.setId.eq(setID))
+		.list(_experiment);
+	}
+
+	@Override
+	public boolean hitExistsInDB(String hitId) {
+		long count = new SQLQueryImpl(conn, dialect)
+		.from(_session)
+		.where(_session.hitId.eq(hitId))
+		.count();
+			
+		// TODO replicate expired experiment logic elsewhere
+		return count > 0;
 				
-		if( results != null && results.size() > 0) {
-			Object correctCount = results.get(0)[0];
-			Object totalCount = results.get(0)[1];
-			int numCorrect = correctCount == null ? 0 : Integer.parseInt(correctCount.toString());
-			int numTotal = totalCount == null ? 0 : Integer.parseInt(totalCount.toString());
-
-			if( numTotal == 0 || // First timer
-					!quizMaster.overallFail(numCorrect, numTotal)) 
-				return true;
-			else 
-				throw new TooManyFailsException();
-		}
-		
-		return true;
+//		if( results != null && results.size() > 0) {
+//			Object experimentId = results.get(0)[0];			
+//			if( experimentId != null && "EXPIRED".equals(experimentId.toString()) ) 
+//				throw new SessionExpiredException();
+//			return true;
+//		}
+//		else return false;
 	}
 
 	@Override
-	public boolean sessionCompletedInDB(String sessionID) {		
-		SessionRecord sr = getStoredSessionInfo(sessionID);
+	public List<Quiz> getSetQuizRecords(String workerId) {
+		SQLQuery query = new SQLQueryImpl(conn, dialect);
 		
-		return (sr != null && (sr.getStatus() == SessionStatus.COMPLETED));
+		return query.from(_quiz)
+				.where(_quiz.setId.eq(setID), 
+						_quiz.workerId.eq(workerId))
+				.list(_quiz);
 	}
 
 	@Override
-	public List<SessionRecord> getSetSessionInfoForWorker(String workerId) {
-		List<SessionRecord> results = null;
+	public List<Session> getSetSessionInfoForWorker(String workerId) {
+		SQLQuery query = new SQLQueryImpl(conn, dialect);
 		
-		try {
-			// This should be quick because workerId is indexed as a foreign key
-			results = qr.query("SELECT * FROM session WHERE workerId=? AND setId=?", 
-					sessionHandler, 
-					workerId, setID);
-		} catch (SQLException e) {			
-			e.printStackTrace();
-		}
-		
-		return results;
+		return query.from(_session)
+				.where(_session.workerId.eq(workerId),
+						_session.setId.eq(setID))
+				.list(_session);
 	}
 
 	@Override
-	public SessionRecord getStoredSessionInfo(String sessionID) {
-		List<SessionRecord> result = null;
-		
-		try {
-			result = qr.query("SELECT * FROM session WHERE hitId=?",
-					sessionHandler, 
-					sessionID);
-		} catch (SQLException e) {			
-			e.printStackTrace();
-		} 
+	public Session getStoredSessionInfo(String hitId) {
+		List<Session> result = new SQLQueryImpl(conn, dialect)
+		.from(_session)
+		.where(_session.hitId.eq(hitId))
+		.list(_session);
 			
 		// Return the first element if one exists
 		return (result == null || result.size() == 0 ? null : result.get(0));
@@ -275,16 +150,21 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 
 	@Override
 	public void saveHITId(String hitId) {
-		try {
-			qr.update("INSERT INTO session (hitId, setId) VALUES (?, ?) " +
-					"ON DUPLICATE KEY UPDATE setId=?", hitId, setID, setID);
-		} catch (SQLException e) {			
-			e.printStackTrace();
-		} 	
+		/*
+		 * INSERT INTO session (hitId, setId) VALUES (?, ?)
+		 * ON DUPLICATE KEY UPDATE setId = ?
+		 */
+		
+		new SQLInsertClause(conn, dialect, _session)
+		.columns(_session.hitId, _session.setId)
+		.values(hitId, setID)
+		.addFlag(Position.END, TemplateExpressionImpl.create(				
+				String.class, " ON DUPLICATE KEY UPDATE {0}", _session.setId.eq(setID) ))
+		.execute();
 	}
 
 	@Override
-	public void saveAssignmentForSession(String sessionID,
+	public void saveAssignmentForSession(String hitId,
 			String assignmentId, String workerId) {
 		try {
 			// Make sure the worker table contains this workerId first, but ignore if already exists
@@ -292,115 +172,60 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			
 			qr.update("UPDATE session SET assignmentId=?, workerId=? WHERE hitId=?", 
 					assignmentId, workerId, 
-					sessionID);
+					hitId);
 		} catch (SQLException e) {			
 			e.printStackTrace();
 		}		
 	}
 
 	@Override
-	public void saveQuizResults(String sessionID, QuizResults results) throws QuizFailException {
-		if( quizMaster == null ) {
-			logger.error("Got back quiz results with no quiz master?");
-			return;
-		}
+	public void saveQuizResults(String hitId, String workerId, QuizResults results) {					
 		
-		String workerId = "unidentified";
-		try {
-			workerId = qr.query("SELECT workerId FROM session WHERE hitId=?", defaultScalarHandler, sessionID).toString();
-			
-			// Make sure the worker table contains this workerId first, but ignore if already exists
-			qr.update("INSERT IGNORE INTO worker(id) VALUES (?)", workerId);
-			
-			qr.update("INSERT INTO quiz(sessionId, workerId, setId, numCorrect, numTotal) " +
-					"VALUES (?, ?, ?, ?, ?)",
-					sessionID, workerId, setID, results.correct, results.total
-					);
-		} catch (SQLException e) {			
-			e.printStackTrace();
-		}
+		// Make sure the worker table contains this workerId first, but ignore if already exists
+		new SQLInsertClause(conn, dialect, _worker)
+		.columns(_worker.id)
+		.values(workerId)
+		.addFlag(Position.START_OVERRIDE, "INSERT IGNORE INTO ")
+		.execute();
 		
-		if( !quizMaster.quizPasses(results) ) {
-			logger.info(workerId + " failed quiz");
-			throw new QuizFailException();
-		}
-		else {
-			logger.info(workerId + " passed quiz");
-		}
-	}
-
-	@Override
-	protected void saveUsernameForSession(String sessionId, String username) {		
-		try {
-			// Update with username and the time they entered the lobby
-			// TODO worry about previous users for this session's lobby Time
-			
-			// TODO automatic truncation right now but we should fix this in frontend
-			if( username.length() > USERNAME_LIMIT ) username = username.substring(0, USERNAME_LIMIT);
-			
-			qr.update("UPDATE session SET username=? WHERE hitId=?",
-					username, 
-					sessionId);
-		} catch (SQLException e) {			
-			e.printStackTrace();
-		}		
-	}
-
-	@Override
-	public void saveIPForSession(String id, InetAddress remoteAddress, Date lobbyTime) {
-		try {
-			qr.update("UPDATE session SET ipAddr=?, lobbyTime=? WHERE hitId=?", 
-					remoteAddress.getHostAddress(), lobbyTime,
-					id);
-		} catch (SQLException e) {			
-			e.printStackTrace();
-		}		
-	}
-
-	@Override
-	protected void saveExpStartTime(ExperimentServer<?> exp, Date startTime) {
-		try {
-			String filename = exp.getFilename();
-			qr.update("INSERT INTO experiment (id, setId, players, file, startTime) VALUES (?,?,?,?,?)",
-					exp.experimentID, setID, exp.size(), filename, startTime);
-		} catch (SQLException e) {			
-			e.printStackTrace();
-		}
-	}
-
-	@Override
-	protected void saveExperimentForSession(String sessionID,
-			String experimentID) {
-		try {
-			qr.update("UPDATE session SET experimentId=? WHERE hitId=?",
-					experimentID, sessionID);
-		} catch (SQLException e) {			
-			e.printStackTrace();
-		}
+		/* creates
+		 * INSERT IGNORE INTO worker(id) VALUES ("workerId");
+		 */
+		
+		double score = 1.0*results.correct/results.total;
+		
+		new SQLInsertClause(conn, dialect, _quiz)
+		.columns(_quiz.sessionId, _quiz.workerId, _quiz.setId, _quiz.numCorrect, _quiz.numTotal, _quiz.score)
+		.values(hitId, workerId, setID, results.correct, results.total, score )
+		.execute();				
 		
 	}
 
 	@Override
-	protected void saveExpEndTime(ExperimentServer<?> exp, Date endTime) {
-		try {
-			qr.update("UPDATE experiment SET endTime=? where hitId=?",
-					endTime, exp.experimentID);
-		} catch (SQLException e) {			
-			e.printStackTrace();
-		}
+	protected void saveExpStartTime(String expId, long startTime) {
 		
+		new SQLInsertClause(conn, dialect, _experiment)
+		.columns(_experiment.id, _experiment.setId, _experiment.participants, _experiment.inputdata, _experiment.startTime)
+		.values(expId, setID, size, inputdata, new Timestamp(startTime))
+		.execute();				
 	}
 
 	@Override
-	protected void saveSessionCompleteInfo(String sessionID,
-			double inactivePercent) {
-		try {
-			qr.update("UPDATE session SET inactivePercent=? WHERE hitId=?", 
-					inactivePercent, 
-					sessionID);
-		} catch (SQLException e) {			
-			e.printStackTrace();
-		}		
+	protected void saveExpEndTime(String expId, long endTime) {
+		
+		new SQLUpdateClause(conn, dialect, _experiment)
+		.where(_experiment.id.eq(expId))
+		.set(_experiment.endTime, new Timestamp(endTime))
+		.execute();	
+	}
+
+	@Override
+	protected void saveSession(Session record) {
+		
+		new SQLInsertClause(conn, dialect, _session)
+		.populate(record)
+		.addFlag(Position.START_OVERRIDE, "REPLACE ")
+		.execute();
 	}
 
 	@Override
@@ -416,8 +241,8 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	}
 	
 	@Override
-	public List<SessionRecord> expireUnusedSessions() {		
-		List<SessionRecord> expired = null;
+	public List<Session> expireUnusedSessions() {		
+		List<Session> expired = null;
 		
 		// TODO replace this with better sql
 		try {

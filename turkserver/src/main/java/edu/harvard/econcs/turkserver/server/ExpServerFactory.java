@@ -10,7 +10,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @param <T>
  */
-public abstract class ExpServerFactory<T extends ExperimentServer<T>> implements Runnable {
+@Deprecated
+public abstract class ExpServerFactory<T> implements Runnable {
 	
 	/**
 	 * Gets a new experiment.   
@@ -20,7 +21,7 @@ public abstract class ExpServerFactory<T extends ExperimentServer<T>> implements
 	 * @return
 	 * @throws ExperimentFactoryException
 	 */
-	public abstract T getNewExperiment(HostServer<T> host, ConcurrentHashMap<String, Boolean> clients)
+	public abstract T getNewExperiment(HostServer host, ConcurrentHashMap<String, Boolean> clients)
 	throws ExperimentFactoryException;
 		
 	public abstract int getExperimentSize();
@@ -29,7 +30,7 @@ public abstract class ExpServerFactory<T extends ExperimentServer<T>> implements
 	 * Init method which can register serializers, etc
 	 * @param host
 	 */
-	public abstract void doInit(HostServer<T> host);
+	public abstract void doInit(HostServer host);
 	
 	/**
 	 * Default run method, which does nothing.
