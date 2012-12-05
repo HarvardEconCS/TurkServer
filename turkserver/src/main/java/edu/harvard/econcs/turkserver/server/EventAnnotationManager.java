@@ -223,12 +223,17 @@ public class EventAnnotationManager {
 	}
 
 	private Object invokeMethod(Object bean, Method m, Object... args) {
+		boolean accessible = m.isAccessible();
 		try {
+			// TODO robust-ify the accessibility issue here
+			m.setAccessible(true);
 			return m.invoke(bean, args);
 		} catch (Exception e) {
 			logger.warn("Exception invoking {} on {}, ignoring", m, bean.getClass().toString());
 			return null;
-		}		
+		} finally {
+			m.setAccessible(accessible);
+		}
 	}
 
 	/**
