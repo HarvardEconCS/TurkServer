@@ -2,6 +2,8 @@ package edu.harvard.econcs.turkserver.server;
 
 import java.util.List;
 
+import com.google.inject.Singleton;
+
 import edu.harvard.econcs.turkserver.QuizResults;
 import edu.harvard.econcs.turkserver.schema.Quiz;
 

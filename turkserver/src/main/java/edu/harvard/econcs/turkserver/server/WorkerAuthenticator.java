@@ -2,6 +2,8 @@ package edu.harvard.econcs.turkserver.server;
 
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,7 +11,6 @@ import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
 import edu.harvard.econcs.turkserver.ExpServerException;
-import edu.harvard.econcs.turkserver.QuizFactory;
 import edu.harvard.econcs.turkserver.QuizMaterials;
 import edu.harvard.econcs.turkserver.QuizResults;
 import edu.harvard.econcs.turkserver.SessionCompletedException;
@@ -38,13 +39,15 @@ public class WorkerAuthenticator {
 	@Inject
 	public WorkerAuthenticator(
 			ExperimentDataTracker tracker,
+			@Nullable 
 			QuizFactory quizFactory,
+			@Nullable 
 			QuizPolicy quizPolicy,
-			@Named("Concurrent Session Limit")
+			@Named(TSConfig.CONCURRENCY_LIMIT)
 			int concurrentSessionLimit,
-			@Named("Total Set Limit")
+			@Named(TSConfig.SET_REPEAT_LIMIT)
 			int totalSetLimit,
-			@Named("Special Workers")
+			@Named(TSConfig.SPECIAL_WORKERS)
 			List<String> specialWorkers) {
 		this.tracker = tracker;
 		

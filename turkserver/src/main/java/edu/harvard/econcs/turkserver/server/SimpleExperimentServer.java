@@ -5,12 +5,11 @@ package edu.harvard.econcs.turkserver.server;
 
 import org.apache.commons.configuration.Configuration;
 import org.cometd.bayeux.server.ServerSession;
-import org.eclipse.jetty.util.resource.Resource;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
-import edu.harvard.econcs.turkserver.mturk.TurkHITManager;
+import edu.harvard.econcs.turkserver.mturk.HITController;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 
 /**
@@ -28,15 +27,17 @@ public final class SimpleExperimentServer extends SessionServer {
 	@Inject
 	public SimpleExperimentServer(			
 			ExperimentDataTracker tracker, 
-			TurkHITManager thm,
+			HITController hitCont,
 			WorkerAuthenticator workerAuth,
 			Experiments experiments,
-			Resource[] resources,
+			JettyCometD jetty,
 			Configuration config
 			) throws Exception {
 		
-		super(tracker, thm, workerAuth, experiments, resources, config);		
-								       
+		super(tracker, hitCont, workerAuth, experiments, jetty, config);		
+		
+		jetty.addServlet(SessionServlet.class, "/exp");
+		
         // TODO init server extensions
 	}	
 

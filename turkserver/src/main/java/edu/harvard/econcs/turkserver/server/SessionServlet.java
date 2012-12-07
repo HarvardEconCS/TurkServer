@@ -21,11 +21,12 @@ import org.eclipse.jetty.util.log.Log;
 import edu.harvard.econcs.turkserver.Codec;
 import edu.harvard.econcs.turkserver.QuizResults;
 
-public abstract class SessionServlet extends GenericServlet {
+public class SessionServlet extends GenericServlet {
 
 	private static final long serialVersionUID = -3882966106597782108L;	
 	
-	protected SessionServer theServer;
+	protected JettyCometD jettyServer;
+	protected SessionServer sessions;
 	
 	protected BayeuxServerImpl bayeux;
 	protected ServerAnnotationProcessor processor;
@@ -34,10 +35,9 @@ public abstract class SessionServlet extends GenericServlet {
 	public void init() throws ServletException {
 		super.init();
 		
-		theServer = (SessionServer) getServletContext().getAttribute(SessionServer.ATTRIBUTE);
-		
-		bayeux = (BayeuxServerImpl) 
-				getServletContext().getAttribute(BayeuxServer.ATTRIBUTE);		
+		sessions = (SessionServer) getServletContext().getAttribute(SessionServer.ATTRIBUTE);
+		jettyServer = (JettyCometD) getServletContext().getAttribute(JettyCometD.ATTRIBUTE);		
+		bayeux = (BayeuxServerImpl)	getServletContext().getAttribute(BayeuxServer.ATTRIBUTE);	
 		
 		// Create extensions
 		bayeux.addExtension(new TimesyncExtension());
@@ -64,7 +64,7 @@ public abstract class SessionServlet extends GenericServlet {
         processor.process(new ExperimentData());
         
         // Watch for connect/disconnects
-        bayeux.addListener(theServer.new UserSessionListener());        
+        bayeux.addListener(sessions.new UserSessionListener());        
 	}
 	
 	public ServerAnnotationProcessor getProcessor() {
@@ -99,7 +99,7 @@ public abstract class SessionServlet extends GenericServlet {
 			if( Codec.hitView.equals(status) ) {				
 				Log.getRootLogger().info("HIT " + hitId + " is being viewed by " + clientId);
 				
-				theServer.sessionView(session, hitId);
+				sessions.sessionView(session, hitId);
 			}
 			else if( Codec.hitAccept.equals(status)) {
 				String assignmentId = null, workerId = null;
@@ -112,23 +112,23 @@ public abstract class SessionServlet extends GenericServlet {
 				
 				Log.getRootLogger().info("HIT " + hitId + " assignment " + assignmentId + " accepted by " + workerId);
 												
-				theServer.sessionAccept(session, hitId, assignmentId, workerId);									
+				sessions.sessionAccept(session, hitId, assignmentId, workerId);									
 			}
 			else if( Codec.quizResults.equals(status) ) {
 				QuizResults qr = new QuizResults();
 				qr.correct = Integer.parseInt(data.get("correct").toString());
 				qr.total = Integer.parseInt(data.get("total").toString());
 								
-				theServer.rcvQuizResults(session, qr);				
+				sessions.rcvQuizResults(session, qr);				
 			}
 			else if( "inactive".equals(status) ) {
 				long inactiveTime = Long.parseLong(data.get("time").toString());
-				theServer.rcvInactiveTime(session, inactiveTime);
+				sessions.rcvInactiveTime(session, inactiveTime);
 			}
 			else if( Codec.hitSubmit .equals(status) ) {								
 				Log.getRootLogger().info("HIT " + hitId + " submitting");
 				
-				theServer.sessionSubmit(session);
+				sessions.sessionSubmit(session);
 			}									
 		}				
 	}
@@ -145,7 +145,7 @@ public abstract class SessionServlet extends GenericServlet {
 		@Listener("/service/experiment/*")
 		public void listenServiceExperiment(ServerSession session, ServerMessage message) {													
 			// Deliver this to the appropriate experiment server
-			theServer.rcvExperimentServiceMsg(session, message.getDataAsMap());			
+			sessions.rcvExperimentServiceMsg(session, message.getDataAsMap());			
 		}
 		
 		@Configure("/experiment/*")
@@ -163,7 +163,7 @@ public abstract class SessionServlet extends GenericServlet {
 			}
 			else {
 				// Deliver this to the appropriate experiment server			
-				return theServer.rcvExperimentBroadcastMsg(session, message.getDataAsMap());
+				return sessions.rcvExperimentBroadcastMsg(session, message.getDataAsMap());
 			}
 			
 		}

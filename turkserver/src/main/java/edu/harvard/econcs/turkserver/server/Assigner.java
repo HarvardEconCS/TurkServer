@@ -3,6 +3,14 @@ package edu.harvard.econcs.turkserver.server;
 import java.util.List;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
+import net.andrewmao.math.RandomSelection;
+
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import com.google.inject.name.Named;
+
 import edu.harvard.econcs.turkserver.schema.Experiment;
 
 /**
@@ -12,11 +20,17 @@ import edu.harvard.econcs.turkserver.schema.Experiment;
  * @author mao
  *
  */
+@Singleton
 public class Assigner {
 
 	Set<String> assignments;
 		
-	Assigner(Set<String> assignments, List<Experiment> existing) {
+	@Inject
+	Assigner(
+			@Named(TSConfig.INPUT_LIST)
+			Set<String> assignments,
+			@Nullable
+			List<Experiment> existing) {
 		this.assignments = assignments;
 		
 		// TODO initialize counts for each assignment, using a heap
@@ -42,7 +56,7 @@ public class Assigner {
 		}
 		
 		// TODO choose the lowest
-		return null;		
+		return RandomSelection.selectRandom(assignments);		
 	}
 	
 	/**

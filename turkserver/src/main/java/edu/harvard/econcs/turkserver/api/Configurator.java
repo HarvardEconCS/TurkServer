@@ -5,6 +5,8 @@ public interface Configurator {
 	/**
 	 * Sets up an experiment with a given treatment/input. 
 	 * 
+	 * TODO allow this to throw an exception
+	 * 
 	 * @param experiment
 	 * @param inputData
 	 */

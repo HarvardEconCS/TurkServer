@@ -5,11 +5,12 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
+import org.cometd.bayeux.server.BayeuxServer;
 import org.cometd.bayeux.server.ConfigurableServerChannel;
 import org.cometd.bayeux.server.LocalSession;
 import org.cometd.bayeux.server.ServerChannel;
 import org.cometd.bayeux.server.ConfigurableServerChannel.Initializer;
-import org.cometd.server.BayeuxServerImpl;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,8 +36,8 @@ public class Experiments {
 	// Injector for creating bean classes
 	@Inject Injector injector;
 		
-	@Inject BayeuxServerImpl bayeux;	
-	@Inject SessionServer server;
+	BayeuxServer bayeux;	
+	SessionServer server;
 	
 	protected final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 	
@@ -72,6 +73,13 @@ public class Experiments {
 		this.manager = manager;
 		
 		this.currentExps = new MapMaker().makeMap();
+	}
+
+	// TODO remove this hack once things are properly wired up
+	public void setReferences(BayeuxServer bayeux,
+			SessionServer server) {
+		this.bayeux = bayeux;
+		this.server = server;		
 	}
 
 	int getMinGroupSize() {

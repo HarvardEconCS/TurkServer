@@ -29,7 +29,7 @@ public class GroupServlet extends SessionServlet {
 		processor.process(new LobbyService());
 		
 		if (bayeux.getLogger().isDebugEnabled())
-            System.err.println(bayeux.dump());
+            System.err.println(bayeux.dump());		
 	}
 	
 	@Service("lobby")

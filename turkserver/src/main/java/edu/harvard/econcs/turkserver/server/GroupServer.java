@@ -5,7 +5,8 @@ package edu.harvard.econcs.turkserver.server;
 
 import edu.harvard.econcs.turkserver.*;
 import edu.harvard.econcs.turkserver.api.*;
-import edu.harvard.econcs.turkserver.mturk.TurkHITManager;
+import edu.harvard.econcs.turkserver.mturk.HITController;
+import edu.harvard.econcs.turkserver.mturk.TurkHITController;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 
 import java.util.*;
@@ -14,8 +15,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.configuration.Configuration;
 import org.cometd.bayeux.server.LocalSession;
 import org.cometd.bayeux.server.ServerSession;
-import org.eclipse.jetty.servlet.ServletHolder;
-import org.eclipse.jetty.util.resource.Resource;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
@@ -41,9 +40,6 @@ public final class GroupServer extends SessionServer {
 	final AtomicReference<String> serverMessage;	
 	
 	private LocalSession lobbyBroadcaster;
-	
-	// Servlet stuff
-	private ServletHolder lobbyServlet;
 
 	// GUI
 	private ServerFrame serverGUI;
@@ -51,21 +47,20 @@ public final class GroupServer extends SessionServer {
 	@Inject
 	public GroupServer(			
 			ExperimentDataTracker tracker,
-			TurkHITManager thm,
+			HITController hitCont,
 			WorkerAuthenticator workerAuth,
 			Experiments experiments,
-			Resource[] resources,
+			JettyCometD jetty,
 			Configuration config
 			) throws ClassNotFoundException {
 		
-		super(tracker, thm, workerAuth, experiments, resources, config);
+		super(tracker, hitCont, workerAuth, experiments, jetty, config);
 		
 		this.requireUsernames = config.getBoolean(TSConfig.SERVER_USERNAME);
 		this.debugMode = config.getBoolean(TSConfig.SERVER_DEBUGMODE);
 		this.lobbyEnabled = config.getBoolean(TSConfig.SERVER_LOBBY);
 		
-        lobbyServlet = context.addServlet(GroupServlet.class, "/exp");  
-        lobbyServlet.setInitOrder(3);  										
+		jetty.addServlet(GroupServlet.class, "/exp");						
 				
 		lobbyStatus = new ConcurrentBooleanCounter<HITWorkerImpl>();				
 				

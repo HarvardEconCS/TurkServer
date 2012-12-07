@@ -1,14 +1,22 @@
 package edu.harvard.econcs.turkserver.mturk;
 
 import edu.harvard.econcs.turkserver.schema.Session;
+import edu.harvard.econcs.turkserver.server.TSConfig;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 
 import java.util.List;
-import java.util.logging.Logger;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.amazonaws.mturk.requester.HIT;
 import com.amazonaws.mturk.requester.QualificationRequirement;
 import com.amazonaws.mturk.service.exception.ServiceException;
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
 
 /**
  * A hacked together class to create HITs and expire leftovers when the end
@@ -21,26 +29,24 @@ import com.amazonaws.mturk.service.exception.ServiceException;
  * @author mao
  *
  */
-public class TurkHITManager implements Runnable {
+public class TurkHITController implements HITController {
 
 	private static final int HIT_SLEEP_MILLIS = 200;
 	private static final int SERVICE_UNAVAILABLE_MILLIS = 5000;
 
-	protected final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
+	protected final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 	
 	private final RequesterServiceExt requester;
 	private final ExperimentDataTracker tracker;
 	
-	private final int initialAmount;
-	private final int additionalDelay;
-	private final int hitAmount;
-	
 	private String hitTypeId;
+	private String title;
 	
 	private String externalURL;
 	private int frameHeight;
 	private int lifeTime;
 			
+	private final BlockingQueue<int[]> jobs;
 	private volatile boolean expireFlag;
 	
 	/**
@@ -51,17 +57,15 @@ public class TurkHITManager implements Runnable {
 	 * @param additionalDelay the amount to wait before each additional hit
 	 * @param totalAmount
 	 */
-	public TurkHITManager(
+	@Inject
+	public TurkHITController(
 			RequesterServiceExt req, 
-			ExperimentDataTracker tracker, int initialAmount, 
-			int additionalDelay, int totalAmount) {
+			ExperimentDataTracker tracker
+			) {
 		this.requester = req;
 		this.tracker = tracker;
-		
-		this.initialAmount = initialAmount;
-		this.additionalDelay = additionalDelay;
-		this.hitAmount = totalAmount;
 				
+		jobs = new LinkedBlockingQueue<int[]>();
 		expireFlag = false;
 	}
 
@@ -74,6 +78,7 @@ public class TurkHITManager implements Runnable {
 	 * @param assignmentDurationInSeconds
 	 * @param autoApprovalDelayInSeconds
 	 */
+	@Override
 	public void setHITType(
 			String title, 
 			String description,
@@ -86,8 +91,9 @@ public class TurkHITManager implements Runnable {
 			hitTypeId = requester.registerHITType(
 					autoApprovalDelayInSeconds, assignmentDurationInSeconds, 
 					reward, title, keywords, description, qualRequirements);
+			this.title = title;
 			
-			logger.info("Got HIT Type: " + hitTypeId);
+			logger.info("Got HIT Type: {}, title is {}", hitTypeId, title);
 			
 		} catch (ServiceException e) {			
 			e.printStackTrace();
@@ -100,57 +106,73 @@ public class TurkHITManager implements Runnable {
 	 * @param frameHeight
 	 * @param lifetime
 	 */
+	@Override
 	public void setExternalParams(String url, int frameHeight, int lifetime) {
 		this.externalURL = url;
 		this.frameHeight = frameHeight;
 		this.lifeTime = lifetime;
 	}		
 	
-	/**
-	 * Called by the server to expire all remaining HITs once enough shit has been reached
-	 */
-	public void expireRemainingHITs() {
+	@Override
+	public void disableRemainingHITs() {
 		expireFlag = true;
+		jobs.offer(new int[] {});
+		
+	}
+	
+	@Override
+	public void postBatchHITs(int initialAmount, int delay, int totalAmount) {
+		jobs.offer(new int[] {initialAmount, delay, totalAmount});
 	}
 	
 	@Override
 	public void run() {
 		Thread.currentThread().setName(this.getClass().getSimpleName());
 		
-		// Thread that creates HITs as soon as it is started
-		int i;
-		
-		// Create HITs until our limit is reached, or expire
-		for( i = 0; i < hitAmount; i++ ) {			
-			long sleepMillis = i > initialAmount ? additionalDelay * 1000 : HIT_SLEEP_MILLIS; 
-			logger.info("Sleeping for " + sleepMillis);
+		while( !expireFlag ) {
+			int[] nextJob = null;
+			try { nextJob = jobs.take(); }
+			catch (InterruptedException e) { e.printStackTrace(); }
 			
-			try { Thread.sleep(sleepMillis); } 
-			catch (InterruptedException e1) { e1.printStackTrace();	}
+			if( nextJob == null || nextJob.length == 0 ) continue;
 			
-			// Quit if expiration was reached while sleeping
-			if( expireFlag ) break;
-						
-			try {
-				HIT resp = requester.createHITExternalFromID(
-							hitTypeId, externalURL, frameHeight, String.valueOf(lifeTime));
+			final int initialAmount = nextJob[0];
+			final int additionalDelay = nextJob[1];
+			final int hitAmount = nextJob[2];
+			
+			// Create HITs until our limit is reached, or expire			
+			for( int i = 0; i < hitAmount; i++ ) {			
+				long sleepMillis = i > initialAmount ? additionalDelay * 1000 : HIT_SLEEP_MILLIS; 
+				logger.info("Sleeping for " + sleepMillis);
+				
+				try { Thread.sleep(sleepMillis); } 
+				catch (InterruptedException e1) { e1.printStackTrace();	}
+				
+				// Quit if expiration was reached while sleeping
+				if( expireFlag ) break;
+							
+				try {
+					HIT resp = requester.createHITExternalFromID(
+								hitTypeId, title, externalURL, frameHeight, String.valueOf(lifeTime));
 
-				String hitId = resp.getHITId();
-				tracker.saveHITId(hitId);				
+					String hitId = resp.getHITId();
+					tracker.saveHITId(hitId);				
 
-			} catch (ServiceException e) {
-				e.printStackTrace();
-				i--;
+				} catch (ServiceException e) {
+					
+					e.printStackTrace();
+					i--;
 
-				logger.info("Throttling HIT creating");
-				// Throttle it a bit
-				try { Thread.sleep(SERVICE_UNAVAILABLE_MILLIS); } 
-				catch (InterruptedException e1) { e1.printStackTrace();	}				
+					logger.info("Throttling HIT creating");
+					// Throttle it a bit
+					try { Thread.sleep(SERVICE_UNAVAILABLE_MILLIS); } 
+					catch (InterruptedException e1) { e1.printStackTrace();	}				
+				}
+			
+				logger.info(String.format("Created %d HITs", i));
 			}
-			
-		}
-		
-		logger.info(String.format("Created %d HITs", i));
+						
+		}								
 		
 		// Wait around until server tells us to expire HITs
 		while( !expireFlag ) {

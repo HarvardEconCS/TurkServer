@@ -11,6 +11,7 @@ import com.amazonaws.mturk.requester.HIT;
 import com.amazonaws.mturk.service.axis.RequesterService;
 import com.amazonaws.mturk.service.exception.ServiceException;
 import com.amazonaws.mturk.util.ClientConfig;
+import com.google.inject.Inject;
 
 /**
  * Class for connecting to MTurk and submitting REST requests.
@@ -19,6 +20,7 @@ import com.amazonaws.mturk.util.ClientConfig;
  */
 public class RequesterServiceExt extends RequesterService {
 	
+	@Inject
 	public RequesterServiceExt(ClientConfig config) {
 		super(config);	
 	}
@@ -32,7 +34,7 @@ public class RequesterServiceExt extends RequesterService {
 	 * @return
 	 * @throws IOException
 	 */
-	public HIT createHITExternalFromID(String hitTypeID, String url, int frameHeight, String lifetimeInSeconds)
+	public HIT createHITExternalFromID(String hitTypeID, String title, String url, int frameHeight, String lifetimeInSeconds)
 	throws ServiceException
 	{
 		String question = String.format(
@@ -44,7 +46,8 @@ public class RequesterServiceExt extends RequesterService {
 				StringEscapeUtils.escapeXml(url), frameHeight);		
 
 		// Only HitType, question, and lifetime needed
-		return super.createHIT(hitTypeID, null, null, null, question, null, null, null, new Long(lifetimeInSeconds), null, null, null, null);		
+		return super.createHIT(hitTypeID, title, null, null, question, null, null, null, 
+				new Long(lifetimeInSeconds), null, null, null, null);		
 	}
 
 	/**

@@ -6,31 +6,14 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.configuration.Configuration;
-import org.apache.commons.lang.ArrayUtils;
-import org.cometd.annotation.AnnotationCometdServlet;
-import org.cometd.bayeux.server.BayeuxServer.BayeuxServerListener;
+import org.cometd.bayeux.server.BayeuxServer;
 import org.cometd.bayeux.server.BayeuxServer.SessionListener;
 import org.cometd.bayeux.server.ServerSession;
-import org.cometd.server.BayeuxServerImpl;
-import org.cometd.server.CometdServlet;
-import org.cometd.server.DefaultSecurityPolicy;
 import org.cometd.server.JettyJSONContextServer;
 
-import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.bio.SocketConnector;
-import org.eclipse.jetty.server.handler.ContextHandler;
-import org.eclipse.jetty.server.handler.ContextHandlerCollection;
-import org.eclipse.jetty.server.nio.SelectChannelConnector;
-import org.eclipse.jetty.servlet.DefaultServlet;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.ajax.JSON.Convertor;
 import org.eclipse.jetty.util.log.Log;
-import org.eclipse.jetty.util.resource.Resource;
-import org.eclipse.jetty.util.resource.ResourceCollection;
-import org.eclipse.jetty.util.thread.QueuedThreadPool;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +23,7 @@ import com.google.common.collect.MapMaker;
 import com.google.common.collect.Table;
 import com.google.common.collect.Tables;
 import com.google.inject.Inject;
-import com.google.inject.Singleton;
+
 import edu.harvard.econcs.turkserver.Codec;
 import edu.harvard.econcs.turkserver.ExpServerException;
 import edu.harvard.econcs.turkserver.Messages;
@@ -53,31 +36,26 @@ import edu.harvard.econcs.turkserver.SimultaneousSessionsException;
 import edu.harvard.econcs.turkserver.TooManyFailsException;
 import edu.harvard.econcs.turkserver.TooManySessionsException;
 import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
-import edu.harvard.econcs.turkserver.mturk.TurkHITManager;
+import edu.harvard.econcs.turkserver.mturk.HITController;
 import edu.harvard.econcs.turkserver.schema.Session;
 import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 
-@Singleton
 public abstract class SessionServer implements Runnable {
 
-	protected final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
-	
-	public static final String ATTRIBUTE = "turkserver.session";
+	public static final String ATTRIBUTE = "edu.harvard.econcs.turkserver.sessions";
+
+	protected final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());	
 			
 	final ExperimentDataTracker tracker;
-	final TurkHITManager turkHITs;
+	final HITController hitCont;
 	final WorkerAuthenticator workerAuth;	
 	final Experiments experiments;
 	
-	protected final int hitGoal;	
+	protected final int hitGoal;		
+	protected final JettyCometD jettyCometD;
 	
-	protected final Server server;	
-	protected final ContextHandlerCollection contexts;
-	protected final ServletContextHandler context;
-	protected final CometdServlet cometdServlet;
-	
-	protected BayeuxServerImpl bayeux;	
+	protected BayeuxServer bayeux;	
 	
 	protected ConcurrentMap<ServerSession, HITWorkerImpl> clientToHITWorker;
 	protected Table<String, String, HITWorkerImpl> hitWorkerTable;
@@ -87,25 +65,26 @@ public abstract class SessionServer implements Runnable {
 	@Inject
 	public SessionServer(			
 			ExperimentDataTracker tracker,			
-			TurkHITManager thm,
+			HITController hitCont,
 			WorkerAuthenticator workerAuth,
 			Experiments experiments,
-			Resource[] resources,
+			JettyCometD server,
 			Configuration config
 			) throws ClassNotFoundException {		
 		
 		this.tracker = tracker;								
-		this.turkHITs = thm;
+		this.hitCont = hitCont;
 		this.workerAuth = workerAuth;
 		this.experiments = experiments;
+		
+		this.jettyCometD = server;
 		
 		this.completedHITs = new AtomicInteger();
 		
 		/*
 		 * Process configuration
 		 */
-		this.hitGoal = config.getInt(TSConfig.SERVER_HITGOAL);		
-		int httpPort = config.getInt(TSConfig.SERVER_HTTPPORT);						
+		this.hitGoal = config.getInt(TSConfig.SERVER_HITGOAL);					
 		
 		/*
 		 * create session and string maps
@@ -118,80 +97,7 @@ public abstract class SessionServer implements Runnable {
 		this.hitWorkerTable = Tables.newCustomTable(
 				rowMap, new Supplier<Map<String, HITWorkerImpl>>() {
 					@Override public Map<String, HITWorkerImpl> get() { return mm.makeMap(); }					
-				});		
-				
-		/* 
-		 * Set up the jetty server		 
-		 */
-		server = new Server();
-		QueuedThreadPool qtp = new QueuedThreadPool();
-		qtp.setMinThreads(5);
-        qtp.setMaxThreads(200);
-        server.setThreadPool(qtp);
-                
-		server.setGracefulShutdown(1000);
-		server.setStopAtShutdown(true);
-        
-        SelectChannelConnector connector = new SelectChannelConnector();
-        connector.setPort(httpPort);
-        connector.setMaxIdleTime(120000);
-        connector.setLowResourcesMaxIdleTime(60000);
-        connector.setLowResourcesConnections(20000);
-        connector.setAcceptQueueSize(5000);
-        server.addConnector(connector);
-        
-        SocketConnector bconnector = new SocketConnector();
-        bconnector.setPort(httpPort+1);
-        server.addConnector(bconnector);
-		
-        contexts = new ContextHandlerCollection();        
-        server.setHandler(contexts);
-        
-        // Base files servlet
-        context = new ServletContextHandler(contexts, "/" ,ServletContextHandler.SESSIONS);       
-        context.setBaseResource(new ResourceCollection(resources));
-        context.setAliases(true);              
-        
-        // Default servlet
-        ServletHolder dftServlet = context.addServlet(DefaultServlet.class, "/");
-        dftServlet.setInitOrder(1);
-        
-        // Cometd servlet
-        cometdServlet = new AnnotationCometdServlet();
-        
-        ServletHolder comet = new ServletHolder(cometdServlet);
-        context.addServlet(comet, "/cometd/*");
-        
-        comet.setInitParameter("timeout", "20000");
-        comet.setInitParameter("interval", "100");
-        comet.setInitParameter("maxInterval", "10000");
-        comet.setInitParameter("multiFrameInterval", "5000");
-        comet.setInitParameter("logLevel", "2");
-        
-        // for registering serialization and deserialization
-        comet.setInitParameter("jsonContext", "org.cometd.server.JettyJSONContextServer");
-        
-        comet.setInitParameter("transports", "org.cometd.server.websocket.WebSocketTransport");
-//        comet.setInitParameter("transports","org.cometd.server.transport.LongPollingTransport");
-        comet.setInitOrder(2);       
-        
-        context.setAttribute(ATTRIBUTE, this);  
-	}
-	
-	/**
-	 * Add custom handlers to the server.
-	 * For advanced users that have custom dynamic content.
-	 * @param handler
-	 */
-	public void addCustomHandler(Handler handler, String contextPath) {
-        // Additional custom handlers
-		
-		ContextHandler ch = new ContextHandler(contextPath);
-		ch.setHandler(handler);
-		
-		// Add this to the beginning of the collection of handlers
-		Handler[] handlers = contexts.getHandlers();
-		contexts.setHandlers((Handler[]) ArrayUtils.addAll(new Handler[] {ch}, handlers));		
+				});										  
 	}
 
 	public class UserSessionListener implements SessionListener {
@@ -225,6 +131,7 @@ public abstract class SessionServer implements Runnable {
 	}
 
 	public void registerConvertor(Class<?> cl, Convertor conv) {
+		// TODO put this elsewhere
 		JettyJSONContextServer jsonContext = (JettyJSONContextServer) bayeux.getOption("jsonContext");
 		jsonContext.getJSON().addConvertor(cl, conv);
 	}
@@ -472,7 +379,7 @@ public abstract class SessionServer implements Runnable {
 		if( completedHITs.addAndGet(group.groupSize()) >= hitGoal ) {
 			logger.info("Goal of " + hitGoal + " users reached!");
 			
-			if( turkHITs != null ) turkHITs.expireRemainingHITs();			
+			if( hitCont != null ) hitCont.disableRemainingHITs();			
 			
 			// TODO quit the thread in this case
 			return true;
@@ -485,22 +392,18 @@ public abstract class SessionServer implements Runnable {
 	public final void run() {
 		Thread.currentThread().setName(this.getClass().getSimpleName());				
 		
-	    try {
-			server.start();
-		} catch (Exception e) {			
-			e.printStackTrace();
-			return;
+		Server server = null;
+		try {
+			server = jettyCometD.start(this);
+		} catch (Exception e1) {			
+			e1.printStackTrace();
 		}
-	    
-	    bayeux = cometdServlet.getBayeux();
-		bayeux.setSecurityPolicy(new DefaultSecurityPolicy());
-
-		bayeux.addListener(new BayeuxServerListener() {
-			
-		});
 		
-		if( turkHITs != null ) {
-			new Thread(turkHITs).start();
+		bayeux = jettyCometD.getBayeux();		
+		experiments.setReferences(bayeux, this);
+		
+		if( hitCont != null ) {
+			new Thread(hitCont).start();
 		}
 		
 		Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -524,8 +427,8 @@ public abstract class SessionServer implements Runnable {
 		
 		System.out.println("Deleting remaining HITs");
 		
-		if( turkHITs != null ) {
-			turkHITs.expireRemainingHITs();
+		if( hitCont != null ) {
+			hitCont.disableRemainingHITs();
 		}			
 		
 		// TODO send a message to people that took HITs after the deadline

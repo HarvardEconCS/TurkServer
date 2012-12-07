@@ -7,19 +7,21 @@ import edu.harvard.econcs.turkserver.schema.Session;
 import edu.harvard.econcs.turkserver.server.ExperimentControllerImpl;
 import edu.harvard.econcs.turkserver.server.HITWorkerImpl;
 
-import java.math.BigInteger;
 import java.net.InetAddress;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
 
 import net.andrewmao.misc.ConcurrentBooleanCounter;
 
-import org.apache.commons.collections.map.MultiValueMap;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SetMultimap;
+import com.google.inject.Singleton;
 
 /**
  * A dummy user tracker that does not store anything
@@ -28,13 +30,13 @@ import org.apache.commons.collections.map.MultiValueMap;
  * @author mao
  *
  */
+@Singleton
 public class ExperimentDummyTracker extends ExperimentDataTracker {		
 	
-	private ConcurrentBooleanCounter<String> usedIDs;
+	private final ConcurrentBooleanCounter<String> usedIDs;
 	
-	private ConcurrentHashMap<String, String> idToAssignmentId;	
-	
-	private MultiValueMap workerIdToSessions;
+	private final ConcurrentMap<String, Session> hitIdToSessions;		
+	private final Multimap<String, Session> workerIdToSessions;
 	
 	// Experiment tracking - FALSE if in progress and TRUE if finished
 	protected final ConcurrentBooleanCounter<String> experiments; 
@@ -43,11 +45,12 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 		
 		usedIDs = new ConcurrentBooleanCounter<String>();
 				
-		idToAssignmentId = new ConcurrentHashMap<String, String>();
+		hitIdToSessions = new ConcurrentHashMap<String, Session>();		
 		
-		// TODO double-check the concurrency of this if it becomes important
-		workerIdToSessions = MultiValueMap.decorate(
-				new ConcurrentHashMap<String, BigInteger>(), ConcurrentLinkedQueue.class);
+		// TODO double-check the concurrency of this if it becomes important		
+		@SuppressWarnings("unused")
+		SetMultimap<String, Session> temp;
+		workerIdToSessions = Multimaps.synchronizedSetMultimap(temp = HashMultimap.create()); 				
 		
 		// Experiment trackers
 		experiments = new ConcurrentBooleanCounter<String>();
@@ -89,30 +92,15 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 		// TODO Auto-generated method stub
 		return null;
 	}
-
-	@SuppressWarnings("unchecked")
+	
 	@Override
-	public List<Session> getSetSessionInfoForWorker(String workerId) {		
-		Collection<String> sessions =
-			(Collection<String>) workerIdToSessions.get(workerId);
-		
-		if( sessions == null ) return null;
-		
-		List<Session> srs = new ArrayList<Session>(sessions.size());		
-		for( String s : sessions ) srs.add(getStoredSessionInfo(s));
-		
-		return srs;
+	public List<Session> getSetSessionInfoForWorker(String workerId) {
+		return new ArrayList<Session>(workerIdToSessions.get(workerId));	 					
 	}
 
 	@Override
-	public Session getStoredSessionInfo(String sessionID) {
-		// Obviously, this is missing most of the stuff, but who cares for now
-		Session sr = new Session();
-		
-		sr.setHitId(sessionID);
-		sr.setAssignmentId(idToAssignmentId.get(sessionID));
-		
-		return sr; 
+	public Session getStoredSessionInfo(String hitId) {
+		return hitIdToSessions.get(hitId); 
 	}
 
 	@Override
@@ -123,8 +111,15 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 	@Override
 	public void saveAssignmentForSession(String hitId,
 			String assignmentId, String workerId) {
-		idToAssignmentId.put(hitId, assignmentId);		
-		workerIdToSessions.put(workerId, hitId);
+		Session s = hitIdToSessions.get(hitId);
+		if( s == null ) s = new Session();
+		
+		s.setHitId(hitId);
+		s.setAssignmentId(assignmentId);
+		s.setWorkerId(workerId);
+		
+		hitIdToSessions.put(hitId, s);		
+		workerIdToSessions.put(workerId, s);
 		
 		logger.info(String.format("session %s has assignment %s by worker %s",
 				hitId, assignmentId, workerId));
@@ -178,21 +173,17 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 		logger.info(String.format("session %s was inactive for fraction %.02f",
 				session, session.getLiveInactivePercent()));		
 	}
-
-	
-	@SuppressWarnings("rawtypes")
-	@Override
-	public void clearWorkerForSession(String id) {
-		// TODO Make this more efficient, although it is so in the DB implementation
 		
-		for( Object worker : workerIdToSessions.keySet() ) {
-			if( ((Collection) workerIdToSessions.get(worker)).contains(id) ) {
-				workerIdToSessions.remove(worker, id);
-				logger.info(String.format("Worker %s disassociated with session %s", 
-						worker.toString(), id));
-				break;
-			}			
-		}
+	@Override
+	public void clearWorkerForSession(String hitId) {				
+		Session s = hitIdToSessions.get(hitId);
+		if( s == null ) return;
+		
+		String workerId = s.getWorkerId();
+		s.setWorkerId(null);
+		s.setUsername(null);
+		
+		logger.info(String.format("Worker %s disassociated with session %s", workerId, hitId));				
 	}
 
 	@Override

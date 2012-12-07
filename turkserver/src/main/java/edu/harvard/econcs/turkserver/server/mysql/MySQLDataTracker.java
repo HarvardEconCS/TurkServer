@@ -2,12 +2,16 @@ package edu.harvard.econcs.turkserver.server.mysql;
 
 import edu.harvard.econcs.turkserver.QuizResults;
 import edu.harvard.econcs.turkserver.schema.*;
+import edu.harvard.econcs.turkserver.server.TSConfig;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import com.google.inject.name.Named;
 import com.mysema.query.QueryFlag.Position;
 import com.mysema.query.sql.MySQLTemplates;
 import com.mysema.query.sql.SQLQuery;
@@ -33,6 +37,7 @@ import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
  * @author mao
  *
  */
+@Singleton
 public class MySQLDataTracker extends ExperimentDataTracker {	
 	
 	QSets _sets = QSets.sets;
@@ -48,7 +53,10 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	private Connection conn;
 	private final SQLTemplates dialect;	
 
-	public MySQLDataTracker(MysqlConnectionPoolDataSource ds, String setID) {
+	@Inject
+	public MySQLDataTracker(			
+			MysqlConnectionPoolDataSource ds, 
+			@Named(TSConfig.EXP_SETID) String setID) {
 		super();
 				
 		this.setID = setID;				
