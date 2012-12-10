@@ -12,7 +12,7 @@ class Util
 
       while i < m.length
         a = m[i].match(/.([^=]+)=(.*)/)
-        params[unescapeURL(a[1])] = unescapeURL(a[2])
+        params[@unescapeURL(a[1])] = @unescapeURL(a[2])
         i++
     params
     

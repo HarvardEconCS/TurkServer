@@ -4,14 +4,17 @@ import edu.harvard.econcs.turkserver.QuizResults;
 import edu.harvard.econcs.turkserver.schema.*;
 import edu.harvard.econcs.turkserver.server.TSConfig;
 
+import java.beans.PropertyVetoException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.Collection;
 import java.util.List;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
+import com.mchange.v2.c3p0.PoolBackedDataSource;
 import com.mysema.query.QueryFlag.Position;
 import com.mysema.query.sql.MySQLTemplates;
 import com.mysema.query.sql.SQLQuery;
@@ -48,223 +51,392 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	
 	private final String setID;		
 	
-	// TODO pool connections with C3P0
-	
-	private Connection conn;
+	private final PoolBackedDataSource pbds;	
 	private final SQLTemplates dialect;	
 
 	@Inject
 	public MySQLDataTracker(			
 			MysqlConnectionPoolDataSource ds, 
-			@Named(TSConfig.EXP_SETID) String setID) {
+			@Named(TSConfig.EXP_SETID) String setID) throws PropertyVetoException {
 		super();
-				
-		this.setID = setID;				
-				
-		dialect = new MySQLTemplates();
 		
-		// TODO make a proper connection		
+		this.setID = setID;
+		
+		pbds = new PoolBackedDataSource();
+		pbds.setConnectionPoolDataSource(ds);
+		 								
+		dialect = new MySQLTemplates();					
+		
+		Connection conn = null;		
 		try {
-			conn = ds.getConnection();
-		} catch (SQLException e) {
+			conn = pbds.getConnection();
+			
+			// ensure this setId exists
+			new SQLInsertClause(conn, dialect, _sets)
+			.columns(_sets.name)
+			.values(setID)
+			.addFlag(Position.START_OVERRIDE, "INSERT IGNORE INTO ")
+			.execute();
+		} catch (SQLException e) {			
 			e.printStackTrace();
-			conn = null;
+		} finally {
+			if( conn != null) {
+				try { conn.close(); }
+				catch (SQLException e) { e.printStackTrace(); }
+			}
 		}
-		
-		// ensure this setId exists
-		new SQLInsertClause(conn, dialect, _sets)
-		.columns(_sets.name)
-		.values(setID)
-		.addFlag(Position.START_OVERRIDE, "INSERT IGNORE INTO ")
-		.execute();
 	}		
 	
 	@Override
-	public List<Experiment> getSetExperiments() {		
-		return new SQLQueryImpl(conn, dialect)
-		.from(_experiment)
-		.where(_experiment.setId.eq(setID))
-		.list(_experiment);
+	public Collection<Experiment> getSetExperiments() {
+		Connection conn = null;		
+		try {
+			conn = pbds.getConnection();
+			
+			return new SQLQueryImpl(conn, dialect)
+			.from(_experiment)
+			.where(_experiment.setId.eq(setID))
+			.list(_experiment);
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		} finally {
+			if( conn != null ) {
+				try { conn.close(); }
+				catch (SQLException e) { e.printStackTrace(); }
+			}
+		}
+		return null;
 	}
 
 	@Override
 	public boolean hitExistsInDB(String hitId) {
-		long count = new SQLQueryImpl(conn, dialect)
-		.from(_session)
-		.where(_session.hitId.eq(hitId))
-		.count();
+		Connection conn = null;		
+		try {
+			conn = pbds.getConnection();
+						
+			long count = new SQLQueryImpl(conn, dialect)
+			.from(_session)
+			.where(_session.hitId.eq(hitId))
+			.count();		
 			
-		// TODO replicate expired experiment logic elsewhere
-		return count > 0;
-				
-//		if( results != null && results.size() > 0) {
-//			Object experimentId = results.get(0)[0];			
-//			if( experimentId != null && "EXPIRED".equals(experimentId.toString()) ) 
-//				throw new SessionExpiredException();
-//			return true;
-//		}
-//		else return false;
+			return count > 0;
+			
+			// TODO replicate expired experiment logic elsewhere			
+//			if( results != null && results.size() > 0) {
+//				Object experimentId = results.get(0)[0];			
+//				if( experimentId != null && "EXPIRED".equals(experimentId.toString()) ) 
+//					throw new SessionExpiredException();
+//				return true;
+//			}
+//			else return false;
+			
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		} finally {
+			if( conn != null ) {
+				try { conn.close(); }
+				catch (SQLException e) { e.printStackTrace(); }
+			}
+		}
+		
+		return false;		
 	}
 
 	@Override
-	public List<Quiz> getSetQuizRecords(String workerId) {
-		SQLQuery query = new SQLQueryImpl(conn, dialect);
-		
-		return query.from(_quiz)
-				.where(_quiz.setId.eq(setID), 
-						_quiz.workerId.eq(workerId))
-				.list(_quiz);
+	public Collection<Quiz> getSetQuizRecords(String workerId) {
+		Connection conn = null;		
+		try {
+			conn = pbds.getConnection();
+			
+			SQLQuery query = new SQLQueryImpl(conn, dialect);
+			
+			return query.from(_quiz)
+					.where(_quiz.setId.eq(setID), 
+							_quiz.workerId.eq(workerId))
+					.list(_quiz);
+			
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		} finally {
+			if( conn != null ) {
+				try { conn.close(); }
+				catch (SQLException e) { e.printStackTrace(); }
+			}
+		}
+		return null;		
 	}
 
 	@Override
-	public List<Session> getSetSessionInfoForWorker(String workerId) {
-		SQLQuery query = new SQLQueryImpl(conn, dialect);
-		
-		return query.from(_session)
-				.where(_session.workerId.eq(workerId),
-						_session.setId.eq(setID))
-				.list(_session);
+	public Collection<Session> getSetSessionInfoForWorker(String workerId) {
+		Connection conn = null;		
+		try {
+			conn = pbds.getConnection();
+			
+			SQLQuery query = new SQLQueryImpl(conn, dialect);
+			
+			return query.from(_session)
+					.where(_session.workerId.eq(workerId),
+							_session.setId.eq(setID))
+					.list(_session);
+			
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		} finally {
+			if( conn != null ) {
+				try { conn.close(); }
+				catch (SQLException e) { e.printStackTrace(); }
+			}
+		}
+		return null;
 	}
 
 	@Override
 	public Session getStoredSessionInfo(String hitId) {
-		List<Session> result = new SQLQueryImpl(conn, dialect)
-		.from(_session)
-		.where(_session.hitId.eq(hitId))
-		.list(_session);
+		Connection conn = null;		
+		try {
+			conn = pbds.getConnection();
 			
-		// Return the first element if one exists
-		return (result == null || result.size() == 0 ? null : result.get(0));
+			List<Session> result = new SQLQueryImpl(conn, dialect)
+			.from(_session)
+			.where(_session.hitId.eq(hitId))
+			.list(_session);
+				
+			// Return the first element if one exists
+			return (result == null || result.size() == 0 ? null : result.get(0));
+			
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		} finally {
+			if( conn != null ) {
+				try { conn.close(); }
+				catch (SQLException e) { e.printStackTrace(); }
+			}
+		}
+		return null;
+	}
+
+	@Override
+	protected void saveSession(Session record) {
+		Connection conn = null;		
+		try {
+			conn = pbds.getConnection();
+			
+			new SQLInsertClause(conn, dialect, _session)
+			.populate(record)
+			.addFlag(Position.START_OVERRIDE, "REPLACE ")
+			.execute();
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		} finally {
+			if( conn != null ) {
+				try { conn.close(); }
+				catch (SQLException e) { e.printStackTrace(); }
+			}
+		}		
 	}
 
 	@Override
 	public void saveHITId(String hitId) {
-		/*
-		 * INSERT INTO session (hitId, setId) VALUES (?, ?)
-		 * ON DUPLICATE KEY UPDATE setId = ?
-		 */
-		
-		new SQLInsertClause(conn, dialect, _session)
-		.columns(_session.hitId, _session.setId)
-		.values(hitId, setID)
-		.addFlag(Position.END, TemplateExpressionImpl.create(				
-				String.class, " ON DUPLICATE KEY UPDATE {0}", _session.setId.eq(setID) ))
-		.execute();
+		Connection conn = null;		
+		try {
+			conn = pbds.getConnection();
+			
+			/*
+			 * INSERT INTO session (hitId, setId) VALUES (?, ?)
+			 * ON DUPLICATE KEY UPDATE setId = ?
+			 */
+			
+			new SQLInsertClause(conn, dialect, _session)
+			.columns(_session.hitId, _session.setId)
+			.values(hitId, setID)
+			.addFlag(Position.END, TemplateExpressionImpl.create(				
+					String.class, " ON DUPLICATE KEY UPDATE {0}", _session.setId.eq(setID) ))
+			.execute();
+			
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		} finally {
+			if( conn != null ) {
+				try { conn.close(); }
+				catch (SQLException e) { e.printStackTrace(); }
+			}
+		}	
 	}
 
 	@Override
 	public void saveAssignmentForSession(String hitId,
 			String assignmentId, String workerId) {
-		// Make sure the worker table contains this workerId first, but ignore if already exists
-		/*
-		 * INSERT IGNORE INTO worker(id) VALUES (?)
-		 */
-		new SQLInsertClause(conn, dialect, _worker)
-		.columns(_worker.id)
-		.values(workerId)
-		.addFlag(Position.START_OVERRIDE, "INSERT IGNORE INTO ")
-		.execute();
-		
-		/*
-		 * UPDATE session SET assignmentId=?, workerId=? WHERE hitId=?
-		 */
-		new SQLUpdateClause(conn, dialect, _session)
-		.set(_session.assignmentId, assignmentId)
-		.set(_session.workerId, workerId)
-		.where(_session.hitId.eq(hitId))
-		.execute();
-				
+		Connection conn = null;		
+		try {
+			conn = pbds.getConnection();
+			
+			// Make sure the worker table contains this workerId first, but ignore if already exists
+			/*
+			 * INSERT IGNORE INTO worker(id) VALUES (?)
+			 */
+			new SQLInsertClause(conn, dialect, _worker)
+			.columns(_worker.id)
+			.values(workerId)
+			.addFlag(Position.START_OVERRIDE, "INSERT IGNORE INTO ")
+			.execute();
+			
+			/*
+			 * UPDATE session SET assignmentId=?, workerId=? WHERE hitId=?
+			 */
+			new SQLUpdateClause(conn, dialect, _session)
+			.set(_session.assignmentId, assignmentId)
+			.set(_session.workerId, workerId)
+			.where(_session.hitId.eq(hitId))
+			.execute();
+			
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		} finally {
+			if( conn != null ) {
+				try { conn.close(); }
+				catch (SQLException e) { e.printStackTrace(); }
+			}
+		}				
 	}
 
 	@Override
 	public void saveQuizResults(String hitId, String workerId, QuizResults results) {					
-		
-		// Make sure the worker table contains this workerId first, but ignore if already exists
-		new SQLInsertClause(conn, dialect, _worker)
-		.columns(_worker.id)
-		.values(workerId)
-		.addFlag(Position.START_OVERRIDE, "INSERT IGNORE INTO ")
-		.execute();
-		
-		/* creates
-		 * INSERT IGNORE INTO worker(id) VALUES ("workerId");
-		 */
-		
-		double score = 1.0*results.correct/results.total;
-		
-		new SQLInsertClause(conn, dialect, _quiz)
-		.columns(_quiz.sessionId, _quiz.workerId, _quiz.setId, _quiz.numCorrect, _quiz.numTotal, _quiz.score)
-		.values(hitId, workerId, setID, results.correct, results.total, score )
-		.execute();				
-		
+		Connection conn = null;		
+		try {
+			conn = pbds.getConnection();
+			
+			// Make sure the worker table contains this workerId first, but ignore if already exists
+			new SQLInsertClause(conn, dialect, _worker)
+			.columns(_worker.id)
+			.values(workerId)
+			.addFlag(Position.START_OVERRIDE, "INSERT IGNORE INTO ")
+			.execute();
+			
+			/* creates
+			 * INSERT IGNORE INTO worker(id) VALUES ("workerId");
+			 */
+			
+			double score = 1.0*results.correct/results.total;
+			
+			new SQLInsertClause(conn, dialect, _quiz)
+			.columns(_quiz.sessionId, _quiz.workerId, _quiz.setId, _quiz.numCorrect, _quiz.numTotal, _quiz.score)
+			.values(hitId, workerId, setID, results.correct, results.total, score )
+			.execute();		
+			
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		} finally {
+			if( conn != null ) {
+				try { conn.close(); }
+				catch (SQLException e) { e.printStackTrace(); }
+			}
+		}					
 	}
 
 	@Override
 	protected void saveExpStartTime(String expId, int size, String inputdata, long startTime) {
-		
-		new SQLInsertClause(conn, dialect, _experiment)
-		.columns(_experiment.id, _experiment.setId, _experiment.participants, _experiment.inputdata, _experiment.startTime)
-		.values(expId, setID, size, inputdata, new Timestamp(startTime))
-		.execute();				
+		Connection conn = null;		
+		try {
+			conn = pbds.getConnection();
+			
+			new SQLInsertClause(conn, dialect, _experiment)
+			.columns(_experiment.id, _experiment.setId, _experiment.participants, _experiment.inputdata, _experiment.startTime)
+			.values(expId, setID, size, inputdata, new Timestamp(startTime))
+			.execute();
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		} finally {
+			if( conn != null ) {
+				try { conn.close(); }
+				catch (SQLException e) { e.printStackTrace(); }
+			}
+		}				
 	}
 
 	@Override
 	protected void saveExpEndTime(String expId, long endTime) {
-		
-		new SQLUpdateClause(conn, dialect, _experiment)
-		.where(_experiment.id.eq(expId))
-		.set(_experiment.endTime, new Timestamp(endTime))
-		.execute();	
-	}
-
-	@Override
-	protected void saveSession(Session record) {
-		
-		new SQLInsertClause(conn, dialect, _session)
-		.populate(record)
-		.addFlag(Position.START_OVERRIDE, "REPLACE ")
-		.execute();
+		Connection conn = null;		
+		try {
+			conn = pbds.getConnection();
+			
+			new SQLUpdateClause(conn, dialect, _experiment)
+			.where(_experiment.id.eq(expId))
+			.set(_experiment.endTime, new Timestamp(endTime))
+			.execute();	
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		} finally {
+			if( conn != null ) {
+				try { conn.close(); }
+				catch (SQLException e) { e.printStackTrace(); }
+			}
+		}
 	}
 
 	@Override
 	public void clearWorkerForSession(String hitId) {
-		/*
-		 * TODO this used to be set to default but not sure how to do with QueryDSL
-		 * UPDATE session SET workerId=DEFAULT, username=DEFAULT WHERE hitId=?
-		 */
-		new SQLUpdateClause(conn, dialect, _session)
-		.setNull(_session.workerId)
-		.setNull(_session.username)
-		.where(_session.hitId.eq(hitId))
-		.execute();
-		
-		logger.info(String.format("HIT %s has workerId cleared", hitId));
-		
+		Connection conn = null;		
+		try {
+			conn = pbds.getConnection();
+			
+			/*
+			 * TODO this used to be set to default but not sure how to do with QueryDSL
+			 * UPDATE session SET workerId=DEFAULT, username=DEFAULT WHERE hitId=?
+			 */
+			new SQLUpdateClause(conn, dialect, _session)
+			.setNull(_session.workerId)
+			.setNull(_session.username)
+			.where(_session.hitId.eq(hitId))
+			.execute();
+			
+			logger.info(String.format("HIT %s has workerId cleared", hitId));
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		} finally {
+			if( conn != null ) {
+				try { conn.close(); }
+				catch (SQLException e) { e.printStackTrace(); }
+			}
+		}		
 	}
 	
 	@Override
 	public List<Session> expireUnusedSessions() {
-		/*
-		 * SELECT * FROM session WHERE setId=? AND experimentId IS NULL
-		 */
-		List<Session> expired = new SQLQueryImpl(conn, dialect)
-		.from(_session)
-		.where(_session.setId.eq(setID), _session.experimentId.isNull())
-		.list(_session);
+		Connection conn = null;		
+		try {
+			conn = pbds.getConnection();
 			
-		logger.info("Found " + expired.size() + " unused sessions");
-		
-		/* 
-		 * TODO this used to set to EXPIRED, but now we reuse,
-		 * so we can just delete them. Verify that this is okay.  
-		 * 
-		 * UPDATE session SET experimentId='EXPIRED' WHERE setId=? AND experimentId IS NULL
-		 */		
-		new SQLDeleteClause(conn, dialect, _session)
-		.where(_session.setId.eq(setID), _session.experimentId.isNull())
-		.execute();
-		
-		return expired;
+			/*
+			 * SELECT * FROM session WHERE setId=? AND experimentId IS NULL
+			 */
+			List<Session> expired = new SQLQueryImpl(conn, dialect)
+			.from(_session)
+			.where(_session.setId.eq(setID), _session.experimentId.isNull())
+			.list(_session);
+				
+			logger.info("Found " + expired.size() + " unused sessions");
+			
+			/* 
+			 * TODO this used to set to EXPIRED, but now we reuse,
+			 * so we can just delete them. Verify that this is okay.  
+			 * 
+			 * UPDATE session SET experimentId='EXPIRED' WHERE setId=? AND experimentId IS NULL
+			 */		
+			new SQLDeleteClause(conn, dialect, _session)
+			.where(_session.setId.eq(setID), _session.experimentId.isNull())
+			.execute();
+			
+			return expired;
+			
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		} finally {
+			if( conn != null ) {
+				try { conn.close(); }
+				catch (SQLException e) { e.printStackTrace(); }
+			}
+		}
+		return null;
 	}
 	
 }

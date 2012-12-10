@@ -1,3 +1,5 @@
+require './setup'
+
 Util = require './util'
 
 class TSClient
@@ -32,8 +34,9 @@ class TSClient
     @params.assignmentId = "DEMO_ASSIGNMENT"
     @params.workerId = "DEMO_WORKER"
 
-  @init: (cookieName, contextPath) ->          
+  @init: (cookieName, contextPath) ->
     # Check for old state information
+      
     stateCookie = (if org.cometd.COOKIE then org.cometd.COOKIE.get(cookieName) else null)
     state = (if stateCookie then org.cometd.JSON.fromJSON(stateCookie) else null)
     $.cometd.getExtension("reload").configure 
@@ -65,7 +68,7 @@ class TSClient
       @connected = false if message.successful
     
     # Initialize CometD 
-    cometURL = location.protocol + "//" + location.host + contextPath + "/cometd"
+    cometURL = location.protocol + "//" + location.host + ":9876" + contextPath + "/cometd"
     $.cometd.websocketEnabled = true
     $.cometd.init
       url: cometURL

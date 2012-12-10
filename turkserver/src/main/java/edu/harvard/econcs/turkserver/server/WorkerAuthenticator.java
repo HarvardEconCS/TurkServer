@@ -1,5 +1,6 @@
 package edu.harvard.econcs.turkserver.server;
 
+import java.util.Collection;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -104,7 +105,7 @@ public class WorkerAuthenticator {
 		 */
 		String prevWorkerId = sessionRec.getWorkerId();
 
-		List<Session> allSessions = tracker.getSetSessionInfoForWorker(workerId);
+		Collection<Session> allSessions = tracker.getSetSessionInfoForWorker(workerId);
 
 		// Return if no sessions so far in this set
 		if( allSessions == null || allSessions.size() == 0 ) return;		
@@ -147,7 +148,7 @@ public class WorkerAuthenticator {
 	public boolean workerRequiresQuiz(String workerId) throws TooManyFailsException {				
 		if( quizPolicy == null ) return false;
 		
-		List<Quiz> results = tracker.getSetQuizRecords(workerId);
+		Collection<Quiz> results = tracker.getSetQuizRecords(workerId);
 				
 		if( !quizPolicy.requiresQuiz(results) ) return false;
 		
@@ -170,7 +171,7 @@ public class WorkerAuthenticator {
 	 * @throws ExpServerException
 	 */	
 	public Session checkAssignment(String hitId, String assignmentId, String workerId)
-	throws ExpServerException {
+	throws SessionCompletedException, SessionOverlapException {
 
 		Session sessionRec = tracker.getStoredSessionInfo(hitId);		
 		// previous worker could be null

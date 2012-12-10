@@ -13,6 +13,7 @@ import edu.harvard.econcs.turkserver.server.HITWorkerImpl;
 
 import java.net.InetAddress;
 import java.sql.Timestamp;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 
@@ -32,13 +33,11 @@ public abstract class ExperimentDataTracker {
 	
 	public static final int USERNAME_LIMIT = 40;			
 
-	protected abstract void saveSession(Session record);
-	
 	/**
 	 * Get all experiments in this set
 	 * @return
 	 */
-	public abstract List<Experiment> getSetExperiments();
+	public abstract Collection<Experiment> getSetExperiments();
 	
 	/**
 	 * Check if we have a record of a sessionID in the database,
@@ -53,7 +52,7 @@ public abstract class ExperimentDataTracker {
 	 * @param workerId
 	 * @return
 	 */
-	public abstract List<Quiz> getSetQuizRecords(String workerId);
+	public abstract Collection<Quiz> getSetQuizRecords(String workerId);
 
 	/**
 	 * Returns a list of all sessions in the current experiment set 
@@ -61,7 +60,7 @@ public abstract class ExperimentDataTracker {
 	 * @param workerId
 	 * @return
 	 */	
-	public abstract List<Session> getSetSessionInfoForWorker(String workerId);
+	public abstract Collection<Session> getSetSessionInfoForWorker(String workerId);
 
 	/**
 	 * Get the assignment Id, if any, for a session
@@ -70,6 +69,8 @@ public abstract class ExperimentDataTracker {
 	 */	
 	public abstract Session getStoredSessionInfo(String hitID);
 	
+	abstract void saveSession(Session record);
+
 	/**
 	 * Adds a hitId to the current set in the database
 	 * @param hitId
@@ -192,7 +193,7 @@ public abstract class ExperimentDataTracker {
 	 * @param group TODO
 	 * @param startTime TODO
 	 */
-	public void newExperimentStarted(ExperimentControllerImpl expCont) {
+	public final void newExperimentStarted(ExperimentControllerImpl expCont) {
 		String expId = expCont.getExpId();
 		saveExpStartTime(expId, expCont.getGroup().groupSize(), expCont.getInputData(), expCont.getStartTime());
 		
@@ -201,7 +202,7 @@ public abstract class ExperimentDataTracker {
 		}			
 	}
 
-	public void experimentFinished(ExperimentControllerImpl expCont) {
+	public final void experimentFinished(ExperimentControllerImpl expCont) {
 		String expId = expCont.getExpId();
 		// Doing DB commits first so there is no limbo state
 		saveExpEndTime(expId, expCont.getFinishTime());

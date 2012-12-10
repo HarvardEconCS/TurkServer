@@ -17,8 +17,11 @@ public class SessionRecord {
 		else if( session.getExperimentId() != null ) {
 			return SessionStatus.EXPERIMENT;
 		}
-		else if( session.getWorkerId() != null ) {
+		else if( session.getLobbyTime() != null ) {
 			return SessionStatus.LOBBY;
+		}
+		else if( session.getWorkerId() != null ) {
+			return SessionStatus.ASSIGNED;
 		}
 		else {
 			return SessionStatus.UNASSIGNED;

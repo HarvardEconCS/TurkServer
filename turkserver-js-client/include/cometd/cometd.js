@@ -14,16 +14,9 @@
  * limitations under the License.
  */
 
-if (typeof dojo !== 'undefined')
-{
-    dojo.provide('org.cometd');
-}
-else
-{
-    // Namespaces for the cometd implementation
-    this.org = this.org || {};
-    org.cometd = {};
-}
+// Namespaces for the cometd implementation
+this.org = this.org || {};
+org.cometd = {};
 
 org.cometd.JSON = {};
 org.cometd.JSON.toJSON = org.cometd.JSON.fromJSON = function(object)
@@ -872,11 +865,32 @@ org.cometd.WebSocketTransport = function()
         var url = _cometd.getURL().replace(/^http/, 'ws');
         this._debug('Transport', this.getType(), 'connecting to URL', url);
 
-        var webSocket = new org.cometd.WebSocket(url);
         var self = this;
+        var connectTimer = null;
+
+        var connectTimeout = _cometd.getConfiguration().connectTimeout;
+        if (connectTimeout > 0)
+        {
+            connectTimer = this.setTimeout(function()
+            {
+                connectTimer = null;
+                if (!_opened)
+                {
+                    self._debug('Transport', self.getType(), 'timed out while connecting to URL', url, ':', connectTimeout, 'ms');
+                    self.onClose(1002, 'Connect Timeout');
+                }
+            }, connectTimeout);
+        }
+
+        var webSocket = new org.cometd.WebSocket(url);
         webSocket.onopen = function()
         {
             self._debug('WebSocket opened', webSocket);
+            if (connectTimer)
+            {
+                self.clearTimeout(connectTimer);
+                connectTimer = null;
+            }
             if (webSocket !== _webSocket)
             {
                 // It's possible that the onopen callback is invoked
@@ -891,6 +905,11 @@ org.cometd.WebSocketTransport = function()
             var code = event ? event.code : 1000;
             var reason = event ? event.reason : undefined;
             self._debug('WebSocket closed', code, '/', reason, webSocket);
+            if (connectTimer)
+            {
+                self.clearTimeout(connectTimer);
+                connectTimer = null;
+            }
             if (webSocket !== _webSocket)
             {
                 // The onclose callback may be invoked when the server sends
@@ -1143,6 +1162,24 @@ org.cometd.WebSocketTransport = function()
         _send.call(this, envelope, metaConnect);
     };
 
+    _self.abort = function()
+    {
+        _super.abort();
+        if (_webSocket !== null)
+        {
+            try
+            {
+                _webSocket.close(1001);
+            }
+            catch (x)
+            {
+                // Firefox may throw, just ignore
+                this._debug(x);
+            }
+        }
+        this.reset();
+    };
+
     _self.reset = function()
     {
         _super.reset();
@@ -1203,9 +1240,11 @@ org.cometd.Cometd = function(name)
     var _extensions = [];
     var _advice = {};
     var _handshakeProps;
+    var _publishCallbacks = {};
     var _reestablish = false;
     var _connected = false;
     var _config = {
+        connectTimeout: 0,
         maxConnections: 2,
         backoffIncrement: 1000,
         maxBackoff: 60000,
@@ -1595,20 +1634,33 @@ org.cometd.Cometd = function(name)
         {
             var message = messages[i];
             message.id = '' + _nextMessageId();
+
             if (_clientId)
             {
                 message.clientId = _clientId;
             }
+
+            var callback = undefined;
+            if (_isFunction(message._callback))
+            {
+                callback = message._callback;
+                // Remove the publish callback before calling the extensions
+                delete message._callback;
+            }
+
             message = _applyOutgoingExtensions(message);
             if (message !== undefined && message !== null)
             {
                 messages[i] = message;
+                if (callback)
+                    _publishCallbacks[message.id] = callback;
             }
             else
             {
                 messages.splice(i--, 1);
             }
         }
+
         if (messages.length === 0)
         {
             return;
@@ -2149,8 +2201,19 @@ org.cometd.Cometd = function(name)
         });
     }
 
+    function _handlePublishCallback(message)
+    {
+        var callback = _publishCallbacks[message.id];
+        if (_isFunction(callback))
+        {
+            delete _publishCallbacks[message.id];
+            callback.call(_cometd, message);
+        }
+    }
+
     function _failMessage(message)
     {
+        _handlePublishCallback(message);
         _notifyListeners('/meta/publish', message);
         _notifyListeners('/meta/unsuccessful', message);
     }
@@ -2173,6 +2236,7 @@ org.cometd.Cometd = function(name)
         {
             if (message.successful)
             {
+                _handlePublishCallback(message);
                 _notifyListeners('/meta/publish', message);
             }
             else
@@ -2710,7 +2774,7 @@ org.cometd.Cometd = function(name)
      * @param content the content of the message
      * @param publishProps an object to be merged with the publish message
      */
-    this.publish = function(channel, content, publishProps)
+    this.publish = function(channel, content, publishProps, publishCallback)
     {
         if (arguments.length < 1)
         {
@@ -2725,9 +2789,21 @@ org.cometd.Cometd = function(name)
             throw 'Illegal state: already disconnected';
         }
 
+        if (_isFunction(content))
+        {
+            publishCallback = content;
+            content = publishProps = {};
+        }
+        else if (_isFunction(publishProps))
+        {
+            publishCallback = publishProps;
+            publishProps = {};
+        }
+
         var bayeuxMessage = {
             channel: channel,
-            data: content
+            data: content,
+            _callback: publishCallback
         };
         var message = this._mixin(false, {}, publishProps, bayeuxMessage);
         _queueSend(message);
@@ -2952,4 +3028,12 @@ org.cometd.Cometd = function(name)
         org.cometd.WebSocket = window.MozWebSocket;
     }
 };
+
+if (typeof define === 'function' && define.amd)
+{
+    define(function()
+    {
+        return org.cometd;
+    });
+}
 

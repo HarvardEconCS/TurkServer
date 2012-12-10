@@ -1,2 +1,5 @@
 Version for the included cometD libraries and jquery plugins
-cometd-2.4.0-distribution
+cometd-2.5.0-distribution
+
+jquery files came from the cometd-jquery plugin
+jquery-cookie is from the cometd javascript examples
