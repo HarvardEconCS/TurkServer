@@ -26,8 +26,13 @@ public class TestUtils {
 		return fakeGroup;
 	}
 	
-	public static FakeExperimentController getFakeController(HITWorkerGroup fakeGroup) {
-		return new FakeExperimentController(fakeGroup);
+	public static FakeExperimentController getFakeController(FakeHITWorkerGroup<? extends FakeHITWorker> fakeGroup) {
+		FakeExperimentController fakeCont = new FakeExperimentController(fakeGroup);
+		
+		for(FakeHITWorker fake : fakeGroup.getClassedHITWorkers())
+			fake.cont = fakeCont;
+		
+		return fakeCont;
 	}
 	
 	public static ExperimentLog getFakeLog() {
