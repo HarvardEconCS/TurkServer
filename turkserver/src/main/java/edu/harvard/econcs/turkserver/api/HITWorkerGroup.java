@@ -13,7 +13,7 @@ public interface HITWorkerGroup {
 	 * Convenience method to get the HIT IDs for this group of workers.
 	 * @return
 	 */
-	List<String> getHITIds();
+	Collection<String> getHITIds();
 
 	/**
 	 * Convenience method to get the Worker IDs for this group of workers.

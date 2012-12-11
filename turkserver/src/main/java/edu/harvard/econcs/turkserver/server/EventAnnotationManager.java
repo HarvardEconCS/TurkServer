@@ -241,7 +241,7 @@ public class EventAnnotationManager {
 	 * @param expId
 	 * @param message
 	 */
-	boolean deliverBroadcastMsg(String expId, HITWorkerImpl source, Map<String, Object> message) {
+	boolean deliverBroadcastMsg(String expId, HITWorker source, Map<String, Object> message) {
 		Object bean = beans.get(expId);
 		
 		boolean forward = false;
@@ -268,7 +268,7 @@ public class EventAnnotationManager {
 	 * @param message
 	 * @return 
 	 */
-	void deliverServiceMsg(String expId, HITWorkerImpl source, Map<String, Object> message) {
+	void deliverServiceMsg(String expId, HITWorker source, Map<String, Object> message) {
 		Object bean = beans.get(expId);
 
 		
