@@ -5,12 +5,22 @@ import edu.harvard.econcs.turkserver.schema.*;
 import edu.harvard.econcs.turkserver.server.TSConfig;
 
 import java.beans.PropertyVetoException;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URL;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.commons.configuration.Configuration;
+
+import com.google.common.io.ByteStreams;
+import com.google.common.io.Files;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
@@ -85,7 +95,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 				catch (SQLException e) { e.printStackTrace(); }
 			}
 		}
-	}		
+	}
 	
 	@Override
 	public Collection<Experiment> getSetExperiments() {
@@ -248,7 +258,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			
 			new SQLInsertClause(conn, dialect, _session)
 			.columns(_session.hitId, _session.setId)
-			.values(hitId, setID)
+			.values(hitId, setID)if( !f.exists)
 			.addFlag(Position.END, TemplateExpressionImpl.create(				
 					String.class, " ON DUPLICATE KEY UPDATE {0}", _session.setId.eq(setID) ))
 			.execute();
@@ -373,7 +383,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 		}
 	}
 
-	@Override
+	@Overrideif( !f.exists)
 	public void clearWorkerForSession(String hitId) {
 		Connection conn = null;		
 		try {
@@ -437,6 +447,75 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			}
 		}
 		return null;
+	}
+	
+	/**
+	 * Create the TurkServer schema from a configuration.
+	 * TODO only works on linux-based machines with mysql client installed.
+	 * 
+	 * @param conf
+	 * @throws Exception
+	 */
+	public static void createSchema(Configuration conf) throws Exception {
+		URL url = MySQLDataTracker.class.getResource("/schema.sql");
+		final File f = new File(url.getFile());
+		
+		if( !f.exists() ) throw new FileNotFoundException("schema.sql was not found");
+		
+		String host = conf.getString(TSConfig.MYSQL_HOST, null);
+		String db = conf.getString(TSConfig.MYSQL_DATABASE, null);
+		String user = conf.getString(TSConfig.MYSQL_USER, null);
+		String pw = conf.getString(TSConfig.MYSQL_PASSWORD, null);
+		
+		if( db == null ) throw new Exception ("Need database name!");
+		String userStr = user == null ? "" : String.format("-u %s ", user);
+		String hostStr = host == null ? "" : String.format("-h %s ", host);
+		String pwStr = pw == null ? "" : String.format("-p%s ", pw);
+		
+		String cmd = String.format("mysql %s %s %s %s", hostStr, userStr, pwStr, db);
+		
+		System.out.println(cmd + " < schema.sql");		
+		
+		final Process pr = Runtime.getRuntime().exec(cmd);
+
+		new Thread() {
+			public void run() {
+				OutputStream stdin = null;
+				try {
+					Files.copy(f, stdin = pr.getOutputStream());
+				} 
+				catch (IOException e) { e.printStackTrace(); }
+				finally {
+					if( stdin != null ) {
+						try { stdin.close(); } 
+						catch (IOException e) { e.printStackTrace(); }
+					}
+				}				
+			}
+		}.start();
+		
+		new Thread() {
+			public void run() {
+				InputStream stdout = null;
+				try {
+					ByteStreams.copy(stdout = pr.getInputStream(), System.out);
+				} 
+				catch (IOException e) { e.printStackTrace(); }
+				finally {
+					if( stdout != null ) {
+						try { stdout.close(); } 
+						catch (IOException e) { e.printStackTrace(); }
+					}
+				}				
+			}
+		}.start();				
+
+		int exitVal = pr.waitFor();
+		if( exitVal == 0 )
+			System.out.println("Create db succeeded!");
+		else	
+			System.out.println("Exited with error code " + exitVal);
+		
 	}
 	
 }
