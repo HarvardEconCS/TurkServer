@@ -258,7 +258,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			
 			new SQLInsertClause(conn, dialect, _session)
 			.columns(_session.hitId, _session.setId)
-			.values(hitId, setID)if( !f.exists)
+			.values(hitId, setID)
 			.addFlag(Position.END, TemplateExpressionImpl.create(				
 					String.class, " ON DUPLICATE KEY UPDATE {0}", _session.setId.eq(setID) ))
 			.execute();
@@ -383,7 +383,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 		}
 	}
 
-	@Overrideif( !f.exists)
+	@Override
 	public void clearWorkerForSession(String hitId) {
 		Connection conn = null;		
 		try {
@@ -456,7 +456,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	 * @param conf
 	 * @throws Exception
 	 */
-	public static void createSchema(Configuration conf) throws Exception {
+	public static int createSchema(Configuration conf) throws Exception {
 		URL url = MySQLDataTracker.class.getResource("/schema.sql");
 		final File f = new File(url.getFile());
 		
@@ -515,7 +515,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			System.out.println("Create db succeeded!");
 		else	
 			System.out.println("Exited with error code " + exitVal);
-		
+		return exitVal;
 	}
 	
 }

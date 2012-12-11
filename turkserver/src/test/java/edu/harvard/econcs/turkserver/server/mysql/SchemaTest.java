@@ -28,8 +28,8 @@ public class SchemaTest {
 	}
 
 	@Test
-	public void testSchema() throws Exception {
-		MySQLDataTracker.createSchema(conf);
+	public void testCreateSchema() throws Exception {
+		assertEquals(0, MySQLDataTracker.createSchema(conf));
 	}
 
 }
