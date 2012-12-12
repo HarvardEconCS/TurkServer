@@ -1,28 +1,18 @@
 package edu.harvard.econcs.turkserver.server;
 
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
+import static com.google.common.base.Preconditions.*;
 
 import org.apache.commons.configuration.Configuration;
-import org.eclipse.jetty.util.resource.Resource;
 
-import com.amazonaws.mturk.util.ClientConfig;
-
-import com.google.inject.AbstractModule;
+import com.amazonaws.mturk.requester.QualificationRequirement;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.Scopes;
-import com.google.inject.TypeLiteral;
+import com.google.inject.Key;
 import com.google.inject.name.Names;
-import com.google.inject.util.Providers;
 
 import edu.harvard.econcs.turkserver.api.Configurator;
 import edu.harvard.econcs.turkserver.mturk.HITController;
-import edu.harvard.econcs.turkserver.schema.Experiment;
-import edu.harvard.econcs.turkserver.server.mturk.FakeHITController;
-import edu.harvard.econcs.turkserver.server.mysql.*;
+import edu.harvard.econcs.turkserver.server.TSBaseModule.*;
 
 /**
  * The main TurkServer class.
@@ -34,94 +24,89 @@ import edu.harvard.econcs.turkserver.server.mysql.*;
  */
 public class TurkServer {
 	
-	public static void testSimpleExperiment(
-			final ClientConfig config,
-			final Class<?> beanClass, 
-			final Configurator configurator,
-			final String setId) {
-				
-		Injector injector = Guice.createInjector(new TSTestModule() {
-			@Override
-			public void configure() {
-				super.configure();
-				
-				bind(ClientConfig.class).toInstance(config);
-				bind(SessionServer.class).to(SimpleExperimentServer.class).in(Scopes.SINGLETON);
-				
-				bind(new TypeLiteral<Class<?>>() {})
-				.annotatedWith(Names.named(TSConfig.EXP_CLASS)).toInstance(beanClass);
-				
-				bind(Configurator.class)
-				.annotatedWith(Names.named(TSConfig.EXP_INIT)).toInstance(configurator);
-				
-				bind(String.class)
-				.annotatedWith(Names.named(TSConfig.EXP_SETID)).toInstance(setId);
-			}
-		});
+	/*
+	 * Last check of sanity before we launch a server
+	 */
+	private static void checkConfiguration(Injector injector, Configuration conf) {
+		
+		checkNotNull(injector.getBinding(Key.get(String.class, Names.named(TSConfig.EXP_SETID))),
+				"set not specified");
+		checkNotNull(injector.getBinding(Key.get(Configurator.class, Names.named(TSConfig.EXP_CONFIGURATOR))),
+				"experiment configurator not specified");
+		checkNotNull(injector.getBinding(Key.get(int.class, Names.named(TSConfig.EXP_REPEAT_LIMIT))),
+				"set limit not specified");
+		
+		boolean debugMode = conf.getBoolean(TSConfig.SERVER_DEBUGMODE);
+		
+		if( !debugMode ) { // Ignore these settings for local test
+			checkNotNull(conf.getDouble(TSConfig.MTURK_HIT_BASE_REWARD, null),
+					"reward not specified");
+			
+			checkNotNull(injector.getBinding(Key.get(QualificationRequirement[].class)),
+					"No qualifications set!");
+			
+			checkNotNull(conf.getInteger(TSConfig.MTURK_HIT_FRAME_HEIGHT, null),
+					"frame height not set");
+			checkNotNull(conf.getString(TSConfig.MTURK_HIT_EXTERNAL_URL, null),
+					"external url not set");
+	
+			// TODO update these when more flexible config is created 
+			checkNotNull( conf.getInteger(TSConfig.HITS_INITIAL, null), 
+					"initial HITs not specified ");
+			checkNotNull( conf.getInteger(TSConfig.HITS_DELAY, null), 
+					"delay not specified" );
+			checkNotNull( conf.getInteger(TSConfig.SERVER_HITGOAL, null), 
+					"goal amount not specified");
+			checkNotNull( conf.getInteger(TSConfig.HITS_TOTAL, null),
+					"total HITs not specified");
+		}
+		
+	}
+
+	public static void testExperiment(TSTestModule testModule) {		
+		
+		Injector injector = Guice.createInjector(testModule);		
+		Configuration conf = testModule.getConfiguration();				
+		checkConfiguration(injector, conf);
 		
 		HITController thm = injector.getInstance(HITController.class);
+				
+		SessionServer ss = getSessionServer(injector);
 		
-		thm.setHITType("test", "test desc", "keyword1 keyword2", 
-				1.00, 86400, 604800, null);
+		// TODO this may not be in conf, but in injector
+		thm.setHITType(
+				conf.getString(TSConfig.MTURK_HIT_TITLE),
+				conf.getString(TSConfig.MTURK_HIT_DESCRIPTION),
+				conf.getString(TSConfig.MTURK_HIT_KEYWORDS),
+				1.00, 
+				conf.getInt(TSConfig.MTURK_ASSIGNMENT_DURATION),
+				conf.getInt(TSConfig.MTURK_AUTO_APPROVAL_DELAY),
+				null);
 		
 		thm.setExternalParams("http://localhost:9294/", 1500, 604800);
-		
-		SimpleExperimentServer ss = injector.getInstance(SimpleExperimentServer.class);
 		
 		new Thread(ss).start();		
 		
 		thm.postBatchHITs(1, 5000, 10);
 	}
-	
-	public static void createSynchronousExperiment() {
+
+	public static void runExperiment(TSBaseModule module) {
+		
+		
 		
 	}
-	
-	static class TSBaseModule extends AbstractModule {
-		@Override
-		protected void configure() {			
-			bind(int.class).annotatedWith(Names.named(TSConfig.CONCURRENCY_LIMIT)).toInstance(1);
-			
-			bind(ExperimentDataTracker.class).to(MySQLDataTracker.class);			
+
+	static SessionServer getSessionServer(Injector injector) {
+		if( injector.getExistingBinding(new Key<SimpleExperimentServer>() {}) != null ) {
+			return injector.getInstance(SimpleExperimentServer.class);
 		}
+		else if( injector.getExistingBinding(new Key<GroupServer>() {}) != null ) {
+			return injector.getInstance(GroupServer.class);
+		}
+		else {
+			throw new RuntimeException("No binding found for session server. " +
+					"Try bindSingleExperiments() or bindGroupExperiments() in your module.");
+		}		
 	}
 	
-	static class TSTestModule extends AbstractModule {
-		@Override
-		protected void configure() {
-			int some_goal = 10;
-			
-			// TODO maybe this should be named too			
-			Configuration conf = TSConfig.getDefault();
-			conf.addProperty(TSConfig.SERVER_HITGOAL, some_goal);
-			
-			bind(int.class)
-			.annotatedWith(Names.named(TSConfig.SERVER_HTTPPORT)).toInstance(conf.getInt(TSConfig.SERVER_HTTPPORT));
-			
-			bind(int.class)
-			.annotatedWith(Names.named(TSConfig.CONCURRENCY_LIMIT)).toInstance(1);			
-			
-			bind(int.class)
-			.annotatedWith(Names.named(TSConfig.SET_REPEAT_LIMIT)).toInstance(some_goal);
-			
-			bind(HITController.class).to(FakeHITController.class);
-			bind(ExperimentDataTracker.class).to(ExperimentDummyTracker.class);
-			
-			bind(QuizFactory.class).toProvider(Providers.of((QuizFactory) null));
-			bind(QuizPolicy.class).toProvider(Providers.of((QuizPolicy) null));
-			
-			bind(Configuration.class).toInstance(conf);
-			bind(Resource[].class).toInstance(new Resource[] {});
-			
-			bind(new TypeLiteral<List<String>>() {})
-			.annotatedWith(Names.named(TSConfig.SPECIAL_WORKERS)).toInstance(new LinkedList<String>());
-			
-			bind(new TypeLiteral<Set<String>>() {})
-			.annotatedWith(Names.named(TSConfig.INPUT_LIST)).toInstance(Collections.singleton("test-treatment"));
-			
-			// TODO replace this with actual list of past experiments
-			bind(new TypeLiteral<List<Experiment>>() {}).toProvider(Providers.of((List<Experiment>) null));
-						
-		}
-	}
 }

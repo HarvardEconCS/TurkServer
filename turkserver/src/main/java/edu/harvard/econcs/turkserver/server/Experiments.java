@@ -60,7 +60,7 @@ public class Experiments {
 	@Inject
 	Experiments(
 			@Named(TSConfig.EXP_CLASS) Class<?> expClass,
-			@Named(TSConfig.EXP_INIT) Configurator configurator,			
+			@Named(TSConfig.EXP_CONFIGURATOR) Configurator configurator,			
 			Assigner assigner,
 			ExperimentDataTracker tracker,
 			EventAnnotationManager manager

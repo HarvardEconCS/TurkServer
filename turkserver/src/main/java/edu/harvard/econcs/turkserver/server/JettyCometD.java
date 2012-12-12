@@ -40,7 +40,7 @@ public class JettyCometD {
 		
 	@Inject
 	JettyCometD(
-			Resource[] resources,
+			@Named(TSConfig.SERVER_RESOURCES) Resource[] resources,
 			@Named(TSConfig.SERVER_HTTPPORT) int httpPort
 			) {				
 		

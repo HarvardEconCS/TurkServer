@@ -1,5 +1,7 @@
 package edu.harvard.econcs.turkserver.server;
 
+import java.io.File;
+
 import org.apache.commons.configuration.CompositeConfiguration;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
@@ -19,43 +21,44 @@ public class TSConfig {
 	public static final String SERVER_HTTPPORT = "server.httpport";
 	public static final String SERVER_DEBUGMODE = "server.debugmode";
 	
-	public static final String CONCURRENCY_LIMIT = "session.concurrent.limit";
+	public static final String CONCURRENCY_LIMIT = "session.concurrent.limit";	
 	
-	/* ****************************************************
-	 * Default MTurk values
-	 ******************************************************/
-	
-	
-	
-	/* ****************************************************
-	 * Named parameters
-	 ******************************************************/
-	
-	public static final String EXP_INIT = "experiment.initializer";
-	public static final String EXP_CLASS = "experiment.class";	
-	public static final String EXP_SETID = "experiment.setid";
-	
-	public static final String SET_REPEAT_LIMIT = "session.set.limit";
-	
-	public static final String SPECIAL_WORKERS = "experiment.special.workers";
-	public static final String INPUT_LIST = "experiment.inputdata";
+	public static final String MTURK_ASSIGNMENT_DURATION = "mturk.assignmentDurationInSeconds";
+	public static final String MTURK_AUTO_APPROVAL_DELAY = "mturk.autoApprovalDelayInSeconds";
+	public static final String MTURK_HIT_LIFETIME = "mturk.lifetimeInSeconds";		
 	
 	/* ****************************************************
 	 * Other things that will need to be set
-	 ******************************************************/	
+	 ******************************************************/
+	
+	public static final String EXP_CONFIGURATOR = "experiment.configurator";
+	public static final String EXP_CLASS = "experiment.class";	
+	public static final String EXP_SETID = "experiment.setid";
+	public static final String EXP_SPECIAL_WORKERS = "experiment.special.workers";
+	public static final String EXP_INPUT_LIST = "experiment.inputdata";	
+	public static final String EXP_REPEAT_LIMIT = "experiment.set.limit";		
 	
 	public static final String MYSQL_HOST = "mysql.host";
 	public static final String MYSQL_DATABASE = "mysql.database";
 	public static final String MYSQL_USER = "mysql.username";
 	public static final String MYSQL_PASSWORD = "mysql.password";
 	
+	public static final String MTURK_HIT_TITLE = "mturk.hit.title";
+	public static final String MTURK_HIT_DESCRIPTION = "mturk.hit.description";
+	public static final String MTURK_HIT_KEYWORDS = "mturk.hit.keywords";	
+	public static final String MTURK_HIT_BASE_REWARD = "mturk.hit.reward";
+	public static final String MTURK_HIT_FRAME_HEIGHT = "mturk.hit.frameheight";		
+	public static final String MTURK_HIT_EXTERNAL_URL = "mturk.hit.external.url";
+	
+	public static final String SERVER_RESOURCES = "server.resources";
 	public static final String SERVER_HITGOAL = "server.hitgoal";
 	public static final String SERVER_USERNAME = "server.usernames";
 	public static final String SERVER_LOBBY = "server.lobby";
 	
 	public static final String HITS_INITIAL = "server.hitinitial";
 	public static final String HITS_DELAY = "server.hitdelay";
-	public static final String HITS_TOTAL = "server.hittotal";							
+	public static final String HITS_TOTAL = "server.hittotal";	
+					
 	
 	public static Configuration getDefault() {
 		Configuration conf = null;
@@ -67,13 +70,18 @@ public class TSConfig {
 			conf = new PropertiesConfiguration();
 		}		
 				
-		conf.addProperty(SERVER_HTTPPORT, 9876);				
+		conf.addProperty(SERVER_HTTPPORT, 9876);
+		conf.addProperty(CONCURRENCY_LIMIT, 1);
+		
+		conf.addProperty(MTURK_ASSIGNMENT_DURATION, 86400);
+		conf.addProperty(MTURK_AUTO_APPROVAL_DELAY, 604800);
+		
 		conf.addProperty(SERVER_USERNAME, false);
 		
 		return conf;
 	}
 	
-	public static Configuration getCustom(String file) throws ConfigurationException {
+	public static Configuration getCustom(File file) throws ConfigurationException {
 		Configuration defaults = getDefault();
 		Configuration experiment = new PropertiesConfiguration(file);
 		

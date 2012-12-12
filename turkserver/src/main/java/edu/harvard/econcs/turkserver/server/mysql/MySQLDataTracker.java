@@ -457,7 +457,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	 * @throws Exception
 	 */
 	public static int createSchema(Configuration conf) throws Exception {
-		URL url = MySQLDataTracker.class.getResource("/schema.sql");
+		URL url = MySQLDataTracker.class.getClassLoader().getResource("schema.sql");
 		final File f = new File(url.getFile());
 		
 		if( !f.exists() ) throw new FileNotFoundException("schema.sql was not found");

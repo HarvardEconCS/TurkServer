@@ -46,9 +46,9 @@ public class WorkerAuthenticator {
 			QuizPolicy quizPolicy,
 			@Named(TSConfig.CONCURRENCY_LIMIT)
 			int concurrentSessionLimit,
-			@Named(TSConfig.SET_REPEAT_LIMIT)
+			@Named(TSConfig.EXP_REPEAT_LIMIT)
 			int totalSetLimit,
-			@Named(TSConfig.SPECIAL_WORKERS)
+			@Named(TSConfig.EXP_SPECIAL_WORKERS)
 			List<String> specialWorkers) {
 		this.tracker = tracker;
 		
