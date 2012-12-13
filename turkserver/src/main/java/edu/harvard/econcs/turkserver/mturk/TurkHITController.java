@@ -1,12 +1,10 @@
 package edu.harvard.econcs.turkserver.mturk;
 
 import edu.harvard.econcs.turkserver.schema.Session;
-import edu.harvard.econcs.turkserver.server.TSConfig;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.slf4j.Logger;
@@ -16,7 +14,6 @@ import com.amazonaws.mturk.requester.HIT;
 import com.amazonaws.mturk.requester.QualificationRequirement;
 import com.amazonaws.mturk.service.exception.ServiceException;
 import com.google.inject.Inject;
-import com.google.inject.name.Named;
 
 /**
  * A hacked together class to create HITs and expire leftovers when the end

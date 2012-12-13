@@ -8,14 +8,17 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotate methods that should be called when an experiment is started.
+ * Denotes an experiment server class.
  * @author mao
  *
  */
-@Target(ElementType.METHOD)
+@Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-public @interface StartExperiment {
-
+public @interface ExperimentServer {
+    /**
+     * @return The name of this experiment
+     */
+    String value() default "";
 }

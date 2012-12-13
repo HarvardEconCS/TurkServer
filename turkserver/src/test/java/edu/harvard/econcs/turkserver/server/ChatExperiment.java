@@ -13,7 +13,7 @@ import edu.harvard.econcs.turkserver.api.*;
  *
  */
 
-@Experiment("chat")
+@ExperimentServer("chat")
 public class ChatExperiment {
 	@Inject HITWorkerGroup group;
 	@Inject ExperimentLog log;

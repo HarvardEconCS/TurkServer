@@ -7,15 +7,15 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * Annotate methods that should be called when an experiment is started.
- * @author mao
- *
- */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-public @interface StartExperiment {
+/**
+ * Annotates method to be called when experiment is done
+ * @author mao
+ *
+ */
+public @interface FinishExperiment {
 
 }

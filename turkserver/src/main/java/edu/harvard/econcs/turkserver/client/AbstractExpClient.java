@@ -1,8 +1,7 @@
 package edu.harvard.econcs.turkserver.client;
 
+@Deprecated
 public interface AbstractExpClient {
-
-	public static enum State { DISCONNECTED, LOBBY, EXPERIMENT }
 
 	/**
 	 * Get the session ID, or none if not applicable.

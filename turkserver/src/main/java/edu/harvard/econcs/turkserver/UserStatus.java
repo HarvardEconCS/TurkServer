@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.math.BigInteger;
 import java.util.Comparator;
 
+@Deprecated
 public class UserStatus implements Serializable {
 
 	private static final long serialVersionUID = 2305358626684670328L;

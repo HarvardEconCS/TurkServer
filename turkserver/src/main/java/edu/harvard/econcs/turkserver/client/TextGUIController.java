@@ -5,12 +5,13 @@ import org.slf4j.LoggerFactory;
 
 import edu.harvard.econcs.turkserver.QuizMaterials;
 import edu.harvard.econcs.turkserver.QuizResults;
+import edu.harvard.econcs.turkserver.api.ClientLobbyController;
 
-public class TextGUIController extends GUIController<NetExpClient> {
+public class TextGUIController extends GUIController {
 		
 	Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 	
-	public TextGUIController(NetExpClient client) {	
+	public TextGUIController(ClientLobbyController client) {	
 		super(client);
 	}
 

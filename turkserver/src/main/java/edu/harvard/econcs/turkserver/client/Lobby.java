@@ -15,8 +15,6 @@ import java.util.TreeSet;
 
 import javax.swing.*;
 
-
-
 /**
  * @author mao
  *
@@ -38,7 +36,7 @@ public class Lobby extends JPanel {
 	private static final String totalUsersText = "Total Users: ";
 	private static final String totalGamesText = "Games In Progress: ";
 	
-	private final GUIController<?> gc;
+	private final GUIController gc;
 	
 	private JLabel serverMessage;
 	
@@ -62,7 +60,7 @@ public class Lobby extends JPanel {
 	
 	JCheckBox joinCheckBox;
 	
-	public Lobby(GUIController<?> gc) {
+	public Lobby(GUIController gc) {
 		this.gc = gc;
 		
 		this.setLayout(new BoxLayout(this, BoxLayout.LINE_AXIS));
@@ -253,7 +251,7 @@ public class Lobby extends JPanel {
 				int index, boolean isSelected, boolean cellHasFocus) {
 			UserStatus u = (UserStatus) value;
 			
-			if ( gc.client.getSessionID().equals( u.sessionID ) ) {
+			if ( gc.client.getHITId().equals( u.sessionID ) ) {
 				// Myself is the one selected
 				setBackground(list.getSelectionBackground());
 				setForeground(list.getSelectionForeground());

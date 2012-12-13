@@ -2,86 +2,260 @@ package edu.harvard.econcs.turkserver.client;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.logging.Logger;
 
 import org.cometd.annotation.*;
 import org.cometd.bayeux.Channel;
 import org.cometd.bayeux.Message;
 import org.cometd.bayeux.client.ClientSession;
+import org.cometd.bayeux.client.ClientSessionChannel;
+import org.cometd.bayeux.client.ClientSessionChannel.MessageListener;
 import org.cometd.client.BayeuxClient;
 import org.cometd.client.ext.AckExtension;
 import org.cometd.client.ext.TimesyncClientExtension;
 import org.cometd.client.transport.LongPollingTransport;
 
-public abstract class SessionClient<T> implements Runnable {
+import edu.harvard.econcs.turkserver.Codec;
+import edu.harvard.econcs.turkserver.QuizResults;
+import edu.harvard.econcs.turkserver.api.ClientController;
+
+public class SessionClient implements ClientController {
 	
-	protected final Logger logger;
+	protected Logger logger;
 	
-	private final String url;
-	protected final T hitId;
-	protected final String assignmentId;
-	protected final String workerId;
+	private String hitId;
+	private String assignmentId;
+	private String workerId;
 	
-	protected BayeuxClient bayeuxClient;
+	protected String expBroadcastChan;
+	protected String expServiceChan;
+	
+	private MessageListener broadcastListener = null;
+	private MessageListener serviceListener = null;
+	
+	protected ClientAnnotationManager clientWrapper;
+	
+	protected BayeuxClient bayeuxClient;	
 	protected ClientAnnotationProcessor processor;
 	
 	protected volatile boolean connected;
 	private volatile boolean wasConnected;
 	
-	private volatile boolean isError = false;
+	protected SessionClient() {				
+
+	}	
+
+	/* ********************************************
+	 * ClientController methods
+	 **********************************************/
 	
-	protected SessionClient(String cometURL, T hitId, String assignmentId, String workerId) {
-		this.url = cometURL;
+	@Override
+	public String getHITId() { return hitId; }
+
+
+	@Override
+	public String getAssignmentId() { return assignmentId; }
+
+
+	@Override
+	public String getWorkerId() { return workerId; }
+
+	@Override
+	public String getUsername() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public boolean isConnected() { return connected; }
+
+	@Override
+	public void sendQuizResults(QuizResults qr) {		
+		Map<String, Object> quizResults = new TreeMap<String, Object>();
+		quizResults.put("status", "quizresults");
+		quizResults.put("correct", qr.correct);
+		quizResults.put("total", qr.total);
+		
+		bayeuxClient.getChannel("/service/user").publish(quizResults);			
+	}
+
+	@Override
+	public void sendExperimentBroadcast(Object data) {
+		bayeuxClient.getChannel(expBroadcastChan).publish(data);
+	}
+	
+	@Override
+	public void sendExperimentService(Object data) {
+		bayeuxClient.getChannel(expServiceChan).publish(data);
+	}	
+	
+	/**
+	 * Get a SessionClient that reflects a client class
+	 * @param clientClass
+	 * @return
+	 * @throws Exception
+	 */
+	public static SessionClient getWrappedClient(Class<?> clientClass) throws Exception {
+		SessionClient client = new SessionClient();
+		client.clientWrapper = new ClientAnnotationManager(client, clientClass);
+		return client;
+	}
+
+	public void connect(String url, String hitId, String assignmentId, String workerId) {
+		if( bayeuxClient != null ) throw new RuntimeException("Already attempted a connect!");
+				
 		this.hitId = hitId;
 		this.assignmentId = assignmentId;
 		this.workerId = workerId;
+		
+		logger = Logger.getLogger(this.getClass().getSimpleName() + this.getHITId());
 		
 		bayeuxClient = new BayeuxClient(url, LongPollingTransport.create(null));
 		
 		bayeuxClient.addExtension(new TimesyncClientExtension());
 		bayeuxClient.addExtension(new AckExtension());
-	
-		logger = Logger.getLogger(this.getClass().getSimpleName() + this.getSessionID());
-		
-		processor = new ClientAnnotationProcessor(bayeuxClient);
-		
+					
+		processor = new ClientAnnotationProcessor(bayeuxClient);		
 		processor.process(new UserClientService());
+				
+		logger.info("Attempting connection with ID " + getHITId());		
+		bayeuxClient.handshake();
+		
+		// Start a thread that will watch for connection success or failure
+		new Thread() {
+			public void run() {						
+				if( !bayeuxClient.waitFor(2000, BayeuxClient.State.CONNECTED) ) {
+					handShakeFail();
+					return;
+				}
+				
+				
+			}			
+		}.start();
 	}
-	
-	public void submit() {
-		Map<String, Object> m = new HashMap<String, Object>();
-		
-		m.put("status", "submit");
-		m.put("hitId", hitId);
-		m.put("workerId", workerId);
-		
-		bayeuxClient.getChannel("/service/user").publish(m);		
-	}	
-	
+
 	public void disconnect() {
-		bayeuxClient.getChannel("/service/user").unsubscribe();
+		if( bayeuxClient == null || !bayeuxClient.isConnected() ) return;
 		
-		bayeuxClient.disconnect();
+		// unsubscribe from any experiment channel too
+		if( broadcastListener != null ) {
+			bayeuxClient.getChannel(expBroadcastChan).unsubscribe(broadcastListener);
+			broadcastListener = null;
+		}
+		if( serviceListener != null ) {
+			bayeuxClient.getChannel(expServiceChan).removeListener(serviceListener);
+			serviceListener = null;
+		}
+		
+		bayeuxClient.getChannel("/service/user").unsubscribe();
+		bayeuxClient.disconnect();		
+	}
+
+	
+	public void subscribeExpChannel(String chan) {
+		expBroadcastChan = Codec.expChanPrefix + chan;
+		expServiceChan = Codec.expSvcPrefix + chan;
+		
+		broadcastListener = new MessageListener() {
+			@Override
+			public void onMessage(ClientSessionChannel channel, Message message) {				
+				clientWrapper.deliverBroadcast(message.getDataAsMap());
+			}			
+		};
+		
+		serviceListener = new MessageListener() {
+			@Override
+			public void onMessage(ClientSessionChannel channel, Message message) {				
+				clientWrapper.deliverService(message.getDataAsMap());
+			}			
+		};
+		
+		bayeuxClient.getChannel(expBroadcastChan).subscribe(broadcastListener);
+		bayeuxClient.getChannel(expServiceChan).addListener(serviceListener);		
 	}
 	
-	public BayeuxClient getBayeux() { return bayeuxClient; }
+	@Service
+	private class UserClientService {
+		@Session
+		private ClientSession client;
+		
+		@Listener(Channel.META_CONNECT)
+		public void metaConnect(Message connectMsg) {
+	        if (bayeuxClient.isDisconnected())
+	        {
+	            connected = false;
+	            connectionClosed();
+	            return;
+	        }
 	
-	public boolean getIsError() { return isError; }		
-	
-	/**
-	 * @return the hitId
-	 */
-	public abstract String getSessionID();
+	        wasConnected = connected;
+	        connected = connectMsg.isSuccessful();
+	        
+	        if (!wasConnected && connected)
+	        {
+	            connectionEstablished();
+	        }
+	        else if (wasConnected && !connected)
+	        {
+	            connectionBroken();
+	        }
+		}
+		
+		@Listener(Channel.META_HANDSHAKE)
+		public void metaHandshake(Message handshake) {
+			if( handshake.isSuccessful() ) {
+				connectionInitialized();
+				
+				// Succeeded...just add a disconnect hook.
+				Runtime.getRuntime().addShutdownHook(new Thread() {
+					public void run() {								
+						logger.info("Disconnecting Bayeux client");				
+						disconnect();
+					}
+				});
+			}
+			else {
+				handShakeFail();
+			}
+		}
+		
+		@Listener(Channel.META_DISCONNECT)
+		public void metaDisconnect(Message disconnect) {
+			if( disconnect.isSuccessful() ) {
+				connected = false;
+			}			
+		}
+		
+		@Subscription("/service/user")
+		public void serviceUser(Message service) {
+			Map<String, Object> m = service.getDataAsMap();
+			Object status = m.get("status");
+			if( status != null ) {
+				System.out.println("Status: " + status.toString() + ", " + "Message: " + m.get("msg"));
+				
+				if( "error".equals(status.toString()) ) {					
+					clientWrapper.triggerClientError(m.get("msg").toString());
+				}
+				else if( "completed".equals(status.toString()) ) {
+					System.out.println("Got complete confirmation, disconnecting.");
+					disconnect();
+				}
+			}
+			else {
+				System.out.println("Service message unexpected:");
+				System.out.println(m);
+			}
+			
+		}
+	}
 
-	/**
-	 * @return the assignmentId
-	 */
-	public String getAssignmentId() { return assignmentId; }
-
-	/**
-	 * @return the workerId
-	 */
-	public String getWorkerId() { return workerId; }
+	/* ****************************************************
+	 * Connection status handlers, can be overridden by subclasses
+	 ******************************************************/
+	protected void handShakeFail() {
+		System.out.println("BayeuxClient Failed Handshake.");
+	}
 
 	/**
 	 * First time connection is initialized
@@ -115,119 +289,35 @@ public abstract class SessionClient<T> implements Runnable {
 		
 		bayeuxClient.getChannel("/service/user").publish(data);
 	}
-	
+
 	/**
 	 * Connection broken
 	 */
 	protected void connectionBroken() {
 				
 	}
-	
+
 	/**
 	 * Disconnected (either by server or by client)
 	 */
 	protected void connectionClosed() {
 		
 	}
-	
-	@Service
-	public class UserClientService {
-		@Session
-		private ClientSession client;
-		
-		@Listener(Channel.META_CONNECT)
-		public void metaConnect(Message connectMsg) {
-            if (bayeuxClient.isDisconnected())
-            {
-                connected = false;
-                connectionClosed();
-                return;
-            }
 
-            wasConnected = connected;
-            connected = connectMsg.isSuccessful();
-            
-            if (!wasConnected && connected)
-            {
-                connectionEstablished();
-            }
-            else if (wasConnected && !connected)
-            {
-                connectionBroken();
-            }
-		}
+	public void submit() {
+		Map<String, Object> m = new HashMap<String, Object>();
 		
-		@Listener(Channel.META_HANDSHAKE)
-		public void metaHandshake(Message handshake) {
-			if( handshake.isSuccessful() ) {
-				connectionInitialized();
-			}
-			else {
-				System.out.println("Handshake failed.");
-			}
-		}
+		m.put("status", "submit");
+		m.put("hitId", hitId);
+		m.put("workerId", workerId);
 		
-		@Listener(Channel.META_DISCONNECT)
-		public void metaDisconnect(Message disconnect) {
-			if( disconnect.isSuccessful() ) {
-				connected = false;
-			}			
-		}
-		
-		@Subscription("/service/user")
-		public void serviceUser(Message service) {
-			Map<String, Object> m = service.getDataAsMap();
-			Object status = m.get("status");
-			if( status != null ) {
-				System.out.println("Status: " + status.toString() + ", " + "Message: " + m.get("msg"));
-				
-				if( "error".equals(status.toString()) ) {
-					isError = true;
-					processError(m.get("msg").toString());
-				}
-				else if( "completed".equals(status.toString()) ) {
-					System.out.println("Got complete confirmation, disconnecting.");
-					disconnect();
-				}
-			}
-			else {
-				System.out.println("Service message unexpected:");
-				System.out.println(m);
-			}
-			
-		}
+		bayeuxClient.getChannel("/service/user").publish(m);
 	}
-
-	public abstract void processError(String string);
 
 	@Override
-	public final void run() {		
-		Thread.currentThread().setName(this.getClass().getSimpleName() + " " + getSessionID());
-		logger.info("Begin client log with session ID " + getSessionID());
+	public void recordInactivity(long timeInactive) {
+		// TODO Auto-generated method stub
 		
-		bayeuxClient.handshake();
-		boolean success = bayeuxClient.waitFor(1000, BayeuxClient.State.CONNECTED);
-		
-		if( !success ) {
-			handShakeFail();			
-			return;
-		}
-		
-		Runtime.getRuntime().addShutdownHook(new Thread() {
-			public void run() {								
-				logger.info("Disconnecting Bayeux client");				
-				disconnect();
-			}
-		});
-	}
-
-	/* ****************************************************
-	 * Various methods that can be overridden by the client
-	 ******************************************************/
-	protected void handShakeFail() {
-		System.out.println("Failed Handshake. Quitting.");
-	}
-	
-	protected void runClient() {}
+	}	
 	
 }

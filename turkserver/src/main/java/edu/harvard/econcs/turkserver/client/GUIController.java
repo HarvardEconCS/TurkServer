@@ -2,6 +2,7 @@ package edu.harvard.econcs.turkserver.client;
 
 import edu.harvard.econcs.turkserver.QuizMaterials;
 import edu.harvard.econcs.turkserver.QuizResults;
+import edu.harvard.econcs.turkserver.api.ClientLobbyController;
 
 import java.awt.Container;
 import java.awt.event.ActionEvent;
@@ -17,11 +18,11 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
-public abstract class GUIController<C extends AbstractExpClient> implements ItemListener, ActionListener {
+public abstract class GUIController implements ItemListener, ActionListener {
 	
 	private enum Activity { ACTIVE, INACTIVE };
 	
-	protected final C client;
+	protected final ClientLobbyController client;
 	private final Container content;
 	private final Container host;
 	
@@ -42,7 +43,7 @@ public abstract class GUIController<C extends AbstractExpClient> implements Item
 	 * @param content
 	 * @param host the top level container (JFrame or Applet)
 	 */
-	protected GUIController(C client, Container content, Container host) {
+	protected GUIController(ClientLobbyController client, Container content, Container host) {
 		this.client = client;
 		this.content = content;
 		this.host = host;
@@ -68,7 +69,7 @@ public abstract class GUIController<C extends AbstractExpClient> implements Item
 	 * Dummy constructor for gc that does nothing
 	 * @param client
 	 */
-	public GUIController(C client) {
+	public GUIController(ClientLobbyController client) {
 		this.client = client;
 		content = null;
 		host = null;

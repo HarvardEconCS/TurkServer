@@ -83,7 +83,7 @@ public class EventAnnotationManager {
 		if( exp == null )
 			throw new RuntimeException("Refusing to make mappings for a null experiment");
 		
-		Experiment e = exp.getClass().getAnnotation(Experiment.class);
+		ExperimentServer e = exp.getClass().getAnnotation(ExperimentServer.class);
 		if( e == null )
 			logger.warn("Class {} does not have @Experiment annotation, but trying mappings anyway", exp.getClass().toString());
 		

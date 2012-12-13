@@ -8,14 +8,17 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotate methods that should be called when an experiment is started.
+ * Denotes a method that should be called when a client encounters a connection
+ * or some other type of error. 
+ *  
  * @author mao
  *
  */
+
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-public @interface StartExperiment {
+public @interface ClientError {
 
 }

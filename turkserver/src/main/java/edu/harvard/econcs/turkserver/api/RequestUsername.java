@@ -8,7 +8,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotate methods that should be called when an experiment is started.
+ * Called on client side to request username
  * @author mao
  *
  */
@@ -16,6 +16,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-public @interface StartExperiment {
+public @interface RequestUsername {
 
 }

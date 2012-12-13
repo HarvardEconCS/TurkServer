@@ -107,7 +107,7 @@ public class EventAnnotationManagerTest {
 		assertEquals(0, m.services.size());
 	}
 
-	@Experiment
+	@ExperimentServer
 	static class TestExperiment {
 		volatile String lastCall = null;
 		
