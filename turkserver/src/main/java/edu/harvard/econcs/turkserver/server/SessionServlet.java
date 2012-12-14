@@ -91,6 +91,8 @@ public class SessionServlet extends GenericServlet {
 			/* 
 			 * TODO compare this hitId with the session metadata
 			 * Remove requirements for client to send hitId every time
+			 * 
+			 * TODO make this logger class the same as the other ones
 			 */
 			
 			String hitId = null;			
@@ -129,7 +131,10 @@ public class SessionServlet extends GenericServlet {
 				Log.getRootLogger().info("HIT " + hitId + " submitting");
 				
 				sessions.sessionSubmit(session);
-			}									
+			}
+			else {
+				Log.getRootLogger().warn("Unrecognized message " + data);
+			}
 		}				
 	}
 	

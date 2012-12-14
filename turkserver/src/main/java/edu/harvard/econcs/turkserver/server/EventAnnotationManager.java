@@ -230,6 +230,7 @@ public class EventAnnotationManager {
 			return m.invoke(bean, args);
 		} catch (Exception e) {
 			logger.warn("Exception invoking {} on {}, ignoring", m, bean.getClass().toString());
+			e.printStackTrace();
 			return null;
 		} finally {
 			m.setAccessible(accessible);

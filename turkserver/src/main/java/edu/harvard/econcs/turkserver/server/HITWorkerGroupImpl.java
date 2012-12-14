@@ -1,5 +1,6 @@
 package edu.harvard.econcs.turkserver.server;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -16,6 +17,11 @@ public class HITWorkerGroupImpl implements HITWorkerGroup {
 		workerSet.put(worker.getHitId(), worker);
 	}
 	
+	public void setExperiment(ExperimentControllerImpl cont) {
+		for( HITWorkerImpl hitw : workerSet.values() )
+			hitw.setExperiment(cont);		
+	}
+
 	@Override
 	public int groupSize() {		
 		return workerSet.size();
@@ -28,14 +34,16 @@ public class HITWorkerGroupImpl implements HITWorkerGroup {
 
 	@Override
 	public List<String> getHITIds() {
-		// TODO Auto-generated method stub
-		return null;
+		List<String> hitIds = new ArrayList<String>(workerSet.size());
+		for( HITWorkerImpl hitw : workerSet.values() ) hitIds.add(hitw.getHitId());
+		return hitIds;
 	}
 
 	@Override
 	public List<String> getWorkerIds() {
-		// TODO Auto-generated method stub
-		return null;
+		List<String> workerIds = new ArrayList<String>(workerSet.size());
+		for( HITWorkerImpl hitw : workerSet.values() ) workerIds.add(hitw.getWorkerId());
+		return workerIds;
 	}
 
 	@Override

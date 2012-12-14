@@ -3,6 +3,8 @@ package edu.harvard.econcs.turkserver.server;
 import java.io.IOException;
 import java.io.PrintStream;
 
+import com.google.common.collect.ObjectArrays;
+
 import net.andrewmao.misc.Utils;
 
 import edu.harvard.econcs.turkserver.api.ExperimentLog;
@@ -55,11 +57,11 @@ public class ExperimentLogImpl implements ExperimentLog {
 		if( expId == null ) throw new RuntimeException(NOT_INIT_MSG);
 		
 		long time = System.currentTimeMillis();
-		
+				
 		sb.append(
-				String.format("%s " + format + "\n", 
+				String.format("%s " + format + "\n", ObjectArrays.concat(
 						Utils.clockStringMillis(System.currentTimeMillis() - startTime), 
-						args));
+						args)));
 		return time;
 	}
 	

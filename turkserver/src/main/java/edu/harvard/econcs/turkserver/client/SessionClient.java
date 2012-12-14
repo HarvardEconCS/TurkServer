@@ -149,20 +149,22 @@ public class SessionClient<C> implements ClientController {
 
 	public void subscribeExpChannel(String chan) {
 		expBroadcastChan = Codec.expChanPrefix + chan;
+		logger.info("Subscribing to exp broadcast channel: " + expBroadcastChan);
 		expServiceChan = Codec.expSvcPrefix + chan;
+		logger.info("Subscribing to exp service channel: " + expServiceChan);
 		
 		broadcastListener = new MessageListener() {
 			@Override
 			public void onMessage(ClientSessionChannel channel, Message message) {				
 				clientWrapper.deliverBroadcast(message.getDataAsMap());
-			}			
+			}
 		};
 		
 		serviceListener = new MessageListener() {
 			@Override
-			public void onMessage(ClientSessionChannel channel, Message message) {				
+			public void onMessage(ClientSessionChannel channel, Message message) {					
 				clientWrapper.deliverService(message.getDataAsMap());
-			}			
+			}
 		};
 		
 		bayeuxClient.getChannel(expBroadcastChan).subscribe(broadcastListener);
@@ -268,7 +270,7 @@ public class SessionClient<C> implements ClientController {
 		Map<String, Object> data = new HashMap<String, Object>();
 		
 		if( assignmentId != null && !assignmentId.equals("ASSIGNMENT_ID_NOT_AVAILABLE") ) {
-			data.put("status", "accept");
+			data.put("status", Codec.hitAccept);
 			data.put("hitId",  hitId);
 			data.put("assignmentId", assignmentId);
 			data.put("workerId", workerId);
@@ -276,7 +278,7 @@ public class SessionClient<C> implements ClientController {
 			System.out.println(bayeuxClient.getId() + " sending accept");
 		}
 		else {
-			data.put("status", "view");
+			data.put("status", Codec.hitView);
 			data.put("hitId",  hitId);
 			
 			System.out.println(bayeuxClient.getId() + " sending view");

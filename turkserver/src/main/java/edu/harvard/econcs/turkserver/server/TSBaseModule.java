@@ -18,7 +18,7 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
 
-import edu.harvard.econcs.turkserver.api.Configurator;
+import edu.harvard.econcs.turkserver.api.*;
 import edu.harvard.econcs.turkserver.mturk.HITController;
 import edu.harvard.econcs.turkserver.mturk.TurkHITController;
 import edu.harvard.econcs.turkserver.schema.Experiment;
@@ -48,7 +48,7 @@ public abstract class TSBaseModule extends AbstractModule {
 	@Override
 	protected void configure() {
 		// Prevent unwanted initializations
-		binder().requireExplicitBindings();
+		// binder().requireExplicitBindings();
 		
 		// Things that were previously JIT bound
 		bind(Assigner.class);
@@ -78,6 +78,9 @@ public abstract class TSBaseModule extends AbstractModule {
 	}
 	
 	protected void bindExperimentClass(Class<?> beanClass) {
+		// Explicit binding for experiment class
+		// bind(beanClass);
+		
 		bind(new TypeLiteral<Class<?>>() {}).
 		annotatedWith(Names.named(TSConfig.EXP_CLASS)).toInstance(beanClass);
 	}

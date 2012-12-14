@@ -56,7 +56,10 @@ public final class GroupServer extends SessionServer {
 		super(tracker, hitCont, workerAuth, experiments, jetty, config);
 		
 		this.requireUsernames = config.getBoolean(TSConfig.SERVER_USERNAME);
+		
 		this.debugMode = config.getBoolean(TSConfig.SERVER_DEBUGMODE);
+		logger.info("Debug mode set to {}", debugMode);
+		
 		this.lobbyEnabled = config.getBoolean(TSConfig.SERVER_LOBBY);
 		
 		jetty.addServlet(GroupServlet.class, "/exp");						
@@ -73,7 +76,7 @@ public final class GroupServer extends SessionServer {
 			String hitId, String assignmentId, String workerId) {
 		
 		HITWorkerImpl hitw = super.sessionAccept(session, hitId, assignmentId, workerId);
-		if( hitw == null ) return null;
+		if( hitw == null ) return null;				
 		
 		// Ask for username if we require it or somehow didn't get it last time		
 		if( this.requireUsernames && hitw.getUsername() == null ) {
@@ -85,19 +88,20 @@ public final class GroupServer extends SessionServer {
 		}		
 		
 		// Check if we should reconnect this HITWorker to an existing experiment
-		if( experiments.workerIsInProgress(hitw) ) {
-									
-			sessionReconnect(session, hitw);
-			
+		if( experiments.workerIsInProgress(hitw) ) {									
+			sessionReconnect(session, hitw);			
 		} 
 		else if( debugMode ) {
-			// single-person debug experiments, so create a new one and skip lobby
-			HITWorkerGroupImpl single = new HITWorkerGroupImpl();
-			single.add(hitw);			
-			
-			logger.info("Creating new experiment in debug mode");
-			createNewExperiment(single);
+			// Create debug experiments if we have enough players, automatically ready
+			lobbyStatus.put(hitw, true);
 			serverGUI.updateLobbyModel();
+			logger.info("Debug mode: lobby has {} people, {} ready", lobbyStatus.size(), lobbyStatus.getTrueCount());
+			
+			if( lobbyStatus.size() >= experiments.getMinGroupSize() ) {
+				logger.info("Creating new experiment in debug mode");
+				createNewExperiment(null);
+				serverGUI.updateLobbyModel();	
+			}						
 		}
 		else {
 			Map<String, String> data = ImmutableMap.of(
@@ -117,7 +121,7 @@ public final class GroupServer extends SessionServer {
 	void sessionReconnect(ServerSession session, HITWorkerImpl hitw) {
 		Map<String, String> data = ImmutableMap.of(
 				"status", Codec.connectExpAck,
-				"channel", Codec.expChanPrefix + hitw.expCont.expChannel
+				"channel", hitw.expCont.expChannel
 				);
 
 		SessionUtils.sendServiceMsg(session, data);							
@@ -211,7 +215,8 @@ public final class GroupServer extends SessionServer {
 		
 	}
 
-	private void createNewExperiment(HITWorkerGroupImpl expClients) {
+	private synchronized void createNewExperiment(HITWorkerGroupImpl expClients) {	
+		if( lobbyStatus.getTrueCount() < experiments.getMinGroupSize() ) return;
 		
 		// Generate the list of experiment clients
 		if( expClients == null ) {			

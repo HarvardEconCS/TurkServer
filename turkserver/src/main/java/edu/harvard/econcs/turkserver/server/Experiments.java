@@ -143,49 +143,78 @@ public class Experiments {
 	
 	ExperimentControllerImpl startGroup(final HITWorkerGroupImpl group) {
 		
-		// TODO initialize bean
-		ExperimentControllerImpl cont = null;
-		Object experimentBean = null;
+		final ExperimentLogImpl log = new ExperimentLogImpl();
+		final ExperimentControllerImpl cont = new ExperimentControllerImpl(log, group, this);
+		group.setExperiment(cont);
+		
+		// Create an experiment instance with specific binding to this HITWorker
+		Injector child = injector.createChildInjector(new AbstractModule() {
+			@Override
+			protected void configure() {
+				bind(HITWorkerGroup.class).toInstance(group);
+				bind(ExperimentLog.class).toInstance(log);
+				bind(ExperimentController.class).toInstance(cont);
+			}			
+		});					
+		Object experimentBean = child.getInstance(expClass);
+				
+		// Initialize the experiment data
+		String inputData = assigner.getAssignment(null);
+		configurator.configure(experimentBean, inputData);
 		
 		// Create a unique ID for an experiment, based on current timestamp
 		long startTime = System.currentTimeMillis();
-		String expId = Utils.getTimeString(startTime);
+		final String expId = Utils.getTimeString(startTime);
 		String expChannel = expId.replace(" ", "_");
 		
 		// Register callbacks on the experiment class
-		manager.processExperiment(expId, experimentBean);
+		manager.processExperiment(expId, experimentBean);		
 		
 		/* 
 		 * Create necessary channels for this experiment
 		 * Note that hostServlet automatically routes these already
 		 */
-		
+				
 		bayeux.createIfAbsent(Codec.expChanPrefix + expChannel, persistent);
 		bayeux.createIfAbsent(Codec.expSvcPrefix + expChannel, persistent);				
+
+		// Initialize controller, which also initializes the log
+		LocalSession ls = bayeux.newLocalSession(expId);
+		ls.handshake();
+		cont.initialize(startTime, expId, inputData, expChannel, ls);
 		
 		/* Update tracking information for experiment
 		 * TODO does this start directing requests to the server before it's started?
 		 */
+		mapWorkers(group, expId);
 		tracker.newExperimentStarted(cont);
-		
-		// Starting the experiment sends out the appropriate notifications to clients
-		manager.triggerStart(expId);		
-		
+					
 		/*
 		 * Send experiment channel to clients to notify connection
 		 * TODO this may be unnecessary, fix protocol
 		 */
 		Map<String, Object> data = new HashMap<String, Object>();
 		data.put("status", Codec.connectExpAck);
-		data.put("channel", Codec.expChanPrefix + expChannel);
+		data.put("channel", expChannel);
 
 		for( HITWorker hitw : group.getHITWorkers() ) {
 			try { ((HITWorkerImpl) hitw).deliverUserService(data);
 			} catch (MessageException e) { e.printStackTrace();	}			
 		}
 		
-		// TODO return the actual controller
-		return null;
+		new Thread() {
+			public void run() {
+				try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e) {					
+					e.printStackTrace();
+				}
+				// Starting the experiment sends out the appropriate notifications to clients
+				manager.triggerStart(expId);				
+			}
+		}.start();
+		
+		return cont;
 	}
 	
 	private void mapWorkers(HITWorkerGroup hitw, String expId) {
@@ -226,6 +255,15 @@ public class Experiments {
 
 	public boolean workerIsInProgress(HITWorkerImpl hitw) {		
 		return currentExps.get(hitw) != null;
+	}
+
+	public void scheduleRound(final ExperimentControllerImpl expCont, final int round) {
+		// TODO whether we want to do it this way
+		new Thread() {
+			public void run() {
+				manager.triggerRound(expCont.getExpId(), round);			
+			}
+		}.start();
 	}
 
 	public void rcvServiceMsg(HITWorkerImpl worker, Map<String, Object> message) {

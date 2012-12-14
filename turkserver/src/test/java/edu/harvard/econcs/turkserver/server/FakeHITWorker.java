@@ -34,10 +34,14 @@ public final class FakeHITWorker implements HITWorker, ClientController {
 		fakeWorker.assignmentId = assignmentId;
 		fakeWorker.workerId = workerId;
 		fakeWorker.username = username;
-			
+					
 		fakeWorker.clientWrapper = new ClientAnnotationManager<C>(fakeWorker, clientClass);
 		return fakeWorker;
 	}	
+	
+	public Object getClientBean() {
+		return clientWrapper.getClientBean();
+	}
 	
 	@Override
 	public String getHitId() {		

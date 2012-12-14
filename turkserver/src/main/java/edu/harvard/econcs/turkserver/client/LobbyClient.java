@@ -17,23 +17,11 @@ public class LobbyClient<C> extends SessionClient<C> implements ClientLobbyContr
 	volatile State state;
 	boolean isReady = false;	
 	
-	private LobbyClient() {		
+	public LobbyClient() {		
 		super();
 		
 		isReady = false;
 		state = State.DISCONNECTED;
-	}
-	
-	/**
-	 * Get a GroupClient that reflects a client class
-	 * @param clientClass
-	 * @return
-	 * @throws Exception
-	 */
-	public static <C> LobbyClient<C> getWrappedClient(Class<C> clientClass) throws Exception {
-		LobbyClient<C> client = new LobbyClient<C>();
-		client.clientWrapper = new ClientAnnotationManager<C>(client, clientClass);
-		return client;
 	}
 	
 	@Override

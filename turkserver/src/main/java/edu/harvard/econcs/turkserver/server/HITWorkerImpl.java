@@ -36,7 +36,7 @@ public class HITWorkerImpl implements HITWorker, HITWorkerGroup {
 	}
 	
 	void setExperiment(ExperimentControllerImpl cont) {
-		this.expCont = expCont;
+		this.expCont = cont;
 	}	
 	
 	@Override

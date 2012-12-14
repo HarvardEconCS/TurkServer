@@ -41,7 +41,7 @@ public class ExperimentControllerImpl implements ExperimentController {
 			Experiments experiments) {
 		this.log = log;
 		this.group = group;
-		this.experiments = experiments;
+		this.experiments = experiments;				
 	}
 	
 	void initialize(long startTime, String expId, String inputData, 
@@ -78,6 +78,8 @@ public class ExperimentControllerImpl implements ExperimentController {
 		currentRound = new AtomicInteger(1);
 		
 		log.startRound();
+		
+		experiments.scheduleRound(this, currentRound.get());
 	}
 
 	@Override
@@ -86,9 +88,7 @@ public class ExperimentControllerImpl implements ExperimentController {
 		
 		log.finishRound();
 		
-		/*
-		 * TODO schedule triggering of next round
-		 */
+		experiments.scheduleRound(this, currentRound.incrementAndGet());
 	}
 
 	@Override

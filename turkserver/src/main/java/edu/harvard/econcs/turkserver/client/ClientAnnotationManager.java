@@ -74,6 +74,10 @@ public class ClientAnnotationManager<C> {
 		clientBean = cons.newInstance(client);
 	}
 
+	public C getClientBean() {		
+		return clientBean;
+	}
+
 	private boolean processStartExperiment(Method method) {
 		Class<? extends Annotation> annot = StartExperiment.class;
 		if( method.getAnnotation(annot) == null ) return false;
@@ -196,6 +200,7 @@ public class ClientAnnotationManager<C> {
 			return m.invoke(clientBean, args);
 		} catch (Exception e) {
 			logger.warning("Exception invoking " + m + " on " + clientBean.getClass().toString() + ", ignoring");
+			e.printStackTrace();
 			return null;
 		} finally {
 			m.setAccessible(accessible);
@@ -257,7 +262,7 @@ public class ClientAnnotationManager<C> {
 		}
 	}
 	
-	public void deliverService(Map<String, Object> message) {
+	public void deliverService(Map<String, Object> message) {		
 		for( Method m : services ) {
 			ServiceMessage ann = m.getAnnotation(ServiceMessage.class);
 			
