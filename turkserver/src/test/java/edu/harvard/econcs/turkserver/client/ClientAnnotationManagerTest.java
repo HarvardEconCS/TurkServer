@@ -30,8 +30,9 @@ public class ClientAnnotationManagerTest {
 	@Test
 	public void test() throws Exception {
 		// Test annotation checking
-		ClientAnnotationManager m = new ClientAnnotationManager(null, TestClient.class);		
-		TestClient e = (TestClient) m.clientBean;
+		ClientAnnotationManager<TestClient> m = 
+				new ClientAnnotationManager<TestClient>(null, TestClient.class);		
+		TestClient e = m.clientBean;
 		
 		/*
 		 * Test all callbacks

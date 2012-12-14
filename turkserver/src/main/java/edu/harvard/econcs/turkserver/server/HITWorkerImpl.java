@@ -5,6 +5,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -81,12 +82,12 @@ public class HITWorkerImpl implements HITWorker, HITWorkerGroup {
 	}
 
 	@Override
-	public void sendExperimentPrivate(Object msg) throws MessageException {
+	public void deliverExperimentService(Map<String, Object> msg) throws MessageException {
 		// Find the experiment this user is on and send a message on that channel
 		expCont.sendExperimentService(this, msg);
 	}
 	
-	public void sendServiceMessage(Object msg) throws MessageException {
+	public void deliverUserService(Map<String, Object> msg) throws MessageException {
 		ServerSession session = cometdSession.get();
 		if( session == null || !session.isConnected() ) throw new MessageException();
 		

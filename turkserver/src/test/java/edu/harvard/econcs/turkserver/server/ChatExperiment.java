@@ -2,6 +2,7 @@ package edu.harvard.econcs.turkserver.server;
 
 import java.util.Map;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 
 import edu.harvard.econcs.turkserver.api.*;
@@ -22,7 +23,8 @@ public class ChatExperiment {
 	@StartExperiment
 	void start() throws MessageException {
 		log.printf("Starting chat with %d people", group.groupSize());
-		controller.sendExperimentBroadcast("Please start chatting!");		
+		Map<String, Object> data = ImmutableMap.of("msg", (Object) "Please start chatting!");
+		controller.sendExperimentBroadcast(data);		
 	}
 	
 	@BroadcastMessage
@@ -33,6 +35,7 @@ public class ChatExperiment {
 	
 	@TimeLimit
 	void timedOut() throws MessageException {
-		controller.sendExperimentBroadcast("No more chatting for you!");		
+		Map<String, Object> data = ImmutableMap.of("msg", (Object) "No more chatting for you!");
+		controller.sendExperimentBroadcast(data);		
 	}
 }

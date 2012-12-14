@@ -1,6 +1,7 @@
 package edu.harvard.econcs.turkserver.api;
 
 import java.net.InetAddress;
+import java.util.Map;
 
 import edu.harvard.econcs.turkserver.server.MessageException;
 
@@ -51,5 +52,5 @@ public interface HITWorker {
 	 * Send a JSON-encoded message to this particular user
 	 * @param msg
 	 */
-	void sendExperimentPrivate(Object msg) throws MessageException;	
+	void deliverExperimentService(Map<String, Object> msg) throws MessageException;	
 }

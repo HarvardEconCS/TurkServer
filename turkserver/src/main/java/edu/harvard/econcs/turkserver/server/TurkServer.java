@@ -12,7 +12,6 @@ import com.google.inject.name.Names;
 
 import edu.harvard.econcs.turkserver.api.Configurator;
 import edu.harvard.econcs.turkserver.mturk.HITController;
-import edu.harvard.econcs.turkserver.server.TSBaseModule.*;
 
 /**
  * The main TurkServer class.
@@ -63,7 +62,7 @@ public class TurkServer {
 		
 	}
 
-	public static void testExperiment(TSTestModule testModule) {		
+	public static SessionServer testExperiment(TSBaseModule testModule) {		
 		
 		Injector injector = Guice.createInjector(testModule);		
 		Configuration conf = testModule.getConfiguration();				
@@ -88,12 +87,13 @@ public class TurkServer {
 		new Thread(ss).start();		
 		
 		thm.postBatchHITs(1, 5000, 10);
+		
+		return ss;
 	}
 
-	public static void runExperiment(TSBaseModule module) {
+	public static SessionServer runExperiment(TSBaseModule module) {
 		
-		
-		
+		return null;		
 	}
 
 	static SessionServer getSessionServer(Injector injector) {

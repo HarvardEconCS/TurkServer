@@ -19,11 +19,11 @@ import edu.harvard.econcs.turkserver.api.StartExperiment;
 import edu.harvard.econcs.turkserver.api.StartRound;
 import edu.harvard.econcs.turkserver.api.TimeLimit;
 
-public class ClientAnnotationManager {
+public class ClientAnnotationManager<C> {
 	
 	final Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 		
-	Object clientBean;
+	C clientBean;
 	
 	private Method startExperiment;
 	private Method startRound;
@@ -33,8 +33,8 @@ public class ClientAnnotationManager {
 	private List<Method> broadcasts;
 	private List<Method> services;
 
-	ClientAnnotationManager(SessionClient client, Class<?> clientClass) throws Exception {		
-		Constructor<?> cons = null;
+	public ClientAnnotationManager(ClientController client, Class<C> clientClass) throws Exception {		
+		Constructor<C> cons = null;
 		
 		try {			
 			// TODO allow lobbyController as well
@@ -202,48 +202,48 @@ public class ClientAnnotationManager {
 		}		
 	}
 
-	void triggerQuiz(QuizMaterials qm) {
+	public void triggerQuiz(QuizMaterials qm) {
 		// TODO Auto-generated method stub
 		
 	}
 
-	void triggerRequestUsername() {
+	public void triggerRequestUsername() {
 		// TODO Auto-generated method stub
 		
 	}
 
-	void triggerJoinLobby() {
+	public void triggerJoinLobby() {
 		// TODO Auto-generated method stub
 		
 	}
 
-	void triggerUpdateLobby(Map<String, Object> data) {
+	public void triggerUpdateLobby(Map<String, Object> data) {
 		// TODO Auto-generated method stub
 		
 	}
 
-	void triggerStartExperiment() {
+	public void triggerStartExperiment() {
 		if( startExperiment != null ) invokeMethod(startExperiment);
 	}
 	
-	void triggerStartRound(int n) {
+	public void triggerStartRound(int n) {
 		if( startRound != null ) invokeMethod(startRound, n);
 	}
 	
-	void triggerFinishExperiment() {
+	public void triggerFinishExperiment() {
 		// TODO Auto-generated method stub
 		
 	}
 
-	void triggerTimeLimit() {
+	public void triggerTimeLimit() {
 		if( timeLimit != null ) invokeMethod(timeLimit);
 	}
 	
-	void triggerClientError(String msg) {
+	public void triggerClientError(String msg) {
 		if( clientError != null ) invokeMethod(clientError, msg);
 	}
 	
-	void deliverBroadcast(Map<String, Object> message) {
+	public void deliverBroadcast(Map<String, Object> message) {
 		for( Method m : broadcasts ) {
 			BroadcastMessage ann = m.getAnnotation(BroadcastMessage.class);
 			
@@ -257,7 +257,7 @@ public class ClientAnnotationManager {
 		}
 	}
 	
-	void deliverService(Map<String, Object> message) {
+	public void deliverService(Map<String, Object> message) {
 		for( Method m : services ) {
 			ServiceMessage ann = m.getAnnotation(ServiceMessage.class);
 			

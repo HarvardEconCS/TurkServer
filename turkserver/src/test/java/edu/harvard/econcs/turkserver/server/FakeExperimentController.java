@@ -5,7 +5,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import edu.harvard.econcs.turkserver.api.ExperimentController;
 import edu.harvard.econcs.turkserver.api.HITWorker;
-import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
 
 /**
  * TODO make this more asynchronous in the starting of rounds and experiment
@@ -19,11 +18,11 @@ public class FakeExperimentController implements ExperimentController {
 	long startTime;
 	long finishTime;
 	
-	HITWorkerGroup group;
+	FakeHITWorkerGroup group;
 	EventAnnotationManager callbacks;
 	AtomicInteger roundNum;
 	
-	public FakeExperimentController(HITWorkerGroup fakeGroup) {
+	public FakeExperimentController(FakeHITWorkerGroup fakeGroup) {
 		this.group = fakeGroup;
 	}
 	
@@ -51,10 +50,8 @@ public class FakeExperimentController implements ExperimentController {
 	}
 
 	@Override
-	public void sendExperimentBroadcast(Object msg) throws MessageException {
-		for( HITWorker fake : group.getHITWorkers() ) {
-			((FakeHITWorker) fake).rcvBroadcast(msg);
-		}
+	public void sendExperimentBroadcast(Map<String, Object> msg) throws MessageException {
+		group.deliverExperimentBroadcast(msg);		
 	}
 
 	@Override

@@ -3,17 +3,18 @@ package edu.harvard.econcs.turkserver.server;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import edu.harvard.econcs.turkserver.api.HITWorker;
 import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
 
-public class FakeHITWorkerGroup<C extends FakeHITWorker> implements HITWorkerGroup {
+public class FakeHITWorkerGroup implements HITWorkerGroup {
 
-	ConcurrentMap<String, C> idMap = new ConcurrentHashMap<String, C>();
+	ConcurrentMap<String, FakeHITWorker> idMap = new ConcurrentHashMap<String, FakeHITWorker>();
 	
-	void addWorker(C fake) {
+	void addWorker(FakeHITWorker fake) {
 		idMap.put(fake.getHitId(), fake);
 	}
 	
@@ -24,10 +25,6 @@ public class FakeHITWorkerGroup<C extends FakeHITWorker> implements HITWorkerGro
 
 	@Override
 	public Collection<? extends HITWorker> getHITWorkers() {		
-		return idMap.values();
-	}
-	
-	public Collection<C> getClassedHITWorkers() {		
 		return idMap.values();
 	}
 
@@ -46,6 +43,12 @@ public class FakeHITWorkerGroup<C extends FakeHITWorker> implements HITWorkerGro
 	@Override
 	public HITWorker findByHITId(String hitId) {		
 		return idMap.get(hitId);
+	}
+
+	public void deliverExperimentBroadcast(Map<String, Object> msg) {
+		for( FakeHITWorker fake : idMap.values() ) {
+			fake.deliverExperimentBroadcast(msg);
+		}		
 	}
 
 }

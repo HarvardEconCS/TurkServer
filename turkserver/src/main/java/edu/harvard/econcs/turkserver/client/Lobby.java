@@ -251,7 +251,7 @@ public class Lobby extends JPanel {
 				int index, boolean isSelected, boolean cellHasFocus) {
 			UserStatus u = (UserStatus) value;
 			
-			if ( gc.client.getHITId().equals( u.sessionID ) ) {
+			if ( gc.clientCont.getHitId().equals( u.sessionID ) ) {
 				// Myself is the one selected
 				setBackground(list.getSelectionBackground());
 				setForeground(list.getSelectionForeground());

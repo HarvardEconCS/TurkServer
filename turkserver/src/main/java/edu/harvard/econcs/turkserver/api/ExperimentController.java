@@ -1,5 +1,7 @@
 package edu.harvard.econcs.turkserver.api;
 
+import java.util.Map;
+
 import edu.harvard.econcs.turkserver.server.MessageException;
 
 public interface ExperimentController {
@@ -10,7 +12,7 @@ public interface ExperimentController {
 	 * Send a JSON-encoded message to the entire group.
 	 * @param msg
 	 */
-	void sendExperimentBroadcast(Object msg) throws MessageException;	
+	void sendExperimentBroadcast(Map<String, Object> msg) throws MessageException;	
 	
 	/**
 	 * Set the experiment up to enable round tracking

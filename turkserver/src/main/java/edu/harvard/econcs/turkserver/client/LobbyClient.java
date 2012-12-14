@@ -10,7 +10,7 @@ import org.cometd.annotation.*;
 import org.cometd.bayeux.Message;
 import org.cometd.bayeux.client.ClientSession;
 
-public class LobbyClient extends SessionClient implements ClientLobbyController {
+public class LobbyClient<C> extends SessionClient<C> implements ClientLobbyController {
 
 	public static enum State { DISCONNECTED, LOBBY, EXPERIMENT }
 
@@ -30,9 +30,9 @@ public class LobbyClient extends SessionClient implements ClientLobbyController 
 	 * @return
 	 * @throws Exception
 	 */
-	public static LobbyClient getWrappedClient(Class<?> clientClass) throws Exception {
-		LobbyClient client = new LobbyClient();
-		client.clientWrapper = new ClientAnnotationManager(client, clientClass);
+	public static <C> LobbyClient<C> getWrappedClient(Class<C> clientClass) throws Exception {
+		LobbyClient<C> client = new LobbyClient<C>();
+		client.clientWrapper = new ClientAnnotationManager<C>(client, clientClass);
 		return client;
 	}
 	

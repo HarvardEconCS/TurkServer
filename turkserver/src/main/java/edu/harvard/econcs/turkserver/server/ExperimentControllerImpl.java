@@ -1,5 +1,6 @@
 package edu.harvard.econcs.turkserver.server;
 
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.cometd.bayeux.server.LocalSession;
@@ -68,7 +69,7 @@ public class ExperimentControllerImpl implements ExperimentController {
 	}
 
 	@Override
-	public void sendExperimentBroadcast(Object msg) throws MessageException {
+	public void sendExperimentBroadcast(Map<String, Object> msg) throws MessageException {
 		source.getChannel(Codec.expChanPrefix + expChannel).publish(msg);		
 	}
 

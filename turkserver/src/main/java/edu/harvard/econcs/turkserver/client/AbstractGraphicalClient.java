@@ -37,8 +37,8 @@ import edu.harvard.econcs.turkserver.api.UpdateLobby;
 @ExperimentClient
 public abstract class AbstractGraphicalClient<GC extends GUIController> {
 
-	ClientLobbyController cont;
-	GC gc;
+	protected ClientLobbyController cont;
+	protected GC gc;
 	
 	public AbstractGraphicalClient(ClientLobbyController cont) {
 		this.cont = cont;

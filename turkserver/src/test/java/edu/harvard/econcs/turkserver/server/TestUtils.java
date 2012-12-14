@@ -1,22 +1,21 @@
 package edu.harvard.econcs.turkserver.server;
 
 import edu.harvard.econcs.turkserver.api.ExperimentLog;
+import edu.harvard.econcs.turkserver.api.HITWorker;
 
 public class TestUtils {
 
-	public static <C extends FakeHITWorker> FakeHITWorkerGroup<C> getFakeGroup(int groupSize, Class<C> workerClass) 
-			throws InstantiationException, IllegalAccessException {
+	public static FakeHITWorkerGroup getFakeGroup(int groupSize, Class<?> clientClass) throws Exception {		
+		FakeHITWorkerGroup fakeGroup 
+			= new FakeHITWorkerGroup();
 		
-		FakeHITWorkerGroup<C> fakeGroup 
-			= new FakeHITWorkerGroup<C>();
-		
-		for(int i = 1; i <= groupSize; i++ ) {
-			C fake = workerClass.newInstance();
+		for(int i = 1; i <= groupSize; i++ ) {									
+			String hitId = "HIT " + i;
+			String workerId = "Worker " + i;
+			String assignmentId = "Assignment " + i;
+			String username = "Username " + i;
 			
-			fake.hitId = "HIT " + i;
-			fake.workerId = "Worker " + i;
-			fake.assignmentId = "Assignment " + i;
-			fake.username = "Username " + i;
+			FakeHITWorker fake = FakeHITWorker.getNew(hitId, assignmentId, workerId, username, clientClass);
 			
 			fakeGroup.addWorker(fake);
 		}
@@ -24,11 +23,11 @@ public class TestUtils {
 		return fakeGroup;
 	}
 	
-	public static FakeExperimentController getFakeController(FakeHITWorkerGroup<? extends FakeHITWorker> fakeGroup) {
+	public static FakeExperimentController getFakeController(FakeHITWorkerGroup fakeGroup) {
 		FakeExperimentController fakeCont = new FakeExperimentController(fakeGroup);
 		
-		for(FakeHITWorker fake : fakeGroup.getClassedHITWorkers())
-			fake.cont = fakeCont;
+		for(HITWorker fake : fakeGroup.getHITWorkers() )
+			((FakeHITWorker) fake).expCont = fakeCont;
 		
 		return fakeCont;
 	}

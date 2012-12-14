@@ -20,7 +20,7 @@ import edu.harvard.econcs.turkserver.Codec;
 import edu.harvard.econcs.turkserver.QuizResults;
 import edu.harvard.econcs.turkserver.api.ClientController;
 
-public class SessionClient implements ClientController {
+public class SessionClient<C> implements ClientController {
 	
 	protected Logger logger;
 	
@@ -34,24 +34,29 @@ public class SessionClient implements ClientController {
 	private MessageListener broadcastListener = null;
 	private MessageListener serviceListener = null;
 	
-	protected ClientAnnotationManager clientWrapper;
+	protected ClientAnnotationManager<C> clientWrapper;
 	
 	protected BayeuxClient bayeuxClient;	
 	protected ClientAnnotationProcessor processor;
-	
-	protected volatile boolean connected;
+		
+	private volatile boolean connected;
 	private volatile boolean wasConnected;
+	private volatile boolean isError = false;
 	
 	protected SessionClient() {				
 
 	}	
 
+	public C getClientBean() {
+		return clientWrapper.clientBean;
+	}
+	
 	/* ********************************************
 	 * ClientController methods
 	 **********************************************/
 	
 	@Override
-	public String getHITId() { return hitId; }
+	public String getHitId() { return hitId; }
 
 
 	@Override
@@ -70,38 +75,8 @@ public class SessionClient implements ClientController {
 	@Override
 	public boolean isConnected() { return connected; }
 
-	@Override
-	public void sendQuizResults(QuizResults qr) {		
-		Map<String, Object> quizResults = new TreeMap<String, Object>();
-		quizResults.put("status", "quizresults");
-		quizResults.put("correct", qr.correct);
-		quizResults.put("total", qr.total);
-		
-		bayeuxClient.getChannel("/service/user").publish(quizResults);			
-	}
-
-	@Override
-	public void sendExperimentBroadcast(Object data) {
-		bayeuxClient.getChannel(expBroadcastChan).publish(data);
-	}
+	public boolean isError() { return isError; }
 	
-	@Override
-	public void sendExperimentService(Object data) {
-		bayeuxClient.getChannel(expServiceChan).publish(data);
-	}	
-	
-	/**
-	 * Get a SessionClient that reflects a client class
-	 * @param clientClass
-	 * @return
-	 * @throws Exception
-	 */
-	public static SessionClient getWrappedClient(Class<?> clientClass) throws Exception {
-		SessionClient client = new SessionClient();
-		client.clientWrapper = new ClientAnnotationManager(client, clientClass);
-		return client;
-	}
-
 	public void connect(String url, String hitId, String assignmentId, String workerId) {
 		if( bayeuxClient != null ) throw new RuntimeException("Already attempted a connect!");
 				
@@ -109,7 +84,7 @@ public class SessionClient implements ClientController {
 		this.assignmentId = assignmentId;
 		this.workerId = workerId;
 		
-		logger = Logger.getLogger(this.getClass().getSimpleName() + this.getHITId());
+		logger = Logger.getLogger(this.getClass().getSimpleName() + this.getHitId());
 		
 		bayeuxClient = new BayeuxClient(url, LongPollingTransport.create(null));
 		
@@ -119,7 +94,7 @@ public class SessionClient implements ClientController {
 		processor = new ClientAnnotationProcessor(bayeuxClient);		
 		processor.process(new UserClientService());
 				
-		logger.info("Attempting connection with ID " + getHITId());		
+		logger.info("Attempting connection with ID " + getHitId());		
 		bayeuxClient.handshake();
 		
 		// Start a thread that will watch for connection success or failure
@@ -152,7 +127,26 @@ public class SessionClient implements ClientController {
 		bayeuxClient.disconnect();		
 	}
 
+	@Override
+	public void sendQuizResults(QuizResults qr) {		
+		Map<String, Object> quizResults = new TreeMap<String, Object>();
+		quizResults.put("status", "quizresults");
+		quizResults.put("correct", qr.correct);
+		quizResults.put("total", qr.total);
+		
+		bayeuxClient.getChannel("/service/user").publish(quizResults);			
+	}
+
+	@Override
+	public void sendExperimentBroadcast(Map<String, Object> data) {
+		bayeuxClient.getChannel(expBroadcastChan).publish(data);
+	}
 	
+	@Override
+	public void sendExperimentService(Map<String, Object> data) {
+		bayeuxClient.getChannel(expServiceChan).publish(data);
+	}	
+
 	public void subscribeExpChannel(String chan) {
 		expBroadcastChan = Codec.expChanPrefix + chan;
 		expServiceChan = Codec.expSvcPrefix + chan;
@@ -236,6 +230,7 @@ public class SessionClient implements ClientController {
 				
 				if( "error".equals(status.toString()) ) {					
 					clientWrapper.triggerClientError(m.get("msg").toString());
+					isError = true;
 				}
 				else if( "completed".equals(status.toString()) ) {
 					System.out.println("Got complete confirmation, disconnecting.");

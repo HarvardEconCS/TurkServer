@@ -180,7 +180,7 @@ public class Experiments {
 		data.put("channel", Codec.expChanPrefix + expChannel);
 
 		for( HITWorker hitw : group.getHITWorkers() ) {
-			try { ((HITWorkerImpl) hitw).sendServiceMessage(data);
+			try { ((HITWorkerImpl) hitw).deliverUserService(data);
 			} catch (MessageException e) { e.printStackTrace();	}			
 		}
 		

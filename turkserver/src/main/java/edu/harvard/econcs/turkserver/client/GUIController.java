@@ -22,7 +22,7 @@ public abstract class GUIController implements ItemListener, ActionListener {
 	
 	private enum Activity { ACTIVE, INACTIVE };
 	
-	protected final ClientLobbyController client;
+	protected final ClientLobbyController clientCont;
 	private final Container content;
 	private final Container host;
 	
@@ -44,7 +44,7 @@ public abstract class GUIController implements ItemListener, ActionListener {
 	 * @param host the top level container (JFrame or Applet)
 	 */
 	protected GUIController(ClientLobbyController client, Container content, Container host) {
-		this.client = client;
+		this.clientCont = client;
 		this.content = content;
 		this.host = host;
 		
@@ -70,7 +70,7 @@ public abstract class GUIController implements ItemListener, ActionListener {
 	 * @param client
 	 */
 	public GUIController(ClientLobbyController client) {
-		this.client = client;
+		this.clientCont = client;
 		content = null;
 		host = null;
 	}
@@ -79,17 +79,17 @@ public abstract class GUIController implements ItemListener, ActionListener {
 	public void itemStateChanged(ItemEvent e) {
 		// From the checkbox
 		if( e.getStateChange() == ItemEvent.SELECTED ) {
-			client.updateLobbyReadiness(true);
+			clientCont.updateLobbyReadiness(true);
 		} 
 		else {
-			client.updateLobbyReadiness(false);
+			clientCont.updateLobbyReadiness(false);
 		}				
 	}	
 
 	@Override
 	public void actionPerformed(ActionEvent e) {		
 		if( Lobby.updateStatusCmd.equals(e.getActionCommand()) ) {
-			client.updateLobbyStatus(lobby.getStatusMsg());
+			clientCont.updateLobbyStatus(lobby.getStatusMsg());
 		}
 		else {
 			System.out.println("Unrecognized command: " + e.toString());
@@ -117,7 +117,7 @@ public abstract class GUIController implements ItemListener, ActionListener {
 	 * @param millis
 	 */
 	public void recordInactivity(long millis) {
-		client.recordInactivity(millis);
+		clientCont.recordInactivity(millis);
 		
 		if( activeStatus == Activity.ACTIVE ) {
 			blankRedraw(

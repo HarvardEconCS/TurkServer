@@ -1,10 +1,12 @@
 package edu.harvard.econcs.turkserver.api;
 
+import java.util.Map;
+
 import edu.harvard.econcs.turkserver.QuizResults;
 
 public interface ClientController {
 
-	public String getHITId();
+	public String getHitId();
 	
 	public String getAssignmentId();
 	
@@ -14,11 +16,24 @@ public interface ClientController {
 
 	public boolean isConnected();		
 	
+	/**
+	 * Order the client to disconnect from the server
+	 */
+	public void disconnect();
+	
 	public void sendQuizResults(QuizResults qr);
 	
-	public void sendExperimentBroadcast(Object data);
+	/**
+	 * Client method to send a broadcast message to the server
+	 * @param data
+	 */
+	public void sendExperimentBroadcast(Map<String, Object> data);
 
-	public void sendExperimentService(Object data);
+	/**
+	 * Client method to send a private message to the server
+	 * @param data
+	 */
+	public void sendExperimentService(Map<String, Object> data);
 
 	/**
 	 * Send an update to the server with some amount of time inactive
