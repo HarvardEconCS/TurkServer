@@ -138,7 +138,7 @@ public abstract class TSBaseModule extends AbstractModule {
 			bind(QuizPolicy.class).toProvider(Providers.of((QuizPolicy) null));
 			
 			bind(Configuration.class).toInstance(conf);
-			bind(Resource[].class).toInstance(new Resource[] {});
+			bind(Resource[].class).annotatedWith(Names.named(TSConfig.SERVER_RESOURCES)).toInstance(new Resource[] {});
 			
 			bind(new TypeLiteral<List<String>>() {})
 			.annotatedWith(Names.named(TSConfig.EXP_SPECIAL_WORKERS)).toInstance(new LinkedList<String>());

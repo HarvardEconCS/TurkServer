@@ -65,8 +65,7 @@ public final class GroupServer extends SessionServer {
 				
 		serverMessage = new AtomicReference<String>("");
 		
-		serverGUI = new ServerFrame(this);
-				
+		serverGUI = new ServerFrame(this);				
 	}
 	
 	@Override
@@ -207,7 +206,7 @@ public final class GroupServer extends SessionServer {
 		}
 		data.put("users", users);
 		
-		// TODO broadcast to lobby?
+		// TODO broadcast to lobby?		
 		bayeux.getChannel("lobby").publish(this.lobbyBroadcaster, data, null);
 		
 	}
@@ -263,6 +262,7 @@ public final class GroupServer extends SessionServer {
 
 	@Override
 	protected void runServerInit() {		
+		logger.info("Creating lobby session");
 		lobbyBroadcaster = bayeux.newLocalSession("lobby");
 		lobbyBroadcaster.handshake();				
 	}

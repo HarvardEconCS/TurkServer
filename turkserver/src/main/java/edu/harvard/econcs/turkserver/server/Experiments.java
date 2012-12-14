@@ -202,6 +202,11 @@ public class Experiments {
 		}		
 	}
 
+	/**
+	 * Remove mappings from workers to experiments.
+	 * @param group
+	 * @return
+	 */
 	private String unmapWorkers(HITWorkerGroup group) {		
 		if( group instanceof HITWorkerImpl ) {
 			return currentExps.remove((HITWorkerImpl) group);			
@@ -266,29 +271,7 @@ public class Experiments {
 	void finishExperiment(ExperimentControllerImpl cont) {
 		
 		manager.deprocessExperiment(cont.getExpId());
-		
-		// TODO save the log where it is supposed to be saved
-		String logOutput = cont.log.getOutput();						
-//		String filename = String.format("%s/%s %d.log", path, expFile, clients.groupSize());
-//		logger.info("Trying to open file " + filename);		
-		// Save to db
-//		tracker.saveSessionLog(logId, data);
-		
-		unmapWorkers(cont.group);
-		
-		// TODO Count the inactive time of anyone who disconnected before finish 
-//		super.finalizeInactiveTime();
-		
-		// TODO deregister experiment channels
-	}
-	
-	void finishExperimentOld(ExperimentControllerImpl cont) {
-		
-		tracker.experimentFinished(cont);
-		
-		// TODO notify the GUI stuff		
-//		serverGUI.finishedExperiment(cont);				
-		
+
 		// unsubscribe from and/or remove channels
 		ServerChannel toRemove = null;
 		if( (toRemove = bayeux.getChannel(Codec.expChanPrefix + cont.expChannel)) != null ) {
@@ -297,16 +280,31 @@ public class Experiments {
 		if( (toRemove = bayeux.getChannel(Codec.expSvcPrefix + cont.expChannel)) != null ) {
 			toRemove.setPersistent(false);
 		}
+	
+		tracker.experimentFinished(cont);
+	
+		// TODO notify any listeners		
+//		serverGUI.finishedExperiment(cont);						
 		
-		/*
-		 * TODO fix all this old-ass code and merge with above 
-		 */
+		// TODO save the log where it is supposed to be saved
+		String logOutput = cont.log.getOutput();		
 		
+//		String filename = String.format("%s/%s %d.log", path, expFile, clients.groupSize());
+//		logger.info("Trying to open file " + filename);		
+		// Save to db
+//		tracker.saveSessionLog(logId, data);
+
 		// Tell clients they are done!
 		for( HITWorker id : cont.group.getHITWorkers() )			
 			SessionUtils.sendStatus(((HITWorkerImpl) id).cometdSession.get(), Codec.doneExpMsg);	
 		
 		// TODO remove this dependency
-		server.groupCompleted(cont.group);				
+		server.groupCompleted(cont.group);	
+		
+		unmapWorkers(cont.group);
+		
+		// TODO Count the inactive time of anyone who disconnected before finish 
+//		super.finalizeInactiveTime();
+			
 	}
 }

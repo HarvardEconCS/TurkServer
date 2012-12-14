@@ -2,7 +2,6 @@ package edu.harvard.econcs.turkserver.server;
 
 import static org.junit.Assert.*;
 
-import java.util.Map;
 
 import org.junit.After;
 import org.junit.Before;
@@ -105,46 +104,5 @@ public class EventAnnotationManagerTest {
 		assertEquals(0, m.disconnects.size());
 		assertEquals(0, m.broadcasts.size());
 		assertEquals(0, m.services.size());
-	}
-
-	@ExperimentServer
-	static class TestExperiment {
-		volatile String lastCall = null;
-		
-		@StartExperiment
-		void startExp() {
-			lastCall = "startExp";
-		}
-		
-		@StartRound
-		void startRound(int n) {
-			lastCall = "startRound";
-		}
-		
-		@TimeLimit
-		void timeLimit() {
-			lastCall = "timeLimit";
-		}
-		
-		@WorkerConnect
-		void connect(HITWorker worker) {
-			lastCall = "connect";
-		}
-		
-		@WorkerDisconnect
-		void disconnect(HITWorker worker) {
-			lastCall = "disconnect";
-		}
-		
-		@BroadcastMessage
-		boolean broadcast(HITWorker worker, Map<String, Object> msg) {
-			lastCall = "broadcast";
-			return true;
-		}
-		
-		@ServiceMessage
-		void service(HITWorker worker, Map<String, Object> msg) {
-			lastCall = "service";
-		}
 	}
 }

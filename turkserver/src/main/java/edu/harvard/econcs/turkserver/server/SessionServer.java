@@ -111,7 +111,8 @@ public abstract class SessionServer implements Runnable {
 				logger.info(session.getId() + " reconnected, used to have HIT " + previous.getHitId());
 			}
 			else {
-				clientToHITWorker.putIfAbsent(session, null);
+				logger.info(session.toString());
+//				clientToHITWorker.putIfAbsent(session, null);
 			}
 		}
 

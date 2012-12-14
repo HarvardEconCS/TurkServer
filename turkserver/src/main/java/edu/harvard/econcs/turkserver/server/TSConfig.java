@@ -76,6 +76,8 @@ public class TSConfig {
 		conf.addProperty(MTURK_ASSIGNMENT_DURATION, 86400);
 		conf.addProperty(MTURK_AUTO_APPROVAL_DELAY, 604800);
 		
+		conf.addProperty(SERVER_LOBBY, false);
+		conf.addProperty(SERVER_DEBUGMODE, true);
 		conf.addProperty(SERVER_USERNAME, false);
 		
 		return conf;
