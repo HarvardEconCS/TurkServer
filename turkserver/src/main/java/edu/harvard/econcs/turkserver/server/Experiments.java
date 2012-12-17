@@ -1,8 +1,9 @@
 package edu.harvard.econcs.turkserver.server;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 
 import org.cometd.bayeux.server.BayeuxServer;
@@ -10,6 +11,7 @@ import org.cometd.bayeux.server.ConfigurableServerChannel;
 import org.cometd.bayeux.server.LocalSession;
 import org.cometd.bayeux.server.ServerChannel;
 import org.cometd.bayeux.server.ConfigurableServerChannel.Initializer;
+import org.cometd.server.authorizer.GrantAuthorizer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,13 +22,13 @@ import com.google.common.collect.MapMaker;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 
 import edu.harvard.econcs.turkserver.Codec;
 import edu.harvard.econcs.turkserver.api.Configurator;
 import edu.harvard.econcs.turkserver.api.ExperimentController;
-import edu.harvard.econcs.turkserver.api.ExperimentLog;
 import edu.harvard.econcs.turkserver.api.HITWorker;
 import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
@@ -45,6 +47,7 @@ public class Experiments {
 		@Override
 		public void configureChannel(ConfigurableServerChannel channel) {
 			channel.setPersistent(true);
+			channel.addAuthorizer(GrantAuthorizer.GRANT_PUBLISH);
 		}			
 	};
 	
@@ -56,6 +59,7 @@ public class Experiments {
 	final Class<?> expClass;
 	
 	final ConcurrentMap<HITWorker, String> currentExps;
+	final Queue<ExperimentListener> listeners;
 	
 	@Inject
 	Experiments(
@@ -73,6 +77,7 @@ public class Experiments {
 		this.manager = manager;
 		
 		this.currentExps = new MapMaker().makeMap();
+		this.listeners = new ConcurrentLinkedQueue<ExperimentListener>();
 	}
 
 	// TODO remove this hack once things are properly wired up
@@ -80,84 +85,66 @@ public class Experiments {
 			SessionServer server) {
 		this.bayeux = bayeux;
 		this.server = server;		
+	}	
+	
+	void registerListener(ExperimentListener listener) {
+		listeners.add(listener);
 	}
 
 	int getMinGroupSize() {
 		return configurator.groupSize();	
 	}
+
+	/*
+	 * TODO replace both stuff below with custom experiment scope
+	 */
 	
-	int getNumInProgress() {
-		return new HashSet<String>(currentExps.values()).size();
-	}
-
-	int getNumFinished() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	ExperimentControllerImpl startSingle(final HITWorkerImpl hitw) {
-
-		/*
-		 * TODO fix this injection pattern to work properly!
-		 * WTF is going on here?
-		 */
-		
-		final ExperimentLogImpl log = new ExperimentLogImpl();
-		final ExperimentControllerImpl cont = new ExperimentControllerImpl(log, hitw, this);
+	ExperimentControllerImpl startSingle(final HITWorkerImpl hitw) {				
 		
 		// Create an experiment instance with specific binding to this HITWorker
 		Injector child = injector.createChildInjector(new AbstractModule() {
 			@Override
 			protected void configure() {
 				bind(HITWorker.class).toInstance(hitw);
-				bind(ExperimentLog.class).toInstance(log);
-				bind(ExperimentController.class).toInstance(cont);
+				bind(HITWorkerGroup.class).toInstance(hitw);				
+				bind(ExperimentController.class).to(ExperimentControllerImpl.class);
+				bind(ExperimentControllerImpl.class).in(Scopes.SINGLETON);
 			}			
-		});					
+		});
+				
+		ExperimentControllerImpl cont = child.getInstance(ExperimentControllerImpl.class);
+		hitw.setExperiment(cont);
 		Object experimentBean = child.getInstance(expClass);
 				
-		// Initialize the experiment data
-		String inputData = assigner.getAssignment(null);
-		configurator.configure(experimentBean, inputData);
-		
-		// Create a unique ID for an experiment, based on current timestamp
-		long startTime = System.currentTimeMillis();
-		String expId = Utils.getTimeString(startTime);
-		String expChannel = expId.replace(" ", "_");
-		
-		// Register callbacks on the experiment class
-		manager.processExperiment(expId, experimentBean);
-				
-		// Initialize controller, which also initializes the log
-		LocalSession ls = bayeux.newLocalSession(expId);
-		ls.handshake();
-		cont.initialize(startTime, expId, inputData, expChannel, ls);
-		
-		// Start experiment and record time
-		mapWorkers(hitw, expId);
-		tracker.newExperimentStarted(cont);
-		manager.triggerStart(expId);				
+		startExperiment(hitw, cont, experimentBean);
 		
 		return cont;
 	}
 	
 	ExperimentControllerImpl startGroup(final HITWorkerGroupImpl group) {
-		
-		final ExperimentLogImpl log = new ExperimentLogImpl();
-		final ExperimentControllerImpl cont = new ExperimentControllerImpl(log, group, this);
-		group.setExperiment(cont);
-		
-		// Create an experiment instance with specific binding to this HITWorker
+				
+		// Create an experiment instance with specific binding to this HITWorkerGroup
 		Injector child = injector.createChildInjector(new AbstractModule() {
 			@Override
-			protected void configure() {
-				bind(HITWorkerGroup.class).toInstance(group);
-				bind(ExperimentLog.class).toInstance(log);
-				bind(ExperimentController.class).toInstance(cont);
+			protected void configure() {				
+				bind(HITWorkerGroup.class).toInstance(group);				
+				bind(ExperimentController.class).to(ExperimentControllerImpl.class);
+				bind(ExperimentControllerImpl.class).in(Scopes.SINGLETON);				
 			}			
-		});					
+		});
+		
+		ExperimentControllerImpl cont = child.getInstance(ExperimentControllerImpl.class);
+		group.setExperiment(cont);
 		Object experimentBean = child.getInstance(expClass);
 				
+		startExperiment(group, cont, experimentBean);
+		
+		return cont;
+	}
+
+	private void startExperiment(final HITWorkerGroup group,
+			final ExperimentControllerImpl cont, Object experimentBean) {		
+		
 		// Initialize the experiment data
 		String inputData = assigner.getAssignment(null);
 		configurator.configure(experimentBean, inputData);
@@ -180,7 +167,7 @@ public class Experiments {
 
 		// Initialize controller, which also initializes the log
 		LocalSession ls = bayeux.newLocalSession(expId);
-		ls.handshake();
+		ls.handshake();				
 		cont.initialize(startTime, expId, inputData, expChannel, ls);
 		
 		/* Update tracking information for experiment
@@ -202,6 +189,13 @@ public class Experiments {
 			} catch (MessageException e) { e.printStackTrace();	}			
 		}
 		
+		for( ExperimentListener el : listeners ) {
+			el.experimentStarted(cont);
+		}
+		
+		/*
+		 * TODO: make this more asynchronous
+		 */
 		new Thread() {
 			public void run() {
 				try {
@@ -213,8 +207,6 @@ public class Experiments {
 				manager.triggerStart(expId);				
 			}
 		}.start();
-		
-		return cont;
 	}
 	
 	private void mapWorkers(HITWorkerGroup hitw, String expId) {
@@ -261,7 +253,9 @@ public class Experiments {
 		// TODO whether we want to do it this way
 		new Thread() {
 			public void run() {
-				manager.triggerRound(expCont.getExpId(), round);			
+				for( ExperimentListener el : listeners)
+					el.roundStarted(expCont);
+				manager.triggerRound(expCont.getExpId(), round);				
 			}
 		}.start();
 	}
@@ -319,10 +313,7 @@ public class Experiments {
 			toRemove.setPersistent(false);
 		}
 	
-		tracker.experimentFinished(cont);
-	
-		// TODO notify any listeners		
-//		serverGUI.finishedExperiment(cont);						
+		tracker.experimentFinished(cont);				
 		
 		// TODO save the log where it is supposed to be saved
 		String logOutput = cont.log.getOutput();		
@@ -336,8 +327,9 @@ public class Experiments {
 		for( HITWorker id : cont.group.getHITWorkers() )			
 			SessionUtils.sendStatus(((HITWorkerImpl) id).cometdSession.get(), Codec.doneExpMsg);	
 		
-		// TODO remove this dependency
-		server.groupCompleted(cont.group);	
+		for( ExperimentListener el : listeners ) {
+			el.experimentFinished(cont);
+		}
 		
 		unmapWorkers(cont.group);
 		

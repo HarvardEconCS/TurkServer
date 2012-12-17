@@ -7,9 +7,7 @@ import com.google.common.collect.ObjectArrays;
 
 import net.andrewmao.misc.Utils;
 
-import edu.harvard.econcs.turkserver.api.ExperimentLog;
-
-public class ExperimentLogImpl implements ExperimentLog {
+public class ExperimentLogImpl implements ServerExperimentLog {
 	
 	private static final String NOT_INIT_MSG = "Log not initialized! Make sure you call start() first!";
 

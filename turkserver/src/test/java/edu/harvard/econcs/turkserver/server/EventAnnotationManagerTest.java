@@ -25,7 +25,7 @@ public class EventAnnotationManagerTest {
 
 	@Test
 	public void test() {
-		TestExperiment e = new TestExperiment();		
+		TestExperiment e = new TestExperiment(null, null, null);		
 		m.processExperiment("test", e);
 		
 		/*
@@ -53,7 +53,7 @@ public class EventAnnotationManagerTest {
 		m.deliverServiceMsg("test", null, null);
 		assertEquals("service", e.lastCall);
 		
-		TestExperiment e2 = new TestExperiment();
+		TestExperiment e2 = new TestExperiment(null, null, null);
 		m.processExperiment("test2", e2);
 		
 		/*

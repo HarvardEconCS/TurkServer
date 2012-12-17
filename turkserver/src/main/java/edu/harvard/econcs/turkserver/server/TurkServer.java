@@ -84,7 +84,7 @@ public class TurkServer {
 		
 		thm.setExternalParams("http://localhost:9294/", 1500, 604800);
 		
-		new Thread(ss).start();		
+		ss.start();		
 		
 		thm.postBatchHITs(1, 5000, 10);
 		

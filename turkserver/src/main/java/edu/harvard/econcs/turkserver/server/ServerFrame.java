@@ -36,7 +36,7 @@ public class ServerFrame extends JFrame implements ActionListener {
 	private static final String runningExpsText = "Running Experiments: ";
 	private static final String doneExpsText = "Completed Experiments: ";
 	
-	private final GroupServer hostServer;
+	private final GroupServer server;
 	
 	private JTextField statusMsg;
 	
@@ -56,7 +56,7 @@ public class ServerFrame extends JFrame implements ActionListener {
 	
 	public ServerFrame(GroupServer host) {
 		super("Experiment Monitor");
-		this.hostServer = host;
+		this.server = host;
 		
 		setMinimumSize(new Dimension(800, 600));
 		
@@ -141,12 +141,12 @@ public class ServerFrame extends JFrame implements ActionListener {
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		if( e.getActionCommand() != null && e.getActionCommand().equals(updateStatusCmd) ) {
-			hostServer.serverMessage.set(statusMsg.getText());
+			server.serverMessage.set(statusMsg.getText());
 			
 			/* publish the message to lobby
 			 * It's fine to broadcast here as it is a rare occurrence
 			 */
-			hostServer.sendLobbyStatus();			
+			server.sendLobbyStatus();			
 		}
 		else if( e.getSource() == timeTicker && runningExpModel.size() > 0 ) {			
 			// Only bother with this if there are running experiments
@@ -158,9 +158,9 @@ public class ServerFrame extends JFrame implements ActionListener {
 		SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
 				// Update user count
-				currentUsers.setText("Users: " + hostServer.lobbyStatus.size());															
+				currentUsers.setText("Users: " + server.lobbyStatus.size());															
 				// Update users list				
-				userListModel.updateModel(hostServer.lobbyStatus.keySet());
+				userListModel.updateModel(server.lobbyStatus.keySet());
 			}			
 		});		
 	}
@@ -172,7 +172,7 @@ public class ServerFrame extends JFrame implements ActionListener {
 		public Component getListCellRendererComponent(JList list, Object value,
 				int index, boolean isSelected, boolean cellHasFocus) {
 						
-			Boolean b = hostServer.lobbyStatus.get(value); 
+			Boolean b = server.lobbyStatus.get(value); 
 			if( b != null) setIcon( b == true ? Lobby.ready : Lobby.notReady );
 			
 			HITWorkerImpl id = (HITWorkerImpl) value;
@@ -191,7 +191,7 @@ public class ServerFrame extends JFrame implements ActionListener {
 	public void newExperiment(final ExperimentControllerImpl exp) {
 		SwingUtilities.invokeLater(new Runnable() {
 			public void run() {				
-				runningExpsLabel.setText(runningExpsText + hostServer.experiments.getNumInProgress());
+				runningExpsLabel.setText(runningExpsText + server.guiListener.inProgress.get());
 				runningExpModel.addElement(exp);				
 			}			
 		});
@@ -222,10 +222,10 @@ public class ServerFrame extends JFrame implements ActionListener {
 	public void finishedExperiment(final ExperimentControllerImpl exp) {
 		SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
-				runningExpsLabel.setText(runningExpsText + hostServer.experiments.getNumInProgress());
+				runningExpsLabel.setText(runningExpsText + server.guiListener.inProgress.get());
 				runningExpModel.removeElement(exp);
 				
-				doneExpsLabel.setText(doneExpsText + hostServer.experiments.getNumFinished());
+				doneExpsLabel.setText(doneExpsText + server.guiListener.completed.get());
 				doneExpModel.addElement(exp);
 			}			
 		});	

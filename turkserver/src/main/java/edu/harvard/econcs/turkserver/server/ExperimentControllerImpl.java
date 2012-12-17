@@ -20,7 +20,7 @@ import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
  */
 public class ExperimentControllerImpl implements ExperimentController {
 
-	final ExperimentLogImpl log;
+	final ServerExperimentLog log;
 	final HITWorkerGroup group;	
 	final Experiments experiments;	
 	
@@ -36,12 +36,12 @@ public class ExperimentControllerImpl implements ExperimentController {
 	
 	@Inject
 	public ExperimentControllerImpl(
-			ExperimentLogImpl log,
+			ServerExperimentLog log,
 			HITWorkerGroup group,
 			Experiments experiments) {
 		this.log = log;
 		this.group = group;
-		this.experiments = experiments;				
+		this.experiments = experiments;		
 	}
 	
 	void initialize(long startTime, String expId, String inputData, 
@@ -58,7 +58,7 @@ public class ExperimentControllerImpl implements ExperimentController {
 		this.source = source;
 						
 		this.expStartTime = startTime;
-		log.initialize(startTime, experimentId);
+		log.initialize(startTime, experimentId);		
 	}	
 	
 	public void sendExperimentService(HITWorkerImpl hitWorkerImpl, Object msg) throws MessageException {
@@ -69,7 +69,7 @@ public class ExperimentControllerImpl implements ExperimentController {
 	}
 
 	@Override
-	public void sendExperimentBroadcast(Map<String, Object> msg) throws MessageException {
+	public void sendExperimentBroadcast(Map<String, Object> msg) throws MessageException {		
 		source.getChannel(Codec.expChanPrefix + expChannel).publish(msg);		
 	}
 

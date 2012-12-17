@@ -9,6 +9,7 @@ import edu.harvard.econcs.turkserver.mturk.HITController;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.configuration.Configuration;
@@ -27,8 +28,7 @@ import net.andrewmao.misc.ConcurrentBooleanCounter;
 @Singleton
 public final class GroupServer extends SessionServer {
 	
-	final boolean requireUsernames;
-	final boolean debugMode;
+	final boolean requireUsernames;	
 	final boolean lobbyEnabled;
 	
 	// Turk crap
@@ -41,7 +41,8 @@ public final class GroupServer extends SessionServer {
 	private LocalSession lobbyBroadcaster;
 
 	// GUI
-	private ServerFrame serverGUI;
+	final GUIListener guiListener;
+	private final ServerFrame serverGUI;
 	
 	@Inject
 	public GroupServer(			
@@ -56,8 +57,7 @@ public final class GroupServer extends SessionServer {
 		super(tracker, hitCont, workerAuth, experiments, jetty, config);
 		
 		this.requireUsernames = config.getBoolean(TSConfig.SERVER_USERNAME);
-		
-		this.debugMode = config.getBoolean(TSConfig.SERVER_DEBUGMODE);
+				
 		logger.info("Debug mode set to {}", debugMode);
 		
 		this.lobbyEnabled = config.getBoolean(TSConfig.SERVER_LOBBY);
@@ -68,9 +68,35 @@ public final class GroupServer extends SessionServer {
 				
 		serverMessage = new AtomicReference<String>("");
 		
+		this.guiListener = new GUIListener();
+		experiments.registerListener(guiListener);
 		serverGUI = new ServerFrame(this);				
 	}
 	
+	public class GUIListener implements ExperimentListener {
+		AtomicInteger inProgress = new AtomicInteger(0);
+		AtomicInteger completed = new AtomicInteger(0);
+		
+		@Override
+		public void experimentStarted(ExperimentControllerImpl exp) {			
+			serverGUI.newExperiment(exp);	
+			inProgress.incrementAndGet();
+		}
+	
+		@Override
+		public void roundStarted(ExperimentControllerImpl exp) {
+			// TODO Auto-generated method stub
+		}
+	
+		@Override
+		public void experimentFinished(ExperimentControllerImpl exp) {			
+			inProgress.decrementAndGet();
+			groupCompleted(exp.group);
+			serverGUI.finishedExperiment(exp);
+			completed.incrementAndGet();
+		}	
+	}
+
 	@Override
 	protected HITWorkerImpl sessionAccept(ServerSession session,
 			String hitId, String assignmentId, String workerId) {
@@ -194,7 +220,7 @@ public final class GroupServer extends SessionServer {
 		data.put("joinenabled", usersInLobby >= usersNeeded);
 		
 		data.put("servermsg", serverMessage.get());
-		data.put("currentexps", experiments.getNumInProgress());
+		data.put("currentexps", guiListener.inProgress.get());
 		data.put("totalusers", bayeux.getSessions().size());
 		
 		// TODO could be some race conditions here if lobby size changes?
@@ -237,8 +263,6 @@ public final class GroupServer extends SessionServer {
 		}		
 		
 		ExperimentControllerImpl exp = experiments.startGroup(expClients);
-		
-		serverGUI.newExperiment(exp);	
 		
 		/* No problem in starting the exp - now can remove from lobby
 		 * everyone in the new exp is removed before lobby is notified 

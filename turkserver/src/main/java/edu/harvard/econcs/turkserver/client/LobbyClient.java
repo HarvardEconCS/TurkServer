@@ -51,8 +51,7 @@ public class LobbyClient<C> extends SessionClient<C> implements ClientLobbyContr
 			Map<String, Object> m = service.getDataAsMap();
 			Object status = m.get("status");
 			
-			if( status != null ) {
-				System.out.println(m.get("msg"));
+			if( status != null ) {				
 				
 				if( Codec.quizNeeded.equals(status.toString()) ) {
 					@SuppressWarnings("unchecked")
@@ -80,31 +79,20 @@ public class LobbyClient<C> extends SessionClient<C> implements ClientLobbyContr
 					
 					// Subscribe to this channel
 					String chan = m.get("channel").toString();					
-					subscribeExpChannel(chan);
+					subscribeExpChannel(chan);					
 					
 					if( state == State.LOBBY ) {
 						state = State.EXPERIMENT;									
-					}										;
-				}
-				else if( Codec.expFinishedAck.equals(status.toString() ) ) {
-					logger.info("Connected to experiment that is already done");
-					clientWrapper.triggerClientError(Codec.expFinishedAck);														
-					LobbyClient.this.disconnect();
-				}
+					}							
+					
+					clientWrapper.triggerStartExperiment();
+				}				
 				else if( Codec.startExpError.equals(status.toString()) ) {
 					clientWrapper.triggerClientError(Codec.startExpError);					
 					isReady = false;
 					
 					// TODO update lobby state as necessary
-				}
-				else if( Codec.doneExpMsg.equals(status.toString())) {
-					clientWrapper.triggerFinishExperiment();			
-					// Do nothing
-				} 
-				else if( Codec.batchFinishedMsg.equals(status.toString())) {
-					clientWrapper.triggerClientError(Codec.batchFinishedMsg);					
-					disconnect();					
-				}
+				}				
 			}
 			else {
 				System.out.println("Service message unexpected:");

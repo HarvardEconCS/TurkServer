@@ -56,6 +56,8 @@ public abstract class TSBaseModule extends AbstractModule {
 		bind(Experiments.class);
 		bind(JettyCometD.class);
 		bind(WorkerAuthenticator.class);
+				
+		bind(ExperimentLog.class).to(ServerExperimentLog.class);
 		
 		bindInt(TSConfig.SERVER_HTTPPORT, conf.getInt(TSConfig.SERVER_HTTPPORT));
 		bindInt(TSConfig.CONCURRENCY_LIMIT, conf.getInt(TSConfig.CONCURRENCY_LIMIT));
@@ -107,12 +109,14 @@ public abstract class TSBaseModule extends AbstractModule {
 		bind(GroupServer.class).in(Scopes.SINGLETON);
 	}
 	
-	protected void bindTestClasses() {
+	protected void bindTestClasses() {		
+		bind(ServerExperimentLog.class).to(FakeExperimentLog.class);
 		bind(HITController.class).to(FakeHITController.class);
 		bind(ExperimentDataTracker.class).to(ExperimentDummyTracker.class);
 	}
 	
-	protected void bindRealClasses() {		
+	protected void bindRealClasses() {
+		bind(ServerExperimentLog.class).to(ExperimentLogImpl.class);
 		bind(HITController.class).to(TurkHITController.class);
 		bind(ExperimentDataTracker.class).to(MySQLDataTracker.class);
 	}
@@ -126,15 +130,15 @@ public abstract class TSBaseModule extends AbstractModule {
 			super();
 		}
 
+		protected void setHITLimit(int some_goal) {
+			conf.addProperty(TSConfig.SERVER_HITGOAL, some_goal);						
+			bindInt(TSConfig.EXP_REPEAT_LIMIT, some_goal);
+		}
+		
 		@Override
 		protected void configure() {
 			super.configure();
-			
-			int some_goal = 10;					
-			conf.addProperty(TSConfig.SERVER_HITGOAL, some_goal);			
-			
-			bindInt(TSConfig.EXP_REPEAT_LIMIT, some_goal);						
-			
+						
 			bindTestClasses();
 			
 			bind(QuizFactory.class).toProvider(Providers.of((QuizFactory) null));

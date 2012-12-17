@@ -38,6 +38,7 @@ public class SessionClient<C> implements ClientController {
 	
 	protected BayeuxClient bayeuxClient;	
 	protected ClientAnnotationProcessor processor;
+	private UserClientService ucl;
 		
 	private volatile boolean connected;
 	private volatile boolean wasConnected;
@@ -92,7 +93,7 @@ public class SessionClient<C> implements ClientController {
 		bayeuxClient.addExtension(new AckExtension());
 					
 		processor = new ClientAnnotationProcessor(bayeuxClient);		
-		processor.process(new UserClientService());
+		processor.process(ucl = new UserClientService());
 				
 		logger.info("Attempting connection with ID " + getHitId());		
 		bayeuxClient.handshake();
@@ -103,9 +104,7 @@ public class SessionClient<C> implements ClientController {
 				if( !bayeuxClient.waitFor(2000, BayeuxClient.State.CONNECTED) ) {
 					handShakeFail();
 					return;
-				}
-				
-				
+				}								
 			}			
 		}.start();
 	}
@@ -123,7 +122,7 @@ public class SessionClient<C> implements ClientController {
 			serviceListener = null;
 		}
 		
-		bayeuxClient.getChannel("/service/user").unsubscribe();
+		processor.deprocess(ucl);				
 		bayeuxClient.disconnect();		
 	}
 
@@ -162,7 +161,7 @@ public class SessionClient<C> implements ClientController {
 		
 		serviceListener = new MessageListener() {
 			@Override
-			public void onMessage(ClientSessionChannel channel, Message message) {					
+			public void onMessage(ClientSessionChannel channel, Message message) {
 				clientWrapper.deliverService(message.getDataAsMap());
 			}
 		};
@@ -227,10 +226,23 @@ public class SessionClient<C> implements ClientController {
 		public void serviceUser(Message service) {
 			Map<String, Object> m = service.getDataAsMap();
 			Object status = m.get("status");
-			if( status != null ) {
-				System.out.println("Status: " + status.toString() + ", " + "Message: " + m.get("msg"));
-				
-				if( "error".equals(status.toString()) ) {					
+			
+			if( status != null ) {										
+				if( Codec.expFinishedAck.equals(status.toString() ) ) {
+					logger.info("Connected to experiment that is already done");
+					clientWrapper.triggerClientError(Codec.expFinishedAck);														
+					disconnect();
+				}
+
+				else if( Codec.doneExpMsg.equals(status.toString())) {
+					clientWrapper.triggerFinishExperiment();			
+					// Do nothing
+				} 
+				else if( Codec.batchFinishedMsg.equals(status.toString())) {
+					clientWrapper.triggerClientError(Codec.batchFinishedMsg);					
+					disconnect();					
+				}
+				else if( "error".equals(status.toString()) ) {					
 					clientWrapper.triggerClientError(m.get("msg").toString());
 					isError = true;
 				}

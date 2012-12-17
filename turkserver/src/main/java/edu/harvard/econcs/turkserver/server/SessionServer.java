@@ -41,7 +41,7 @@ import edu.harvard.econcs.turkserver.schema.Session;
 import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 
-public abstract class SessionServer implements Runnable {
+public abstract class SessionServer extends Thread {
 
 	public static final String ATTRIBUTE = "edu.harvard.econcs.turkserver.sessions";
 
@@ -52,6 +52,7 @@ public abstract class SessionServer implements Runnable {
 	final WorkerAuthenticator workerAuth;	
 	final Experiments experiments;
 	
+	protected final boolean debugMode;
 	protected final int hitGoal;		
 	protected final JettyCometD jettyCometD;
 	
@@ -84,6 +85,7 @@ public abstract class SessionServer implements Runnable {
 		/*
 		 * Process configuration
 		 */
+		this.debugMode = config.getBoolean(TSConfig.SERVER_DEBUGMODE);
 		this.hitGoal = config.getInt(TSConfig.SERVER_HITGOAL);					
 		
 		/*
@@ -403,8 +405,9 @@ public abstract class SessionServer implements Runnable {
 		bayeux = jettyCometD.getBayeux();		
 		experiments.setReferences(bayeux, this);
 		
+		Thread hcThread = null;
 		if( hitCont != null ) {
-			new Thread(hitCont).start();
+			(hcThread = new Thread(hitCont)).start();
 		}
 		
 		Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -430,16 +433,23 @@ public abstract class SessionServer implements Runnable {
 		
 		if( hitCont != null ) {
 			hitCont.disableRemainingHITs();
+			try {
+				hcThread.join();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}			
 		}			
 		
 		// TODO send a message to people that took HITs after the deadline
 		
-		try {			
-			// Sleep for a bit before shutting down jetty server
-			Thread.sleep(5 * 60 * 1000);
-		}
-		catch (InterruptedException e ) {
-			e.printStackTrace();
+		if( !debugMode ) {
+			try {	
+				// Sleep for a bit before shutting down jetty server
+				Thread.sleep(5 * 60 * 1000);
+			}
+			catch (Exception e ) {
+				e.printStackTrace();
+			}
 		}
 		System.out.println("Shutting down jetty server");
 		

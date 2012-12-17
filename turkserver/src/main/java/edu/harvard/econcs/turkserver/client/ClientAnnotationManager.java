@@ -10,14 +10,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 import edu.harvard.econcs.turkserver.QuizMaterials;
-import edu.harvard.econcs.turkserver.api.BroadcastMessage;
-import edu.harvard.econcs.turkserver.api.ClientController;
-import edu.harvard.econcs.turkserver.api.ClientError;
-import edu.harvard.econcs.turkserver.api.ExperimentClient;
-import edu.harvard.econcs.turkserver.api.ServiceMessage;
-import edu.harvard.econcs.turkserver.api.StartExperiment;
-import edu.harvard.econcs.turkserver.api.StartRound;
-import edu.harvard.econcs.turkserver.api.TimeLimit;
+import edu.harvard.econcs.turkserver.api.*;
 
 public class ClientAnnotationManager<C> {
 	
@@ -28,6 +21,7 @@ public class ClientAnnotationManager<C> {
 	private Method startExperiment;
 	private Method startRound;
 	private Method timeLimit;
+	private Method finishExperiment;
 	private Method clientError;
 	
 	private List<Method> broadcasts;
@@ -61,6 +55,7 @@ public class ClientAnnotationManager<C> {
             	processed |= processStartExperiment(method);
             	processed |= processStartRound(method);
             	processed |= processTimeLimit(method);
+            	processed |= processFinishExperiment(method);
             	processed |= processClientError(method);
             	
             	processed |= processBroadcast(method);
@@ -136,6 +131,26 @@ public class ClientAnnotationManager<C> {
 		}	
 		
 		timeLimit = method;
+		return true;
+	}
+	
+	private boolean processFinishExperiment(Method method) {
+		Class<? extends Annotation> annot = FinishExperiment.class;
+		if( method.getAnnotation(annot) == null ) return false;
+		
+        if (method.getReturnType() != Void.TYPE)
+            throw new RuntimeException("Invalid " + annot.toString() + " method " + method + ": it must have void return type");
+        if (method.getParameterTypes().length > 0)
+            throw new RuntimeException("Invalid " + annot.toString() + " method " + method + ": it must have no parameters");
+        if (Modifier.isStatic(method.getModifiers()))
+            throw new RuntimeException("Invalid " + annot.toString() + " method " + method + ": it must not be static");
+		
+		if( finishExperiment != null ) {
+			logger.warning("Already found a " + annot.toString() + " method, ignoring " + method.toString());
+			return false;
+		}	
+		
+		finishExperiment = method;
 		return true;
 	}
 
@@ -236,8 +251,7 @@ public class ClientAnnotationManager<C> {
 	}
 	
 	public void triggerFinishExperiment() {
-		// TODO Auto-generated method stub
-		
+		if( finishExperiment != null ) invokeMethod(finishExperiment);		
 	}
 
 	public void triggerTimeLimit() {
