@@ -150,6 +150,7 @@ public class SessionServlet extends GenericServlet {
 		@Listener("/service/experiment/*")
 		public void listenServiceExperiment(ServerSession session, ServerMessage message) {													
 			// Deliver this to the appropriate experiment server
+			System.out.println(message.toString() + message.getData());
 			sessions.rcvExperimentServiceMsg(session, message.getDataAsMap());			
 		}
 		

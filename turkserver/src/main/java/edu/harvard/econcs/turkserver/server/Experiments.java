@@ -301,9 +301,9 @@ public class Experiments {
 	}
 
 	void finishExperiment(ExperimentControllerImpl cont) {
-		
+				
 		manager.deprocessExperiment(cont.getExpId());
-
+		
 		// unsubscribe from and/or remove channels
 		ServerChannel toRemove = null;
 		if( (toRemove = bayeux.getChannel(Codec.expChanPrefix + cont.expChannel)) != null ) {
@@ -330,7 +330,7 @@ public class Experiments {
 		for( ExperimentListener el : listeners ) {
 			el.experimentFinished(cont);
 		}
-		
+
 		unmapWorkers(cont.group);
 		
 		// TODO Count the inactive time of anyone who disconnected before finish 

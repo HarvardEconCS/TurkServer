@@ -157,17 +157,18 @@ public class SessionClient<C> implements ClientController {
 			public void onMessage(ClientSessionChannel channel, Message message) {				
 				clientWrapper.deliverBroadcast(message.getDataAsMap());
 			}
-		};
+		};						
 		
 		serviceListener = new MessageListener() {
 			@Override
-			public void onMessage(ClientSessionChannel channel, Message message) {
+			public void onMessage(ClientSessionChannel channel, Message message) {							
 				clientWrapper.deliverService(message.getDataAsMap());
 			}
 		};
 		
 		bayeuxClient.getChannel(expBroadcastChan).subscribe(broadcastListener);
-		bayeuxClient.getChannel(expServiceChan).addListener(serviceListener);		
+		// Don't use addListener here...gives random useless messages
+		bayeuxClient.getChannel(expServiceChan).subscribe(serviceListener);		
 	}
 	
 	@Service

@@ -64,7 +64,7 @@ public class ExperimentControllerImpl implements ExperimentController {
 	public void sendExperimentService(HITWorkerImpl hitWorkerImpl, Object msg) throws MessageException {
 		ServerSession session = hitWorkerImpl.cometdSession.get();
 		if( session == null ) throw new MessageException();
-				
+		
 		session.deliver(source, Codec.expSvcPrefix + expChannel, msg, null);		
 	}
 

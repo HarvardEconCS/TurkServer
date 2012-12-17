@@ -247,17 +247,19 @@ public class EventAnnotationManager {
 		
 		boolean forward = false;
 		
-		for( Method m : broadcasts.get(bean.getClass())) {					
-			BroadcastMessage ann = m.getAnnotation(BroadcastMessage.class);
-			
-			if( ann.key().length > 0 ) {
-				String key = ann.key()[0];
-				if (!message.containsKey(key) ) continue;
-				if ( ann.value().length > 0 && !message.get(key).equals(ann.value()[0])) continue;
-			}
-			
-			forward |= (Boolean) invokeMethod(bean, m, source, message);
-		}
+		synchronized(broadcasts) {
+			for( Method m : broadcasts.get(bean.getClass())) {					
+				BroadcastMessage ann = m.getAnnotation(BroadcastMessage.class);
+				
+				if( ann.key().length > 0 ) {
+					String key = ann.key()[0];
+					if (!message.containsKey(key) ) continue;
+					if ( ann.value().length > 0 && !message.get(key).equals(ann.value()[0])) continue;
+				}
+				
+				forward |= (Boolean) invokeMethod(bean, m, source, message);
+			}	
+		}		
 				
 		return forward;
 	}
@@ -271,58 +273,69 @@ public class EventAnnotationManager {
 	 */
 	void deliverServiceMsg(String expId, HITWorker source, Map<String, Object> message) {
 		Object bean = beans.get(expId);
+				
+		synchronized(services) {
+			for( Method m : services.get(bean.getClass())) {
+				ServiceMessage ann = m.getAnnotation(ServiceMessage.class);
 
-		
-		for( Method m : services.get(bean.getClass())) {
-			ServiceMessage ann = m.getAnnotation(ServiceMessage.class);
-			
-			if( ann.key().length > 0 ) {
-				String key = ann.key()[0];
-				if (!message.containsKey(key) ) continue;
-				if ( ann.value().length > 0 && !message.get(key).equals(ann.value()[0])) continue;
-			}			
-			
-			invokeMethod(bean, m, source, message);
+				if( ann.key().length > 0 ) {
+					String key = ann.key()[0];
+					if (!message.containsKey(key) ) continue;
+					if ( ann.value().length > 0 && !message.get(key).equals(ann.value()[0])) continue;
+				}			
+
+				invokeMethod(bean, m, source, message);
+			}
 		}
 	}
 	
 	void triggerStart(String expId) {
 		Object bean = beans.get(expId);
 		
-		for( Method m : starts.get(bean.getClass())) {
-			invokeMethod(bean, m);
+		synchronized(starts) {
+			for( Method m : starts.get(bean.getClass())) {
+				invokeMethod(bean, m);
+			}
 		}
 	}
 	
 	void triggerRound(String expId, int round) {
 		Object bean = beans.get(expId);
 		
-		for( Method m : rounds.get(bean.getClass())) {
-			invokeMethod(bean, m, round);
+		synchronized(rounds) {
+			for( Method m : rounds.get(bean.getClass())) {
+				invokeMethod(bean, m, round);
+			}
 		}
 	}
 
 	void triggerWorkerConnect(String expId, HITWorkerImpl source) {
 		Object bean = beans.get(expId);
 		
-		for( Method m : connects.get(bean.getClass())) {
-			invokeMethod(bean, m, source);
+		synchronized(connects) {
+			for( Method m : connects.get(bean.getClass())) {
+				invokeMethod(bean, m, source);
+			}
 		}
 	}
 	
 	void triggerWorkerDisconnect(String expId, HITWorkerImpl source) {
 		Object bean = beans.get(expId);
 		
-		for( Method m : disconnects.get(bean.getClass())) {
-			invokeMethod(bean, m, source);
-		}		
+		synchronized(disconnects) {
+			for( Method m : disconnects.get(bean.getClass())) {
+				invokeMethod(bean, m, source);
+			}		
+		}
 	}
 	
 	void triggerTimelimit(String expId) {
 		Object bean = beans.get(expId);
 		
-		for( Method m : timeouts.get(bean.getClass())) {
-			invokeMethod(bean, m);
+		synchronized(timeouts) {
+			for( Method m : timeouts.get(bean.getClass())) {
+				invokeMethod(bean, m);
+			}
 		}
 	}
 	
