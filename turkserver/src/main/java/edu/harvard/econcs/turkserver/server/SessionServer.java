@@ -453,7 +453,7 @@ public abstract class SessionServer extends Thread {
 		}
 		System.out.println("Shutting down jetty server");
 		
-		try {
+		try {			
 			server.stop();
 			server.join();
 		} catch (InterruptedException e) {			

@@ -77,7 +77,7 @@ public class ExperimentControllerImpl implements ExperimentController {
 	public void startRounds() {		
 		currentRound = new AtomicInteger(1);
 		
-		log.startRound();
+		log.startRound(currentRound.get());
 		
 		experiments.scheduleRound(this, currentRound.get());
 	}
@@ -88,14 +88,17 @@ public class ExperimentControllerImpl implements ExperimentController {
 		
 		log.finishRound();
 		
-		experiments.scheduleRound(this, currentRound.incrementAndGet());
+		log.startRound(currentRound.incrementAndGet());
+		experiments.scheduleRound(this, currentRound.get());		
 	}
 
 	@Override
 	public void finishExperiment() {
+		if( currentRound != null ) log.finishRound();
+		
 		this.expFinishTime = log.conclude();					
 		
-		experiments.finishExperiment(this);		
+		experiments.scheduleFinishExperiment(this);		
 	}
 
 	@Override

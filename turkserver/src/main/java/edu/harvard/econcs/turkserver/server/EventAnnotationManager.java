@@ -354,6 +354,7 @@ public class EventAnnotationManager {
 		// no more beans of this type, de-register callbacks
 		for (Class<?> c = bean.getClass(); c != Object.class; c = c.getSuperclass())
 		{
+			
 			starts.removeAll(c);
 			timeouts.removeAll(c);
 

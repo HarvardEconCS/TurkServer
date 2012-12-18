@@ -111,13 +111,13 @@ class TSClient
         @subscribe()
         if assignmentId and assignmentId isnt "ASSIGNMENT_ID_NOT_AVAILABLE"
           $.cometd.publish "/service/user",
-            status: "accept"
+            status: "accept.hit"
             hitId: hitId
             assignmentId: assignmentId
             workerId: workerId
         else
           $.cometd.publish "/service/user",
-            status: "view"
+            status: "view.hit"
             hitId: hitId
 
   # Broken connection

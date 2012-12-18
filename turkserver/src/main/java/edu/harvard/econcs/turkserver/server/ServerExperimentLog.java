@@ -6,7 +6,7 @@ interface ServerExperimentLog extends ExperimentLog {
 
 	void initialize(long startTime, String experimentId);
 
-	void startRound();
+	void startRound(int round);
 
 	void finishRound();
 

@@ -266,7 +266,7 @@ public class Experiments {
 			logger.info("{} not in experiment, ignoring service message", worker);
 			return;
 		}
-		
+		System.out.println(message.toString());
 		manager.deliverServiceMsg(expId, worker, message);
 	}
 
@@ -300,7 +300,15 @@ public class Experiments {
 		manager.triggerWorkerDisconnect(expId, worker);
 	}
 
-	void finishExperiment(ExperimentControllerImpl cont) {
+	void scheduleFinishExperiment(final ExperimentControllerImpl cont) {
+		new Thread() {
+			public void run() {
+				finishExperiment(cont);
+			}
+		}.start();
+	}
+	
+	private void finishExperiment(ExperimentControllerImpl cont) {
 				
 		manager.deprocessExperiment(cont.getExpId());
 		

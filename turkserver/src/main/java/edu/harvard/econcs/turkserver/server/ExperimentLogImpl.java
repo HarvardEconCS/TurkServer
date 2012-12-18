@@ -27,7 +27,7 @@ public class ExperimentLogImpl implements ServerExperimentLog {
 		print(expId + " started");
 	}
 
-	public void startRound() {
+	public void startRound(int round) {
 		// TODO Auto-generated method stub
 		
 	}

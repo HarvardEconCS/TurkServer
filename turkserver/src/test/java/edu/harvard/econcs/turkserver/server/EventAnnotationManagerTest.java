@@ -2,12 +2,9 @@ package edu.harvard.econcs.turkserver.server;
 
 import static org.junit.Assert.*;
 
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import edu.harvard.econcs.turkserver.api.*;
 
 public class EventAnnotationManagerTest {
 

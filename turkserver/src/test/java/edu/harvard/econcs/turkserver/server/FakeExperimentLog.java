@@ -2,11 +2,11 @@ package edu.harvard.econcs.turkserver.server;
 
 public class FakeExperimentLog implements ServerExperimentLog {	
 	
-	int round;
+	volatile int lastRound;
 	
 	@Override
 	public void initialize(long startTime, String experimentId) {
-		round = 0;		
+		
 	}
 
 	@Override
@@ -23,13 +23,14 @@ public class FakeExperimentLog implements ServerExperimentLog {
 	}
 
 	@Override
-	public void startRound() {
-		System.out.println("Starting round " + ++round);		
+	public void startRound(int round) {
+		System.out.println("ExpLog: Starting round " + round);	
+		lastRound = round;
 	}
 
 	@Override
 	public void finishRound() {
-		System.out.println("Finishing round " + round);	
+		System.out.println("ExpLog: Finishing round " + lastRound);	
 	}
 
 	@Override
