@@ -1,6 +1,9 @@
 package edu.harvard.econcs.turkserver.server;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import com.google.inject.Inject;
 
@@ -25,6 +28,10 @@ class TestExperiment {
 	ExperimentLog log;
 	ExperimentController cont;
 	
+	int setSize;
+	int rounds;
+	Set<String> uniqueMessages;
+	
 	@Inject
 	public TestExperiment(
 			HITWorkerGroup group,
@@ -33,11 +40,20 @@ class TestExperiment {
 		this.group = group;
 		this.log = log;
 		this.cont = cont;
+		
+		uniqueMessages = Collections.synchronizedSet(new HashSet<String>());
+	}
+	
+	void init(int groupSize, int rounds) {
+		setSize = groupSize;
+		this.rounds = rounds;
 	}
 	
 	@StartExperiment
 	void startExp() {
 		lastCall = "startExp";
+		
+		cont.startRounds();
 	}
 	
 	@StartRound
@@ -63,11 +79,28 @@ class TestExperiment {
 	@BroadcastMessage
 	boolean broadcast(HITWorker worker, Map<String, Object> msg) {
 		lastCall = "broadcast";
+		Object message = msg.get("msg");
+		if( message != null ) uniqueMessages.add(message.toString());
+		checkStatus();
 		return true;
 	}
 	
 	@ServiceMessage
 	void service(HITWorker worker, Map<String, Object> msg) {
 		lastCall = "service";
+		Object message = msg.get("msg");
+		if( message != null ) uniqueMessages.add(message.toString());
+		checkStatus();
+	}
+
+	private synchronized void checkStatus() {
+		if( uniqueMessages.size() < setSize ) return;			
+		
+		uniqueMessages.clear();
+		
+		if( cont.getCurrentRound() < rounds )
+			cont.finishRound();
+		else
+			cont.finishExperiment();
 	}
 }

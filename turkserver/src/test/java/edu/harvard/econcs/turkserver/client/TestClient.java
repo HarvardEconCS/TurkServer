@@ -1,6 +1,9 @@
 package edu.harvard.econcs.turkserver.client;
 
 import java.util.Map;
+import java.util.Random;
+
+import com.google.common.collect.ImmutableMap;
 
 import edu.harvard.econcs.turkserver.api.BroadcastMessage;
 import edu.harvard.econcs.turkserver.api.ClientController;
@@ -18,8 +21,18 @@ public class TestClient {
 	public volatile String lastCall = null;		
 	ClientController cont;
 	
+	volatile String message;
+	volatile int delay;
+	
+	Random rnd = new Random();
+	
 	public TestClient(ClientController cont) {
 		this.cont = cont;			
+	}
+	
+	public void setMessage(String message, int delay) {
+		this.message = message;
+		this.delay = delay;
 	}
 	
 	@StartExperiment
@@ -30,6 +43,14 @@ public class TestClient {
 	@StartRound
 	void startRound(int n) {
 		lastCall = "startRound";
+		
+		new Thread() {
+			public void run() {
+				try { Thread.sleep(rnd.nextInt(delay));	}
+				catch (InterruptedException e) {}
+				cont.sendExperimentBroadcast(ImmutableMap.of("msg", (Object) message));
+			}
+		}.start();
 	}	
 	
 	@TimeLimit

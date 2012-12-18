@@ -15,7 +15,7 @@ import edu.harvard.econcs.turkserver.client.LobbyClient;
 import edu.harvard.econcs.turkserver.client.TestClient;
 import edu.harvard.econcs.turkserver.server.TSBaseModule.TSTestModule;
 
-public class GroupServerTest {
+public class SimpleGroupTest {
 
 	static int clients = 10;
 	static int groupSize = 5;
@@ -37,7 +37,7 @@ public class GroupServerTest {
 			
 			bindGroupExperiments();
 			bindExperimentClass(TestExperiment.class);				
-			bindConfigurator(new TestConfigurator(groupSize));
+			bindConfigurator(new TestConfigurator(groupSize, 0));
 			bindString(TSConfig.EXP_SETID, "test");
 		}
 	}

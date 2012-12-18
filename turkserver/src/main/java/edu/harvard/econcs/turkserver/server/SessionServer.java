@@ -382,9 +382,8 @@ public abstract class SessionServer extends Thread {
 		if( completedHITs.addAndGet(group.groupSize()) >= hitGoal ) {
 			logger.info("Goal of " + hitGoal + " users reached!");
 			
-			if( hitCont != null ) hitCont.disableRemainingHITs();			
-			
-			// TODO quit the thread in this case
+			// Quit the thread
+			this.interrupt();						
 			return true;
 		}
 		
@@ -404,6 +403,8 @@ public abstract class SessionServer extends Thread {
 		
 		bayeux = jettyCometD.getBayeux();		
 		experiments.setReferences(bayeux, this);
+		Thread expThread = new Thread(experiments);
+		expThread.start();
 		
 		Thread hcThread = null;
 		if( hitCont != null ) {
@@ -422,13 +423,10 @@ public abstract class SessionServer extends Thread {
 		
 	    // Hang out until goal # of HITs are reached and shutdown jetty server
 		while( completedHITs.get() < hitGoal ) {			
-			try {
-				Thread.sleep(5000);
-			} catch (InterruptedException e) {				
-				e.printStackTrace();
-			}
+			try { Thread.sleep(5000); }
+			catch (InterruptedException e) {}
 		}
-		
+				
 		System.out.println("Deleting remaining HITs");
 		
 		if( hitCont != null ) {
@@ -440,8 +438,7 @@ public abstract class SessionServer extends Thread {
 			}			
 		}			
 		
-		// TODO send a message to people that took HITs after the deadline
-		
+		// TODO send a message to people that took HITs after the deadline		
 		if( !debugMode ) {
 			try {	
 				// Sleep for a bit before shutting down jetty server
@@ -451,6 +448,15 @@ public abstract class SessionServer extends Thread {
 				e.printStackTrace();
 			}
 		}
+				
+		// Stop experiments thread		 
+		try {
+			experiments.stop();
+			expThread.join();
+		} catch (InterruptedException e) {			
+			e.printStackTrace();
+		}		
+		
 		System.out.println("Shutting down jetty server");
 		
 		try {			

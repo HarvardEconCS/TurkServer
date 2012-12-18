@@ -3,8 +3,10 @@ package edu.harvard.econcs.turkserver.server;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.cometd.bayeux.server.BayeuxServer;
 import org.cometd.bayeux.server.ConfigurableServerChannel;
@@ -18,6 +20,7 @@ import org.slf4j.LoggerFactory;
 
 import net.andrewmao.misc.Utils;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.MapMaker;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
@@ -34,7 +37,7 @@ import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 
 @Singleton
-public class Experiments {
+public class Experiments implements Runnable {
 	// Injector for creating bean classes
 	@Inject Injector injector;
 		
@@ -57,9 +60,12 @@ public class Experiments {
 	
 	final Configurator configurator;
 	final Class<?> expClass;
-	
+		
 	final ConcurrentMap<HITWorker, String> currentExps;
 	final Queue<ExperimentListener> listeners;
+	
+	volatile boolean isRunning = true;
+	final BlockingQueue<Runnable> expEvents;
 	
 	@Inject
 	Experiments(
@@ -78,6 +84,8 @@ public class Experiments {
 		
 		this.currentExps = new MapMaker().makeMap();
 		this.listeners = new ConcurrentLinkedQueue<ExperimentListener>();
+		
+		this.expEvents = new LinkedBlockingQueue<Runnable>();
 	}
 
 	// TODO remove this hack once things are properly wired up
@@ -165,17 +173,6 @@ public class Experiments {
 		bayeux.createIfAbsent(Codec.expChanPrefix + expChannel, persistent);
 		bayeux.createIfAbsent(Codec.expSvcPrefix + expChannel, persistent);				
 
-		// Initialize controller, which also initializes the log
-		LocalSession ls = bayeux.newLocalSession(expId);
-		ls.handshake();				
-		cont.initialize(startTime, expId, inputData, expChannel, ls);
-		
-		/* Update tracking information for experiment
-		 * TODO does this start directing requests to the server before it's started?
-		 */
-		mapWorkers(group, expId);
-		tracker.newExperimentStarted(cont);
-					
 		/*
 		 * Send experiment channel to clients to notify connection
 		 * TODO this may be unnecessary, fix protocol
@@ -187,23 +184,31 @@ public class Experiments {
 		for( HITWorker hitw : group.getHITWorkers() ) {
 			try { ((HITWorkerImpl) hitw).deliverUserService(data);
 			} catch (MessageException e) { e.printStackTrace();	}			
-		}
+		}				
+		
+		// Initialize controller, which also initializes the log
+		LocalSession ls = bayeux.newLocalSession(expId);
+		ls.handshake();				
+		cont.initialize(startTime, expId, inputData, expChannel, ls);
+		
+		/* Update tracking information for experiment
+		 * TODO does this start directing requests to the server before it's started?
+		 */
+		mapWorkers(group, expId);
+		tracker.newExperimentStarted(cont);					
 		
 		for( ExperimentListener el : listeners ) {
 			el.experimentStarted(cont);
 		}
-		
+				
 		/*
-		 * TODO: make this more asynchronous
+		 * TODO this may not be enough time for every client to register channel...
+		 * reconcile this with the timing stuff above
 		 */
 		new Thread() {
-			public void run() {
-				try {
-					Thread.sleep(1000);
-				} catch (InterruptedException e) {					
-					e.printStackTrace();
-				}
-				// Starting the experiment sends out the appropriate notifications to clients
+			public void run() {				
+				try { Thread.sleep(1000); }
+				catch (InterruptedException e) { e.printStackTrace(); }				
 				manager.triggerStart(expId);				
 			}
 		}.start();
@@ -250,14 +255,25 @@ public class Experiments {
 	}
 
 	public void scheduleRound(final ExperimentControllerImpl expCont, final int round) {
-		// TODO whether we want to do it this way
-		new Thread() {
-			public void run() {
-				for( ExperimentListener el : listeners)
-					el.roundStarted(expCont);
-				manager.triggerRound(expCont.getExpId(), round);				
+		expEvents
+		.add(new Runnable() {
+			public void run() {										
+				startRound( expCont, round );
 			}
-		}.start();
+		});
+	}
+	
+	private void startRound(ExperimentControllerImpl expCont, int round) {
+		Object data = ImmutableMap.of(
+				"status", Codec.roundStartMsg,
+				"round", round);
+		for( HITWorker id : expCont.group.getHITWorkers() )			
+			SessionUtils.sendServiceMsg(((HITWorkerImpl) id).cometdSession.get(), data);
+		
+		for( ExperimentListener el : listeners)
+			el.roundStarted(expCont);
+		
+		manager.triggerRound(expCont.getExpId(), round);
 	}
 
 	public void rcvServiceMsg(HITWorkerImpl worker, Map<String, Object> message) {
@@ -301,11 +317,12 @@ public class Experiments {
 	}
 
 	void scheduleFinishExperiment(final ExperimentControllerImpl cont) {
-		new Thread() {
+		expEvents
+		.add(new Runnable() {
 			public void run() {
 				finishExperiment(cont);
 			}
-		}.start();
+		});
 	}
 	
 	private void finishExperiment(ExperimentControllerImpl cont) {
@@ -344,5 +361,21 @@ public class Experiments {
 		// TODO Count the inactive time of anyone who disconnected before finish 
 //		super.finalizeInactiveTime();
 			
+	}
+	
+	public void stop() {
+		isRunning = false;
+		expEvents
+		.add(new Runnable() {
+			public void run() {}			
+		});
+	}
+	
+	@Override
+	public void run() {
+		while( isRunning ) {
+			try { expEvents.take().run(); }
+			catch (InterruptedException e) {}
+		}				
 	}
 }

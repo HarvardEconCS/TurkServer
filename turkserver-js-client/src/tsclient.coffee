@@ -1,5 +1,6 @@
 require './setup'
 
+Codec = require './codec'
 Util = require './util'
 
 class TSClient
@@ -8,7 +9,15 @@ class TSClient
   @connect_callback = undefined
   @disconnect_callback = undefined
   @error_callback = undefined  
-  @experimentData = undefined  
+
+  @startExperiment_cb = undefined    
+  @startRound_cb = undefined
+  @timeLimit_cb = undefined
+  @finishExperiment_cb = undefined
+  @clientError_cb = undefined
+  @broadcastMessage_cb = undefined
+  @serviceMessage_cb = undefined
+  
   @logLevel = "info"
 
   # Setup values
@@ -20,7 +29,8 @@ class TSClient
   
   @clientId = undefined
   
-  @expSubscription = null
+  @expBroadcastSubscription = null
+  @expServiceSubscrption = null
   @userSubscription = null
 
   @hitIsViewing: ->
@@ -111,13 +121,13 @@ class TSClient
         @subscribe()
         if assignmentId and assignmentId isnt "ASSIGNMENT_ID_NOT_AVAILABLE"
           $.cometd.publish "/service/user",
-            status: "accept.hit"
+            status: Codec.hitAccept
             hitId: hitId
             assignmentId: assignmentId
             workerId: workerId
         else
           $.cometd.publish "/service/user",
-            status: "view.hit"
+            status: Codec.hitView
             hitId: hitId
 
   # Broken connection
@@ -130,28 +140,33 @@ class TSClient
     data = message.data
     status = data.status
     console.log "Status: " + status
-    @subscribeExp data.channel if status is "startexp"
-    
-  @expData: (message) =>
-    @experimentData?(message.data)
+    switch status
+      when Codec.connectExpAck
+        @subscribeExp data.channel    
     
   @subscribeExp: (channel) ->
-    @expSubscription = $.cometd.subscribe(channel, @expData)
-    console.log "Subscribed to exp channel " + channel
+    @expServiceSubscription = $.cometd.subscribe
+      Codec.expSvcPrefix + channel, (message) => @serviceMessage_cb? message.data
+    @expBroadcastSubscription = $.cometd.subscribe
+      Codec.expChanPrefix + channel, (message) => @broadcastMessage_cb? message.data
+    console.log "Subscribed to exp channels " + channel
     
   @subscribe: ->
-    @userSubscription = $.cometd.subscribe("/service/user", @userData)        
-    # Subscribe to any other necessary channels
-    @subscribeData()
+    @userSubscription = $.cometd.subscribe "/service/user", @userData
     
   @unsubscribe: ->
-    $.cometd.unsubscribe @userSubscription  if @userSubscription
+    $.cometd.unsubscribe @userSubscription if @userSubscription
     @userSubscription = null
-    $.cometd.unsubscribe @expSubscrption  if @expSubscription
-    @expSubscription = null
+    $.cometd.unsubscribe @expBroadcastSubscrption if @expBroadcastSubscription
+    @expBroadcastSubscription = null    
+    $.cometd.unsubscribe @expServiceSubscription if @expServiceSubscription
+    @expServiceSubscription = null
+      
+  @sendExperimentBroadcast (msg) =>
+    @channelSend @expBroadcastSubscription[0], msg
     
-    # Unsubscribe to any other channels
-    @unsubscribeData()
+  @sendExperimentService (msg) =>
+    @channelSend @expServiceSubscription[0], msg
   
   @channelSend: (channel, msg) ->
     unless @localMode

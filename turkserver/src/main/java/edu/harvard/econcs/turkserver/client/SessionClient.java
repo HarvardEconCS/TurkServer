@@ -87,7 +87,7 @@ public class SessionClient<C> implements ClientController {
 		
 		logger = Logger.getLogger(this.getClass().getSimpleName() + this.getHitId());
 		
-		bayeuxClient = new BayeuxClient(url, LongPollingTransport.create(null));
+		bayeuxClient = new BayeuxClient(url, LongPollingTransport.create(null));		
 		
 		bayeuxClient.addExtension(new TimesyncClientExtension());
 		bayeuxClient.addExtension(new AckExtension());
@@ -234,7 +234,9 @@ public class SessionClient<C> implements ClientController {
 					clientWrapper.triggerClientError(Codec.expFinishedAck);														
 					disconnect();
 				}
-
+				else if( Codec.roundStartMsg.equals(status.toString())) {
+					clientWrapper.triggerStartRound(((Number) m.get("round")).intValue());
+				}
 				else if( Codec.doneExpMsg.equals(status.toString())) {
 					clientWrapper.triggerFinishExperiment();			
 					// Do nothing

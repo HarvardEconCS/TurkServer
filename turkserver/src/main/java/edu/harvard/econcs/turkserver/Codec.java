@@ -25,6 +25,7 @@ public class Codec {
 	
 	public static final String startExpError = "experror";
 	
+	public static final String roundStartMsg = "roundstart";	
 	public static final String doneExpMsg = "finishexp";
 	// Sent when the host server is done with experiments
 	public static final String batchFinishedMsg = "batchfinished";
