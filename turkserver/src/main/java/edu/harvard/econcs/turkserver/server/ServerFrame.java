@@ -1,7 +1,7 @@
 package edu.harvard.econcs.turkserver.server;
 
 import edu.harvard.econcs.turkserver.client.JTextFieldLimit;
-import edu.harvard.econcs.turkserver.client.Lobby;
+import edu.harvard.econcs.turkserver.client.LobbyPanel;
 import edu.harvard.econcs.turkserver.client.SortedListModel;
 
 import java.awt.Component;
@@ -173,7 +173,7 @@ public class ServerFrame extends JFrame implements ActionListener {
 				int index, boolean isSelected, boolean cellHasFocus) {
 						
 			Boolean b = server.lobbyStatus.get(value); 
-			if( b != null) setIcon( b == true ? Lobby.ready : Lobby.notReady );
+			if( b != null) setIcon( b == true ? LobbyPanel.ready : LobbyPanel.notReady );
 			
 			HITWorkerImpl id = (HITWorkerImpl) value;
 			

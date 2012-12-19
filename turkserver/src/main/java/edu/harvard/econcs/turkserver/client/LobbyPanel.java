@@ -19,7 +19,7 @@ import javax.swing.*;
  * @author mao
  *
  */
-public class Lobby extends JPanel {
+public class LobbyPanel extends JPanel {
 	private static final long serialVersionUID = 948003342518575634L;
 	
 	public static final String updateStatusCmd = "UpdateStatus";
@@ -60,7 +60,7 @@ public class Lobby extends JPanel {
 	
 	JCheckBox joinCheckBox;
 	
-	public Lobby(GUIController gc) {
+	public LobbyPanel(GUIController gc) {
 		this.gc = gc;
 		
 		this.setLayout(new BoxLayout(this, BoxLayout.LINE_AXIS));
@@ -103,7 +103,7 @@ public class Lobby extends JPanel {
 			statusMsg = new JTextField(40);
 			statusMsg.setDocument(new JTextFieldLimit(60));
 			updateStatusButton = new JButton("Update Status");
-			updateStatusButton.setActionCommand(Lobby.updateStatusCmd);
+			updateStatusButton.setActionCommand(LobbyPanel.updateStatusCmd);
 			updateStatusButton.addActionListener(gc);								
 			
 			statusPanel.add(statusLabel);

@@ -26,7 +26,7 @@ public abstract class GUIController implements ItemListener, ActionListener {
 	private final Container content;
 	private final Container host;
 	
-	protected Lobby lobby;
+	protected LobbyPanel lobby;
 	
 	// This should always be at the bottom of the screen
 	protected StatusBar statusBar;
@@ -51,7 +51,7 @@ public abstract class GUIController implements ItemListener, ActionListener {
 		content.setLayout(new BoxLayout(content, BoxLayout.PAGE_AXIS));						
 		
 		// Create lobby
-		lobby = new Lobby(this);
+		lobby = new LobbyPanel(this);
 		
 		// Create status bar
 		statusBar = new StatusBar("Initializing...");
@@ -88,7 +88,7 @@ public abstract class GUIController implements ItemListener, ActionListener {
 
 	@Override
 	public void actionPerformed(ActionEvent e) {		
-		if( Lobby.updateStatusCmd.equals(e.getActionCommand()) ) {
+		if( LobbyPanel.updateStatusCmd.equals(e.getActionCommand()) ) {
 			clientCont.updateLobbyStatus(lobby.getStatusMsg());
 		}
 		else {
@@ -96,7 +96,7 @@ public abstract class GUIController implements ItemListener, ActionListener {
 		}
 	}
 
-	public Lobby getLobby() { 
+	public LobbyPanel getLobby() { 
 		return lobby; 
 	}
 	

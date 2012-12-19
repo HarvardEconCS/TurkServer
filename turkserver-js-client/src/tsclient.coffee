@@ -75,8 +75,8 @@ class TSClient
   @init: (cookieName, contextPath) ->
     # Check for old state information
       
-#    stateCookie = (if org.cometd.COOKIE then org.cometd.COOKIE.get(cookieName) else null)
-#    state = (if stateCookie then org.cometd.JSON.fromJSON(stateCookie) else null)
+    stateCookie = (if org.cometd.COOKIE then org.cometd.COOKIE.get(cookieName) else null)
+    state = (if stateCookie then org.cometd.JSON.fromJSON(stateCookie) else null)
 
     $.cometd.getExtension("reload").configure 
       cookieMaxAge: 10
