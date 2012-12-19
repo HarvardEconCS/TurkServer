@@ -75,8 +75,9 @@ class TSClient
   @init: (cookieName, contextPath) ->
     # Check for old state information
       
-    stateCookie = (if org.cometd.COOKIE then org.cometd.COOKIE.get(cookieName) else null)
-    state = (if stateCookie then org.cometd.JSON.fromJSON(stateCookie) else null)
+#    stateCookie = (if org.cometd.COOKIE then org.cometd.COOKIE.get(cookieName) else null)
+#    state = (if stateCookie then org.cometd.JSON.fromJSON(stateCookie) else null)
+
     $.cometd.getExtension("reload").configure 
       cookieMaxAge: 10
     
@@ -106,7 +107,7 @@ class TSClient
       @connected = false if message.successful
     
     # Initialize CometD 
-    cometURL = location.protocol + "//" + location.host + ":9876" + contextPath + "/cometd"
+    cometURL = location.protocol + "//" + location.hostname + ":9876" + contextPath + "/cometd"
     $.cometd.websocketEnabled = true
     $.cometd.init
       url: cometURL
@@ -178,10 +179,8 @@ class TSClient
         @finishExperiment_cb?()
     
   @subscribeExp: (channel) ->
-    @expServiceSubscription = $.cometd.subscribe
-      Codec.expSvcPrefix + channel, (message) => @serviceMessage_cb? message.data
-    @expBroadcastSubscription = $.cometd.subscribe
-      Codec.expChanPrefix + channel, (message) => @broadcastMessage_cb? message.data
+    @expServiceSubscription = $.cometd.subscribe Codec.expSvcPrefix + channel, (message) => @serviceMessage_cb? message.data
+    @expBroadcastSubscription = $.cometd.subscribe Codec.expChanPrefix + channel, (message) => @broadcastMessage_cb? message.data
     console.log "Subscribed to exp channels " + channel
     
   @subscribe: ->
@@ -195,10 +194,10 @@ class TSClient
     $.cometd.unsubscribe @expServiceSubscription if @expServiceSubscription
     @expServiceSubscription = null
       
-  @sendExperimentBroadcast (msg) =>
+  @sendExperimentBroadcast: (msg) =>
     @channelSend @expBroadcastSubscription[0], msg
     
-  @sendExperimentService (msg) =>
+  @sendExperimentService: (msg) =>
     @channelSend @expServiceSubscription[0], msg
   
   @channelSend: (channel, msg) ->
