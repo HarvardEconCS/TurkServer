@@ -4,19 +4,6 @@ Codec = require './codec'
 Util = require './util'
 
 class TSClient
-
-  # Pass-in parameters prior to init
-  @connect_callback = undefined
-  @disconnect_callback = undefined
-  @error_callback = undefined  
-
-  @startExperiment_cb = undefined    
-  @startRound_cb = undefined
-  @timeLimit_cb = undefined
-  @finishExperiment_cb = undefined
-  @clientError_cb = undefined
-  @broadcastMessage_cb = undefined
-  @serviceMessage_cb = undefined
   
   @logLevel = "info"
 
@@ -30,8 +17,49 @@ class TSClient
   @clientId = undefined
   
   @expBroadcastSubscription = null
-  @expServiceSubscrption = null
+  @expServiceSubscription = null
   @userSubscription = null
+
+  @connect_callback = undefined
+  @disconnect_callback = undefined
+  @error_callback = undefined  
+
+  @startExperiment_cb = undefined    
+  @startRound_cb = undefined
+  @timeLimit_cb = undefined
+  @finishExperiment_cb = undefined
+  @clientError_cb = undefined
+  @broadcastMessage_cb = undefined
+  @serviceMessage_cb = undefined
+
+  ###
+  Callback registration
+  ###
+
+  @StartExperiment: (callback) ->
+    @startExperiment_cb = callback
+
+  @StartRound: (callback) ->
+    @startRound_cb = callback
+
+  @TimeLimit: (callback) ->
+    @timeLimit_cb = callback
+
+  @FinishExperiment: (callback) ->
+    @finishExperiment_cb = callback
+    
+  @ClientError: (callback) ->
+    @clientError_cb = callback
+    
+  @BroadcastMessage: (callback) ->
+    @broadcastMessage_cb = callback        
+
+  @ServiceMessage: (callback) ->
+    @serviceMessage_cb = callback        
+    
+  ###
+  Other functions
+  ###
 
   @hitIsViewing: ->
     @params.assignmentId and @params.assignmentId is "ASSIGNMENT_ID_NOT_AVAILABLE"
@@ -142,7 +170,12 @@ class TSClient
     console.log "Status: " + status
     switch status
       when Codec.connectExpAck
-        @subscribeExp data.channel    
+        @subscribeExp data.channel
+        @startExperiment_cb?()
+      when Codec.roundStartMsg
+        @startRound_cb? data.round
+      when Codec.doneExpMsg
+        @finishExperiment_cb?()
     
   @subscribeExp: (channel) ->
     @expServiceSubscription = $.cometd.subscribe
@@ -172,6 +205,6 @@ class TSClient
     unless @localMode
       $.cometd.publish channel, msg
     else
-      console.log "Would send on channel " + channel + " messsage " + msg
+      console.log "Would send on channel " + channel + " message " + msg
 
 module.exports = TSClient

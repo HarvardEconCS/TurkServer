@@ -7,6 +7,8 @@ class Codec
   @hitSubmit = "submit.hit"
   
   @connectExpAck = "startexp"
+  @roundStartMsg = "roundstart"
+  @doneExpMsg = "finishexp"
   
   # channels
   @expChanPrefix = "/experiment/"

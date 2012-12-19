@@ -19,6 +19,7 @@ import org.cometd.client.transport.LongPollingTransport;
 import edu.harvard.econcs.turkserver.Codec;
 import edu.harvard.econcs.turkserver.QuizResults;
 import edu.harvard.econcs.turkserver.api.ClientController;
+import edu.harvard.econcs.turkserver.client.LobbyClient.State;
 
 public class SessionClient<C> implements ClientController {
 	
@@ -233,6 +234,13 @@ public class SessionClient<C> implements ClientController {
 					logger.info("Connected to experiment that is already done");
 					clientWrapper.triggerClientError(Codec.expFinishedAck);														
 					disconnect();
+				}
+				else if( Codec.connectExpAck.equals(status.toString())) {					
+					// Subscribe to this channel
+					String chan = m.get("channel").toString();					
+					subscribeExpChannel(chan);					
+					
+					clientWrapper.triggerStartExperiment();
 				}
 				else if( Codec.roundStartMsg.equals(status.toString())) {
 					clientWrapper.triggerStartRound(((Number) m.get("round")).intValue());

@@ -76,16 +76,10 @@ public class LobbyClient<C> extends SessionClient<C> implements ClientLobbyContr
 				}
 				else if( Codec.connectExpAck.equals(status.toString())) {					
 					logger.info("Client is (re)connecting to an experiment");
-					
-					// Subscribe to this channel
-					String chan = m.get("channel").toString();					
-					subscribeExpChannel(chan);					
-					
+										
 					if( state == State.LOBBY ) {
 						state = State.EXPERIMENT;									
-					}							
-					
-					clientWrapper.triggerStartExperiment();
+					}										
 				}				
 				else if( Codec.startExpError.equals(status.toString()) ) {
 					clientWrapper.triggerClientError(Codec.startExpError);					
