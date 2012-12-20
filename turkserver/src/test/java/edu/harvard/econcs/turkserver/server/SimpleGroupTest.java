@@ -62,7 +62,7 @@ public class SimpleGroupTest {
 		}	
 	}
 
-	@Test
+	@Test(timeout=10000)
 	public void test() throws Exception {
 		SessionServer ss = TurkServer.testExperiment(new GroupModule());
 		

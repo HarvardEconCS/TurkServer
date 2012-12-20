@@ -52,8 +52,7 @@ public class TSConfig {
 	
 	public static final String SERVER_RESOURCES = "server.resources";
 	public static final String SERVER_HITGOAL = "server.hitgoal";
-	public static final String SERVER_USERNAME = "server.usernames";
-	public static final String SERVER_LOBBY = "server.lobby";
+	public static final String SERVER_USERNAME = "server.usernames";	
 	
 	public static final String HITS_INITIAL = "server.hitinitial";
 	public static final String HITS_DELAY = "server.hitdelay";
@@ -76,7 +75,6 @@ public class TSConfig {
 		conf.addProperty(MTURK_ASSIGNMENT_DURATION, 86400);
 		conf.addProperty(MTURK_AUTO_APPROVAL_DELAY, 604800);
 		
-		conf.addProperty(SERVER_LOBBY, false);
 		conf.addProperty(SERVER_DEBUGMODE, true);
 		conf.addProperty(SERVER_USERNAME, false);
 		

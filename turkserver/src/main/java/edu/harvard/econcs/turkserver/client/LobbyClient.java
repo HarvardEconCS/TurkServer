@@ -17,6 +17,8 @@ public class LobbyClient<C> extends SessionClient<C> implements ClientLobbyContr
 	volatile State state;
 	boolean isReady = false;	
 	
+	LobbyService lobbySvc = null;
+	
 	public LobbyClient() {		
 		super();
 		
@@ -29,6 +31,7 @@ public class LobbyClient<C> extends SessionClient<C> implements ClientLobbyContr
 		super.connect(url, hitId, assignmentId, workerId);
 		
 		processor.process(new NetExpService());
+		processor.process(lobbySvc = new LobbyService());
 	}
 
 	@Override
@@ -71,14 +74,16 @@ public class LobbyClient<C> extends SessionClient<C> implements ClientLobbyContr
 					state = State.LOBBY;
 					logger.info("Client connected to lobby");
 					
-					clientWrapper.triggerJoinLobby();																																									
+					clientWrapper.triggerJoinLobby();																																							
 					updateLobbyStatus(null);
 				}
 				else if( Codec.connectExpAck.equals(status.toString())) {					
 					logger.info("Client is (re)connecting to an experiment");
 										
 					if( state == State.LOBBY ) {
-						state = State.EXPERIMENT;									
+						state = State.EXPERIMENT;
+						// Unsubscribe from lobby updates
+						if( lobbySvc != null ) processor.deprocess(lobbySvc);
 					}										
 				}				
 				else if( Codec.startExpError.equals(status.toString()) ) {
@@ -94,6 +99,11 @@ public class LobbyClient<C> extends SessionClient<C> implements ClientLobbyContr
 			}		
 		}
 		
+	}
+	
+	@Service
+	class LobbyService {
+		
 		@Subscription("/lobby")
 		public void lobbyUpdate(Message service) {
 			// TODO process a lobby update (need usernames!)			
@@ -102,7 +112,7 @@ public class LobbyClient<C> extends SessionClient<C> implements ClientLobbyContr
 				/* TODO Currently ignoring
 				 * fix this in the future, but commented for now to eliminate a bug source
 				 */
-				logger.warning("Got experiment update while in lobby");
+				logger.warning("Got lobby update while in experiment");
 				return;
 				
 //				gc.setStatus(StatusBar.returningToLobbyMsg);

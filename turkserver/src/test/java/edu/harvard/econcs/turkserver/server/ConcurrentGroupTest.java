@@ -2,9 +2,13 @@ package edu.harvard.econcs.turkserver.server;
 
 import static org.junit.Assert.*;
 
+import java.util.LinkedList;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import com.google.common.collect.Lists;
 
 import edu.harvard.econcs.turkserver.client.LobbyClient;
 import edu.harvard.econcs.turkserver.client.TestClient;
@@ -15,7 +19,7 @@ public class ConcurrentGroupTest {
 	static int clients = 100;
 	static int groupSize = 5;	
 	
-	static int rounds = 10;
+	static int rounds = 5;
 	static int delay = 1000;
 	
 	@Before
@@ -40,18 +44,27 @@ public class ConcurrentGroupTest {
 		}
 	}
 
-	@Test
+	@Test(timeout=20000)
 	public void test() throws Exception {
 		SessionServer ss = TurkServer.testExperiment(new GroupModule());
 		
 		ClientGenerator cg = new ClientGenerator("http://localhost:9876/cometd/");
 		
+		LinkedList<TestClient> ll = Lists.newLinkedList();
+		
 		for( int i = 0; i < clients; i++) {
 			LobbyClient<TestClient> lc = cg.getClient(TestClient.class);
-			lc.getClientBean().setMessage(String.valueOf(i), delay);
+			TestClient cl = lc.getClientBean();
+			cl.setMessage(String.valueOf(i), delay);
+			ll.add(cl);
 		}
 		
-		ss.join();		
+		// Wait for server to shut down
+		ss.join();
+		
+		// Verify that every client finished correctly
+		for( TestClient cl : ll )
+			assertTrue(cl.finished);
 	}
 
 }

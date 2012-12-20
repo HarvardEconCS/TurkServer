@@ -45,7 +45,7 @@ public abstract class SessionServer extends Thread {
 
 	public static final String ATTRIBUTE = "edu.harvard.econcs.turkserver.sessions";
 
-	protected final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());	
+	protected final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 			
 	final ExperimentDataTracker tracker;
 	final HITController hitCont;
@@ -439,15 +439,16 @@ public abstract class SessionServer extends Thread {
 		}			
 		
 		// TODO send a message to people that took HITs after the deadline		
-		if( !debugMode ) {
+		
 			try {	
 				// Sleep for a bit before shutting down jetty server
-				Thread.sleep(5 * 60 * 1000);
+				if( debugMode ) Thread.sleep(1000); 
+				else Thread.sleep(5 * 60 * 1000);
 			}
 			catch (Exception e ) {
 				e.printStackTrace();
 			}
-		}
+		
 				
 		// Stop experiments thread		 
 		try {

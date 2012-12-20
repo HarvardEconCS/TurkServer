@@ -10,7 +10,6 @@ import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.configuration.Configuration;
 import org.cometd.bayeux.server.LocalSession;
@@ -19,7 +18,6 @@ import org.cometd.bayeux.server.ServerSession;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import net.andrewmao.misc.ConcurrentBooleanCounter;
 
 /**
  * @author Mao
@@ -29,16 +27,9 @@ import net.andrewmao.misc.ConcurrentBooleanCounter;
 public final class GroupServer extends SessionServer {
 	
 	final boolean requireUsernames;	
-	final boolean lobbyEnabled;
-	
-	// Turk crap
-	
-	// Experiment and user information					
-	final ConcurrentBooleanCounter<HITWorkerImpl> lobbyStatus;	
-	
-	final AtomicReference<String> serverMessage;	
-	
-	private LocalSession lobbyBroadcaster;
+		
+	final Lobby lobby;
+	private volatile LocalSession lobbyBroadcaster;
 
 	// GUI
 	final GUIListener guiListener;
@@ -51,29 +42,27 @@ public final class GroupServer extends SessionServer {
 			WorkerAuthenticator workerAuth,
 			Experiments experiments,
 			JettyCometD jetty,
-			Configuration config
-			) throws ClassNotFoundException {
-		
+			Configuration config,
+			Lobby lobby
+			) throws ClassNotFoundException {		
 		super(tracker, hitCont, workerAuth, experiments, jetty, config);
 		
-		this.requireUsernames = config.getBoolean(TSConfig.SERVER_USERNAME);
-				
 		logger.info("Debug mode set to {}", debugMode);
 		
-		this.lobbyEnabled = config.getBoolean(TSConfig.SERVER_LOBBY);
-		
+		this.requireUsernames = config.getBoolean(TSConfig.SERVER_USERNAME);
+		this.lobby = lobby;
+						
 		jetty.addServlet(GroupServlet.class, "/exp");						
-				
-		lobbyStatus = new ConcurrentBooleanCounter<HITWorkerImpl>();				
-				
-		serverMessage = new AtomicReference<String>("");
+		
+		serverGUI = new ServerFrame(this);
 		
 		this.guiListener = new GUIListener();
 		experiments.registerListener(guiListener);
-		serverGUI = new ServerFrame(this);				
+		
+		lobby.setListener(new ServerLobbyListener());				
 	}
 	
-	public class GUIListener implements ExperimentListener {
+	class GUIListener implements ExperimentListener {
 		AtomicInteger inProgress = new AtomicInteger(0);
 		AtomicInteger completed = new AtomicInteger(0);
 		
@@ -97,8 +86,34 @@ public final class GroupServer extends SessionServer {
 		}	
 	}
 
+	class ServerLobbyListener implements LobbyListener {
+		@Override
+		public void broadcastLobbyMessage(Object data) {		
+			if( lobbyBroadcaster != null )
+				bayeux.getChannel("/lobby").publish(lobbyBroadcaster, data, null);
+			else
+				logger.warn("Tried to send message but lobby wasn't ready yet: " + data.toString());
+		}
+	
+		@Override
+		public void createNewExperiment(HITWorkerGroupImpl expClients) {				
+			ExperimentControllerImpl exp = experiments.startGroup(expClients);			
+			serverGUI.updateLobbyModel();
+		}
+	
+		@Override
+		public int getNumExperimentsRunning() {		
+			return guiListener.completed.get();
+		}
+	
+		@Override
+		public int getNumUsersConnected() {		
+			return bayeux.getSessions().size();
+		}
+	}
+
 	@Override
-	protected HITWorkerImpl sessionAccept(ServerSession session,
+	HITWorkerImpl sessionAccept(ServerSession session,
 			String hitId, String assignmentId, String workerId) {
 		
 		HITWorkerImpl hitw = super.sessionAccept(session, hitId, assignmentId, workerId);
@@ -117,18 +132,6 @@ public final class GroupServer extends SessionServer {
 		if( experiments.workerIsInProgress(hitw) ) {									
 			sessionReconnect(session, hitw);			
 		} 
-		else if( debugMode ) {
-			// Create debug experiments if we have enough players, automatically ready
-			lobbyStatus.put(hitw, true);
-			serverGUI.updateLobbyModel();
-			logger.info("Debug mode: lobby has {} people, {} ready", lobbyStatus.size(), lobbyStatus.getTrueCount());
-			
-			if( lobbyStatus.size() >= experiments.getMinGroupSize() ) {
-				logger.info("Creating new experiment in debug mode");
-				createNewExperiment(null);
-				serverGUI.updateLobbyModel();	
-			}						
-		}
 		else {
 			Map<String, String> data = ImmutableMap.of(
 					"status", Codec.connectLobbyAck					
@@ -136,8 +139,10 @@ public final class GroupServer extends SessionServer {
 			
 			SessionUtils.sendServiceMsg(session, data);
 			
-			logger.info(String.format("%s (%s) connected to lobby",	
-					hitId, hitw.getUsername()));
+			logger.info(hitw.toString() + "connected to lobby");
+			
+			lobby.userJoined(hitw);
+			serverGUI.updateLobbyModel();
 		}
 		
 		return hitw;
@@ -162,6 +167,8 @@ public final class GroupServer extends SessionServer {
 	 * @return true if this should be sent to the whole lobby
 	 */
 	public boolean lobbyLogin(ServerSession session, String username) {
+		// TODO: this is in the wrong place
+		
 		HITWorkerImpl hitw = clientToHITWorker.get(session);
 		
 		if( hitw == null ) {
@@ -173,116 +180,30 @@ public final class GroupServer extends SessionServer {
 		return true;
 	}
 
-	public boolean lobbyUpdate(ServerSession session, boolean isReady) {
+	public boolean lobbyUpdate(ServerSession session, Map<String, Object> data) {
 		HITWorkerImpl hitw = clientToHITWorker.get(session);
 		if( hitw == null ) {
 			logger.error("Can't accept update status for unknown session {}", session.getId());
 			return false;
 		}
-		
-		lobbyStatus.put(hitw, isReady);				
-		
-		int neededPeople = experiments.getMinGroupSize();
-		
-		// are there enough people ready to start?
-		synchronized(lobbyStatus) {	
-			logger.info("Lobby has " + lobbyStatus.getTrueCount() + " ready people");				
-			if( lobbyStatus.getTrueCount() >= neededPeople ) {				
-				// Create a new experiment and assign the ready people to it
-				createNewExperiment(null);				
-			}
-			else if( lobbyStatus.size() < neededPeople ) {				
-				// Make sure everyone's ready is disabled
-				for( HITWorkerImpl id : lobbyStatus.keySet() ) {
-					lobbyStatus.put(id, false);
-				}
-			}
+		else if (experiments.workerIsInProgress(hitw)) {
+			logger.info("Ignoring lobby update for {} in experiment", hitw);
+			return false;
 		}
-							
-		serverGUI.updateLobbyModel();
 		
-		// Notify everyone who is remaining in the lobby
-		sendLobbyStatus();
+		lobby.updateStatus(hitw, data);
+		serverGUI.updateLobbyModel();
 		
 		return true;
 	}
 
-	void sendLobbyStatus() {
-		Map<String, Object> data = new TreeMap<String, Object>();
-		
-		int usersInLobby = lobbyStatus.size();
-		int usersNeeded = experiments.getMinGroupSize();
-		
-		data.put("status", "update");
-		
-		data.put("numusers", usersInLobby);
-		data.put("numneeded", usersNeeded);
-		data.put("joinenabled", usersInLobby >= usersNeeded);
-		
-		data.put("servermsg", serverMessage.get());
-		data.put("currentexps", guiListener.inProgress.get());
-		data.put("totalusers", bayeux.getSessions().size());
-		
-		// TODO could be some race conditions here if lobby size changes?
-		Object[] users = new Object[lobbyStatus.size()];		
-		int i = 0;
-		for( Map.Entry<HITWorkerImpl, Boolean> e : lobbyStatus.entrySet() ) {
-			HITWorkerImpl user = e.getKey();
-			ServerSession session = user.cometdSession.get();
-			if( session == null ) continue;
-			
-			// clientId, username, and status
-			users[i++]= new Object[] { session.getId(),	user.getUsername(), e.getValue() };
-		}
-		data.put("users", users);
-		
-		// TODO broadcast to lobby?		
-		bayeux.getChannel("lobby").publish(this.lobbyBroadcaster, data, null);
-		
-	}
-
-	private synchronized void createNewExperiment(HITWorkerGroupImpl expClients) {	
-		if( lobbyStatus.getTrueCount() < experiments.getMinGroupSize() ) return;
-		
-		// Generate the list of experiment clients
-		if( expClients == null ) {			
-			int expSize = experiments.getMinGroupSize();
-			expClients = new HITWorkerGroupImpl();
-
-			// Count up exactly expSize people for the new experiment
-			int counter = 0;
-			for( Map.Entry<HITWorkerImpl, Boolean> e : lobbyStatus.entrySet() ) {						
-				if( e.getValue() == true ) {							
-					expClients.add(e.getKey());
-					counter++;
-				}
-
-				// Don't put more than the required number of people, even if more are ready
-				if(counter == expSize) break;
-			}
-		}		
-		
-		ExperimentControllerImpl exp = experiments.startGroup(expClients);
-		
-		/* No problem in starting the exp - now can remove from lobby
-		 * everyone in the new exp is removed before lobby is notified 
-		 * due to synchronize over lobbyStatus above
-		 * 
-		 * Moved this down here to try and avoid race condition? 
-		 * So that they are in experiment before being out of lobby - limbo state 
-		 * since experiment is checked first
-		 */			
-		for( HITWorker id : expClients.getHITWorkers()) 
-			lobbyStatus.remove((HITWorkerImpl) id);
-	}
-		
 	@Override
 	boolean groupCompleted(HITWorkerGroup group) {
 		boolean completed;
 		
 		if ( completed = super.groupCompleted(group) ) {
 			// Only notify people in lobby, not (experiment people need to submit)
-			for( HITWorkerImpl worker : lobbyStatus.keySet() )
+			for( HITWorkerImpl worker : lobby.getLobbyUsers() )
 				SessionUtils.sendStatus(worker.cometdSession.get(), Codec.batchFinishedMsg);
 		}
 		
@@ -292,30 +213,19 @@ public final class GroupServer extends SessionServer {
 	@Override
 	protected void runServerInit() {		
 		logger.info("Creating lobby session");
+		
 		lobbyBroadcaster = bayeux.newLocalSession("lobby");
-		lobbyBroadcaster.handshake();				
+		lobbyBroadcaster.handshake();
+				
 	}
 	
 	@Override
 	public void sessionDisconnect(ServerSession clientId) {
 		HITWorkerImpl worker = clientToHITWorker.get(clientId);
 		
-		// Was this dude in the lobby? If so remove him from the lobby and notify lobby ppl		
-		if( worker != null && lobbyStatus.remove(worker) != null ) {			
-			logger.info(String.format("%s (%s) removed from lobby",
-					worker.getHitId(), worker.getUsername()));			
-			ServerSession session = worker.cometdSession.get();
-			
-			// TODO check on this quit message to lobby, be more robust 
-			
-			Map<String, Object> data = new TreeMap<String, Object>();
-			
-			data.put("status", "quit");
-			if( session != null ) data.put("id", session.getId());
-			data.put("username", worker.getUsername());
-			
-			bayeux.getChannel("/lobby").publish(clientId, data, null);
-		}
+		if( worker != null ) {
+			if (lobby.userQuit(worker))	serverGUI.updateLobbyModel();
+		}		
 		
 		// This takes care of disconnecting in the tracker
 		super.sessionDisconnect(clientId);

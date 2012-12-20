@@ -10,6 +10,7 @@ import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.Comparator;
+import java.util.Set;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -37,6 +38,7 @@ public class ServerFrame extends JFrame implements ActionListener {
 	private static final String doneExpsText = "Completed Experiments: ";
 	
 	private final GroupServer server;
+	private final Lobby lobby;
 	
 	private JTextField statusMsg;
 	
@@ -57,6 +59,7 @@ public class ServerFrame extends JFrame implements ActionListener {
 	public ServerFrame(GroupServer host) {
 		super("Experiment Monitor");
 		this.server = host;
+		this.lobby = host.lobby;
 		
 		setMinimumSize(new Dimension(800, 600));
 		
@@ -141,12 +144,7 @@ public class ServerFrame extends JFrame implements ActionListener {
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		if( e.getActionCommand() != null && e.getActionCommand().equals(updateStatusCmd) ) {
-			server.serverMessage.set(statusMsg.getText());
-			
-			/* publish the message to lobby
-			 * It's fine to broadcast here as it is a rare occurrence
-			 */
-			server.sendLobbyStatus();			
+			lobby.setMessage(statusMsg.getText());	
 		}
 		else if( e.getSource() == timeTicker && runningExpModel.size() > 0 ) {			
 			// Only bother with this if there are running experiments
@@ -157,10 +155,11 @@ public class ServerFrame extends JFrame implements ActionListener {
 	public void updateLobbyModel() {
 		SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
+				Set<HITWorkerImpl> lobbyppl = lobby.getLobbyUsers();
 				// Update user count
-				currentUsers.setText("Users: " + server.lobbyStatus.size());															
+				currentUsers.setText("Users: " + lobbyppl.size());															
 				// Update users list				
-				userListModel.updateModel(server.lobbyStatus.keySet());
+				userListModel.updateModel(lobbyppl);
 			}			
 		});		
 	}
@@ -171,11 +170,10 @@ public class ServerFrame extends JFrame implements ActionListener {
 		@Override
 		public Component getListCellRendererComponent(JList list, Object value,
 				int index, boolean isSelected, boolean cellHasFocus) {
-						
-			Boolean b = server.lobbyStatus.get(value); 
-			if( b != null) setIcon( b == true ? LobbyPanel.ready : LobbyPanel.notReady );
-			
 			HITWorkerImpl id = (HITWorkerImpl) value;
+			
+			Object status = lobby.getStatus(id);			
+			if( status != null) setIcon( (Boolean) status == true ? LobbyPanel.ready : LobbyPanel.notReady );			
 			
 			setText( id.getUsername() );
 			// TODO render textual messages

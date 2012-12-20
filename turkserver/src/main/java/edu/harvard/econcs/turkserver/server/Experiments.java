@@ -177,9 +177,9 @@ public class Experiments implements Runnable {
 		 * Send experiment channel to clients to notify connection
 		 * TODO this may be unnecessary, fix protocol
 		 */
-		Map<String, Object> data = new HashMap<String, Object>();
-		data.put("status", Codec.connectExpAck);
-		data.put("channel", expChannel);
+		Map<String, Object> data = ImmutableMap.of(
+				"status", Codec.connectExpAck,
+				"channel", (Object) expChannel);
 
 		for( HITWorker hitw : group.getHITWorkers() ) {
 			try { ((HITWorkerImpl) hitw).deliverUserService(data);
@@ -326,7 +326,11 @@ public class Experiments implements Runnable {
 	}
 	
 	private void finishExperiment(ExperimentControllerImpl cont) {
-				
+
+		// Tell clients they are done!
+		for( HITWorker id : cont.group.getHITWorkers() )			
+			SessionUtils.sendStatus(((HITWorkerImpl) id).cometdSession.get(), Codec.doneExpMsg);	
+		
 		manager.deprocessExperiment(cont.getExpId());
 		
 		// unsubscribe from and/or remove channels
@@ -347,10 +351,6 @@ public class Experiments implements Runnable {
 //		logger.info("Trying to open file " + filename);		
 		// Save to db
 //		tracker.saveSessionLog(logId, data);
-
-		// Tell clients they are done!
-		for( HITWorker id : cont.group.getHITWorkers() )			
-			SessionUtils.sendStatus(((HITWorkerImpl) id).cometdSession.get(), Codec.doneExpMsg);	
 		
 		for( ExperimentListener el : listeners ) {
 			el.experimentFinished(cont);

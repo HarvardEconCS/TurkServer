@@ -1,5 +1,6 @@
 package edu.harvard.econcs.turkserver.client;
 
+import java.net.ConnectException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -123,8 +124,14 @@ public class SessionClient<C> implements ClientController {
 			serviceListener = null;
 		}
 		
-		processor.deprocess(ucl);				
-		bayeuxClient.disconnect();		
+		processor.deprocess(ucl);
+		
+		try {
+			bayeuxClient.disconnect();
+		}
+		catch( Exception e ) {
+			logger.info("Ignoring thrown exception on disconnect attempt");
+		}
 	}
 
 	@Override

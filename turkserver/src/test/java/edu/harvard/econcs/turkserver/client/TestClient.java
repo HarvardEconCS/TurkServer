@@ -18,11 +18,14 @@ import edu.harvard.econcs.turkserver.api.TimeLimit;
 @ExperimentClient
 public class TestClient {
 	
-	public volatile String lastCall = null;		
+	public volatile String lastCall = null;
+	public volatile boolean started = false;
+	public volatile boolean finished = false;
+	
 	ClientController cont;
 	
-	volatile String message;
-	volatile int delay;
+	volatile String message = null;
+	volatile int delay;		
 	
 	Random rnd = new Random();
 	
@@ -38,11 +41,14 @@ public class TestClient {
 	@StartExperiment
 	void startExp() {
 		lastCall = "startExp";
+		started = true;
 	}
 	
 	@StartRound
 	void startRound(int n) {
 		lastCall = "startRound";
+		
+		if( message == null ) return;
 		
 		new Thread() {
 			public void run() {
@@ -61,6 +67,7 @@ public class TestClient {
 	@FinishExperiment
 	void finishExp() {
 		lastCall = "finishExp";
+		finished = true;
 	}
 	
 	@ClientError
@@ -70,13 +77,13 @@ public class TestClient {
 	
 	@BroadcastMessage
 	void broadcast(Map<String, Object> msg) {
-		System.out.println("Got broadcast: " + msg.toString());
+//		System.out.println("Got broadcast: " + msg.toString());
 		lastCall = "broadcast";			
 	}
 	
 	@ServiceMessage
 	void service(Map<String, Object> msg) {
-		System.out.println("Got service: " + msg.toString());
+//		System.out.println("Got service: " + msg.toString());
 		lastCall = "service";
 	}
 }

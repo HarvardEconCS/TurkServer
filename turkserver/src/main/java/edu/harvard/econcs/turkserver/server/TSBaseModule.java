@@ -58,9 +58,11 @@ public abstract class TSBaseModule extends AbstractModule {
 		bind(WorkerAuthenticator.class);
 				
 		bind(ExperimentLog.class).to(ServerExperimentLog.class);
-		
-		bindInt(TSConfig.SERVER_HTTPPORT, conf.getInt(TSConfig.SERVER_HTTPPORT));
-		bindInt(TSConfig.CONCURRENCY_LIMIT, conf.getInt(TSConfig.CONCURRENCY_LIMIT));
+		bind(Lobby.class).to(ReadyStateLobby.class);		
+	}
+	
+	protected void bindBoolean(String setting, boolean value) {
+		bind(boolean.class).annotatedWith(Names.named(setting)).toInstance(value);
 	}
 	
 	protected void bindInt(String setting, int value) {
@@ -132,7 +134,7 @@ public abstract class TSBaseModule extends AbstractModule {
 
 		protected void setHITLimit(int some_goal) {
 			conf.addProperty(TSConfig.SERVER_HITGOAL, some_goal);						
-			bindInt(TSConfig.EXP_REPEAT_LIMIT, some_goal);
+			conf.addProperty(TSConfig.EXP_REPEAT_LIMIT, some_goal);
 		}
 		
 		@Override

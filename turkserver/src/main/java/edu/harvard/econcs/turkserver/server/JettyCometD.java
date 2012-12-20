@@ -2,6 +2,7 @@ package edu.harvard.econcs.turkserver.server;
 
 import javax.servlet.GenericServlet;
 
+import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang.ArrayUtils;
 import org.cometd.annotation.AnnotationCometdServlet;
 import org.cometd.bayeux.server.BayeuxServer;
@@ -41,8 +42,9 @@ public class JettyCometD {
 	@Inject
 	JettyCometD(
 			@Named(TSConfig.SERVER_RESOURCES) Resource[] resources,
-			@Named(TSConfig.SERVER_HTTPPORT) int httpPort
+			Configuration conf
 			) {				
+		int httpPort = conf.getInt(TSConfig.SERVER_HTTPPORT);
 		
 		server = new Server();
 		QueuedThreadPool qtp = new QueuedThreadPool();

@@ -5,6 +5,8 @@ import static org.junit.Assert.*;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.commons.configuration.Configuration;
+import org.apache.commons.configuration.PropertiesConfiguration;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -14,6 +16,7 @@ import edu.harvard.econcs.turkserver.SessionOverlapException;
 import edu.harvard.econcs.turkserver.SimultaneousSessionsException;
 import edu.harvard.econcs.turkserver.TooManySessionsException;
 import edu.harvard.econcs.turkserver.schema.Session;
+import edu.harvard.econcs.turkserver.server.TSConfig;
 import edu.harvard.econcs.turkserver.server.WorkerAuthenticator;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 
@@ -32,12 +35,16 @@ public class WorkerAuthenticatorTest {
 		
 		tracker = new ExperimentDummyTracker();
 		
+		Configuration conf = new PropertiesConfiguration();
+		
+		conf.addProperty(TSConfig.CONCURRENCY_LIMIT, concurrentSessionLimit);
+		conf.addProperty(TSConfig.EXP_REPEAT_LIMIT, totalSetLimit);
+		
 		workerAuth = new WorkerAuthenticator(
 				tracker,
 				null,
 				null,
-				concurrentSessionLimit,
-				totalSetLimit,
+				conf,
 				specialWorkers);
 	}
 

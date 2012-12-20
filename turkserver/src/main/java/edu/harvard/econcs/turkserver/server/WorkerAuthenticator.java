@@ -5,6 +5,7 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
+import org.apache.commons.configuration.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,10 +45,7 @@ public class WorkerAuthenticator {
 			QuizFactory quizFactory,
 			@Nullable 
 			QuizPolicy quizPolicy,
-			@Named(TSConfig.CONCURRENCY_LIMIT)
-			int concurrentSessionLimit,
-			@Named(TSConfig.EXP_REPEAT_LIMIT)
-			int totalSetLimit,
+			Configuration conf,
 			@Named(TSConfig.EXP_SPECIAL_WORKERS)
 			List<String> specialWorkers) {
 		this.tracker = tracker;
@@ -55,8 +53,8 @@ public class WorkerAuthenticator {
 		this.quizFactory = quizFactory;
 		this.quizPolicy = quizPolicy;
 		
-		this.simultaneousSessionLimit = concurrentSessionLimit;
-		this.totalSetLimit = totalSetLimit;
+		this.simultaneousSessionLimit = conf.getInt(TSConfig.CONCURRENCY_LIMIT);
+		this.totalSetLimit = conf.getInt(TSConfig.EXP_REPEAT_LIMIT);
 		
 		this.specialWorkers = specialWorkers;
 	}

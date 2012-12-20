@@ -28,12 +28,15 @@ public class TurkServer {
 	 */
 	private static void checkConfiguration(Injector injector, Configuration conf) {
 		
+		// Check bindings
 		checkNotNull(injector.getBinding(Key.get(String.class, Names.named(TSConfig.EXP_SETID))),
 				"set not specified");
 		checkNotNull(injector.getBinding(Key.get(Configurator.class, Names.named(TSConfig.EXP_CONFIGURATOR))),
 				"experiment configurator not specified");
-		checkNotNull(injector.getBinding(Key.get(int.class, Names.named(TSConfig.EXP_REPEAT_LIMIT))),
-				"set limit not specified");
+		
+		// Check properties
+		checkNotNull(conf.getProperty(TSConfig.CONCURRENCY_LIMIT), "concurrent limit not specified");
+		checkNotNull(conf.getProperty(TSConfig.EXP_REPEAT_LIMIT), "set limit not specified");
 		
 		boolean debugMode = conf.getBoolean(TSConfig.SERVER_DEBUGMODE);
 		
