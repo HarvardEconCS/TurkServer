@@ -16,14 +16,25 @@ import edu.harvard.econcs.turkserver.api.*;
 
 @ExperimentServer("chat")
 public class ChatExperiment {
-	@Inject HITWorkerGroup group;
-	@Inject ExperimentLog log;
-	@Inject ExperimentController controller;
+	HITWorkerGroup group;
+	ExperimentLog log;
+	ExperimentController controller;
+	
+	@Inject
+	public ChatExperiment(
+			HITWorkerGroup group,
+			ExperimentLog log,
+			ExperimentController controller) {
+		this.group = group;
+		this.log = log;
+		this.controller = controller;
+	}
 	
 	@StartExperiment
 	void start() throws MessageException {
 		log.printf("Starting chat with %d people", group.groupSize());
-		Map<String, Object> data = ImmutableMap.of("msg", (Object) "Please start chatting!");
+		Map<String, Object> data = ImmutableMap.of(
+						"msg", (Object) "Please start chatting!");
 		controller.sendExperimentBroadcast(data);		
 	}
 	
@@ -35,7 +46,8 @@ public class ChatExperiment {
 	
 	@TimeLimit
 	void timedOut() throws MessageException {
-		Map<String, Object> data = ImmutableMap.of("msg", (Object) "No more chatting for you!");
+		Map<String, Object> data = ImmutableMap.of(
+				"msg", (Object) "No more chatting for you!");
 		controller.sendExperimentBroadcast(data);		
 	}
 }
