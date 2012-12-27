@@ -1,4 +1,4 @@
-TurkServer
+TurkServer 
 
 multi-user experiment framework for Amazon Mechanical Turk
 
@@ -17,7 +17,7 @@ interface design using Java's Swing or client-side
 Javascript. However, TurkServer simplifies many other things that you
 would otherwise have to do from scratch, such as network
 communication, posting hits on MTurk, paying workers, and collecting
-data. Please read the (wiki)[/wiki] to learn more about how to use
+data. Please read the [wiki](TurkServer/wiki) to learn more about how to use
 TurkServer. As with any other open-source project, we welcome useful
 collaboration: bug reports, help with the documentation, and good pull
 requests.
