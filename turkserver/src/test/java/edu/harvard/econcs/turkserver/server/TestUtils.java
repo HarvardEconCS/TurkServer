@@ -1,9 +1,17 @@
 package edu.harvard.econcs.turkserver.server;
 
+import java.io.IOException;
+import java.net.DatagramSocket;
+import java.net.ServerSocket;
+import java.util.List;
+
 import edu.harvard.econcs.turkserver.api.ExperimentLog;
 import edu.harvard.econcs.turkserver.api.HITWorker;
+import edu.harvard.econcs.turkserver.client.SessionClient;
 
 public class TestUtils {
+	
+	public static int PORT_SLEEP_MILLIS = 200;
 
 	public static FakeHITWorkerGroup getFakeGroup(int groupSize, Class<?> clientClass) throws Exception {		
 		FakeHITWorkerGroup fakeGroup 
@@ -36,4 +44,52 @@ public class TestUtils {
 		return new FakeExperimentLog();
 	}
 	
+	public static void disconnectAll(List<? extends SessionClient<?>> clients) {
+		for( SessionClient<?> client : clients ) {
+			client.disconnect();			
+		}		
+	}
+
+	public static void waitForPort(int port) {
+		while( !available(port) ) {
+			try { Thread.sleep(PORT_SLEEP_MILLIS); } 
+			catch (InterruptedException e) {}
+		}
+	}
+
+	/**
+	 * Stolen from http://stackoverflow.com/questions/434718/sockets-discover-port-availability-using-java
+	 * @param port
+	 * @return
+	 */
+	public static boolean available(int port) {
+	    if (port < 1 || port > 65535 ) {
+	        throw new IllegalArgumentException("Invalid start port: " + port);
+	    }
+
+	    ServerSocket ss = null;
+	    DatagramSocket ds = null;
+	    try {
+	        ss = new ServerSocket(port);
+	        ss.setReuseAddress(true);
+	        ds = new DatagramSocket(port);
+	        ds.setReuseAddress(true);
+	        return true;
+	    } catch (IOException e) {
+	    } finally {
+	        if (ds != null) {
+	            ds.close();
+	        }
+
+	        if (ss != null) {
+	            try {
+	                ss.close();
+	            } catch (IOException e) {
+	                /* should not be thrown */
+	            }
+	        }
+	    }
+
+	    return false;
+	}
 }

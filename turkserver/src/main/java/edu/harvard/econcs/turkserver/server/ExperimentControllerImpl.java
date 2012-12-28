@@ -133,4 +133,8 @@ public class ExperimentControllerImpl implements ExperimentController {
 	public HITWorkerGroup getGroup() {
 		return group;
 	}
+	
+	public String toString() {
+		return experimentId == null ? super.toString() : "Experiment " + experimentId;
+	}
 }

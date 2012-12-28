@@ -151,7 +151,9 @@ public class HITWorkerImpl implements HITWorker, HITWorkerGroup {
 	}
 
 	@Override
-	public double getLiveInactivePercent() {		
+	public double getLiveInactivePercent() {
+		if( expCont == null ) return 0d;
+			
 		long totalTime = System.currentTimeMillis() - expCont.expStartTime;
 		return 1.0d * inactiveMillis.get() / totalTime;
 	}

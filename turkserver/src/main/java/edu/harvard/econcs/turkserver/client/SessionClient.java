@@ -1,6 +1,5 @@
 package edu.harvard.econcs.turkserver.client;
 
-import java.net.ConnectException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -20,7 +19,6 @@ import org.cometd.client.transport.LongPollingTransport;
 import edu.harvard.econcs.turkserver.Codec;
 import edu.harvard.econcs.turkserver.QuizResults;
 import edu.harvard.econcs.turkserver.api.ClientController;
-import edu.harvard.econcs.turkserver.client.LobbyClient.State;
 
 public class SessionClient<C> implements ClientController {
 	

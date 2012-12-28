@@ -79,6 +79,8 @@ class TestExperiment {
 	@BroadcastMessage
 	boolean broadcast(HITWorker worker, Map<String, Object> msg) {
 		lastCall = "broadcast";
+		if( msg == null ) return true;
+		
 		Object message = msg.get("msg");
 		if( message != null ) uniqueMessages.add(message.toString());
 		checkStatus();
@@ -88,6 +90,8 @@ class TestExperiment {
 	@ServiceMessage
 	void service(HITWorker worker, Map<String, Object> msg) {
 		lastCall = "service";
+		if( msg == null ) return;
+		
 		Object message = msg.get("msg");
 		if( message != null ) uniqueMessages.add(message.toString());
 		checkStatus();

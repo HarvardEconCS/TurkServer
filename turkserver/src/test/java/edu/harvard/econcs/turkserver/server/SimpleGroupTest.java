@@ -20,12 +20,20 @@ public class SimpleGroupTest {
 	static int clients = 10;
 	static int groupSize = 5;
 	
+	SessionServer ss;	
+	
 	@Before
 	public void setUp() throws Exception {
+		TestUtils.waitForPort(9876);
+		TestUtils.waitForPort(9877);				
 	}
 
 	@After
 	public void tearDown() throws Exception {
+		if( ss != null ) {
+			ss.shutdown();
+			ss.join();
+		}
 	}
 
 	class GroupModule extends TSTestModule {
@@ -64,10 +72,13 @@ public class SimpleGroupTest {
 
 	@Test(timeout=10000)
 	public void test() throws Exception {
-		SessionServer ss = TurkServer.testExperiment(new GroupModule());
+		ss = TurkServer.testExperiment(new GroupModule());
 		
 		TestListener tl = new TestListener();
-		ss.experiments.registerListener(tl);			
+		ss.experiments.registerListener(tl);					
+		
+		// Give server enough time to initialize
+		Thread.sleep(500);
 		
 		ClientGenerator cg = new ClientGenerator("http://localhost:9876/cometd/");
 		
@@ -123,8 +134,8 @@ public class SimpleGroupTest {
 		Thread.sleep(500);
 		for( LobbyClient<TestClient> lc : clients1 )
 			assertEquals("finishExp", lc.getClientBean().lastCall );		
-		
-		ss.join();
+				
+		ss.join();				
 	}
 
 }

@@ -2,7 +2,6 @@ package edu.harvard.econcs.turkserver.server.mysql;
 
 import static org.junit.Assert.*;
 
-import java.beans.PropertyVetoException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.sql.SQLException;
@@ -13,31 +12,34 @@ import edu.harvard.econcs.turkserver.ExpServerException;
 import edu.harvard.econcs.turkserver.schema.Session;
 import edu.harvard.econcs.turkserver.server.HITWorkerImpl;
 import edu.harvard.econcs.turkserver.server.SessionRecord;
+import edu.harvard.econcs.turkserver.server.TSConfig;
 import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
 
+import org.apache.commons.configuration.Configuration;
 import org.junit.*;
 
 import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 
 public class MySQLDataTrackerTest {
 	
+	private static Configuration conf;
+	private static MysqlConnectionPoolDataSource ds;
+	
 	private MySQLDataTracker dt;
 		
+	@BeforeClass
+	public static void init() {
+		conf = TSConfig.getDefault();
+		
+		ds = TSConfig.getMysqlCPDS(conf);
+	}
+	
 	@Before
-	public void init() throws PropertyVetoException {		
+	public void setup() throws Exception {				
+		// import default (empty) schema into database		
+		MySQLDataTracker.createSchema(conf);
 		
-		// TODO import default schema into database
-		
-		MysqlConnectionPoolDataSource ds = new MysqlConnectionPoolDataSource();
-		
-		ds.setDatabaseName("turking");
-		ds.setUser("turker");
-		ds.setPassword("P@$$w0rd");
-		
-		// To avoid unexpected lost data
-		ds.setStrictUpdates(false);	
-		
-		dt = new MySQLDataTracker(ds, "test");		
+		dt = new MySQLDataTracker(ds, "test");
 	}
 	
 	/**

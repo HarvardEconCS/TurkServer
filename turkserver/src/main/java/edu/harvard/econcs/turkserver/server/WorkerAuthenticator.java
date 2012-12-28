@@ -101,7 +101,7 @@ public class WorkerAuthenticator {
 		/* This could be null if no other worker has taken the HIT yet 
 		 * will not be null if this session was disconnected after an experiment		
 		 */
-		String prevWorkerId = sessionRec.getWorkerId();
+		String prevWorkerId = sessionRec == null ? null : sessionRec.getWorkerId();
 
 		Collection<Session> allSessions = tracker.getSetSessionInfoForWorker(workerId);
 
@@ -173,7 +173,7 @@ public class WorkerAuthenticator {
 
 		Session sessionRec = tracker.getStoredSessionInfo(hitId);		
 		// previous worker could be null
-		String prevWorkerId = sessionRec.getWorkerId();		
+		String prevWorkerId = sessionRec == null ? null : sessionRec.getWorkerId();		
 				
 		if( workerId.equals(prevWorkerId) ) {
 			/* This session already had a previous assignment and 
@@ -220,8 +220,14 @@ public class WorkerAuthenticator {
 		// First connection	for this assignment (but multiple from worker should be caught above)		
 		tracker.saveAssignmentForSession(hitId, assignmentId, workerId);
 
+		if( sessionRec == null ) {
+			sessionRec = new Session();
+			sessionRec.setHitId(hitId);
+		}
+		
 		sessionRec.setAssignmentId(assignmentId);
 		sessionRec.setWorkerId(workerId);
+		
 		return sessionRec;		
 	}
 	

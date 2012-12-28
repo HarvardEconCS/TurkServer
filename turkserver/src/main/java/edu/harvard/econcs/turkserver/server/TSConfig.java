@@ -7,6 +7,8 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 
+import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
+
 public class TSConfig {
 
 	/* ****************************************************
@@ -90,6 +92,26 @@ public class TSConfig {
 		cc.addConfiguration(defaults);
 		
 		return cc;
+	}
+
+	public static MysqlConnectionPoolDataSource getMysqlCPDS(Configuration conf) {
+		MysqlConnectionPoolDataSource ds = new MysqlConnectionPoolDataSource();
+		
+		ds.setDatabaseName(conf.getString(TSConfig.MYSQL_DATABASE));
+		
+		if( conf.containsKey(TSConfig.MYSQL_HOST))
+			ds.setServerName(conf.getString(TSConfig.MYSQL_HOST));
+		
+		if( conf.containsKey(TSConfig.MYSQL_USER))
+			ds.setUser(conf.getString(TSConfig.MYSQL_USER));
+		
+		if( conf.containsKey(TSConfig.MYSQL_PASSWORD))			
+			ds.setPassword(conf.getString(TSConfig.MYSQL_PASSWORD));
+		
+		// To avoid unexpected lost data
+		ds.setStrictUpdates(false);
+		
+		return ds;
 	}
 	
 }

@@ -47,6 +47,7 @@ public class JettyCometD {
 		int httpPort = conf.getInt(TSConfig.SERVER_HTTPPORT);
 		
 		server = new Server();
+		
 		QueuedThreadPool qtp = new QueuedThreadPool();
 		qtp.setMinThreads(5);
         qtp.setMaxThreads(200);

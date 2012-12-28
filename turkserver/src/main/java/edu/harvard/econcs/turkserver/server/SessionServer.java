@@ -62,6 +62,7 @@ public abstract class SessionServer extends Thread {
 	protected Table<String, String, HITWorkerImpl> hitWorkerTable;
 	
 	protected final AtomicInteger completedHITs;	
+	private volatile boolean running = true;
 	
 	@Inject
 	public SessionServer(			
@@ -422,7 +423,7 @@ public abstract class SessionServer extends Thread {
 		runServerInit();
 		
 	    // Hang out until goal # of HITs are reached and shutdown jetty server
-		while( completedHITs.get() < hitGoal ) {			
+		while( running && completedHITs.get() < hitGoal ) {			
 			try { Thread.sleep(5000); }
 			catch (InterruptedException e) {}
 		}
@@ -469,6 +470,11 @@ public abstract class SessionServer extends Thread {
 			e.printStackTrace();
 		}
 		
+	}
+
+	public void shutdown() {
+		running = false;
+		this.interrupt();
 	}
 
 	protected abstract void runServerInit();

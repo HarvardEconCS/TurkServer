@@ -252,8 +252,9 @@ public class EventAnnotationManager {
 				BroadcastMessage ann = m.getAnnotation(BroadcastMessage.class);
 				
 				if( ann.key().length > 0 ) {
+					if( message == null ) continue;
 					String key = ann.key()[0];
-					if (!message.containsKey(key) ) continue;
+					if ( !message.containsKey(key) ) continue;
 					if ( ann.value().length > 0 && !message.get(key).equals(ann.value()[0])) continue;
 				}
 				

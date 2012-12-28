@@ -7,6 +7,7 @@ public class SessionRecord {
 	public enum SessionStatus { UNASSIGNED, ASSIGNED, LOBBY, EXPERIMENT, COMPLETED };
 	
 	public static SessionStatus status(Session session) {
+		if( session == null ) return SessionStatus.UNASSIGNED;
 		
 		// What's the status of this session?
 		if( session.getInactivePercent() != null ) {
