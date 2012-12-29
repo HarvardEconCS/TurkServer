@@ -3,12 +3,9 @@ package edu.harvard.econcs.turkserver.server.mysql;
 import static org.junit.Assert.*;
 
 import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Date;
 
-import edu.harvard.econcs.turkserver.ExpServerException;
 import edu.harvard.econcs.turkserver.schema.Session;
 import edu.harvard.econcs.turkserver.server.HITWorkerImpl;
 import edu.harvard.econcs.turkserver.server.SessionRecord;
@@ -28,29 +25,52 @@ public class MySQLDataTrackerTest {
 	private MySQLDataTracker dt;
 		
 	@BeforeClass
-	public static void init() {
+	public static void init() throws Exception {
 		conf = TSConfig.getDefault();
+		
+		// import default (empty) schema into database		
+		MySQLDataTracker.createSchema(conf);
 		
 		ds = TSConfig.getMysqlCPDS(conf);
 	}
 	
 	@Before
-	public void setup() throws Exception {				
-		// import default (empty) schema into database		
-		MySQLDataTracker.createSchema(conf);
-		
+	public void setup() throws Exception {			
 		dt = new MySQLDataTracker(ds, "test");
 	}
 	
-	/**
+	@After
+	public void tearDown() {
+		dt.clearDatabase();
+	}
+	
+	@Test // Test simple saving and retrieving from db
+	public void testSaving() {		
+		
+		String hitId = "HIT12340931";
+		String assignmentId = "AsstIJFINGPEWRBNAE";		
+		String workerId = "WorkerABJAER";
+		
+		Session record = new Session();
+		record.setHitId(hitId);
+		record.setAssignmentId(assignmentId);
+		record.setWorkerId(workerId);
+		
+		dt.saveSession(record);
+		
+		Session saved = dt.getStoredSessionInfo(hitId);
+		
+		assertEquals(hitId, saved.getHitId());
+		assertEquals(assignmentId, saved.getAssignmentId());
+		assertEquals(workerId, saved.getWorkerId());
+	}
+	
+	/*
 	 * Simple test of session storing capabilities
 	 *  
-	 * @throws SQLException
-	 * @throws ExpServerException
-	 * @throws UnknownHostException
 	 */
 	@Test
-	public void testSession() throws SQLException, ExpServerException, UnknownHostException {
+	public void testSession() throws Exception {
 				
 		String hitId = "HIT12340931";
 		String assignmentId = "AsstIJFINGPEWRBNAE";		

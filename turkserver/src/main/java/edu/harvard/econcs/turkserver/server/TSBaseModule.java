@@ -13,10 +13,12 @@ import org.eclipse.jetty.util.resource.Resource;
 
 import com.amazonaws.mturk.util.ClientConfig;
 import com.google.inject.AbstractModule;
+import com.google.inject.Provider;
 import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
+import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 
 import edu.harvard.econcs.turkserver.api.*;
 import edu.harvard.econcs.turkserver.mturk.HITController;
@@ -58,7 +60,9 @@ public abstract class TSBaseModule extends AbstractModule {
 		bind(WorkerAuthenticator.class);
 				
 		bind(ExperimentLog.class).to(ServerExperimentLog.class);
-		bind(Lobby.class).to(ReadyStateLobby.class);		
+		bind(Lobby.class).to(ReadyStateLobby.class);
+		
+		bind(MysqlConnectionPoolDataSource.class).toProvider(new MysqlCPDSProvider()).asEagerSingleton();
 	}
 	
 	protected void bindBoolean(String setting, boolean value) {
@@ -123,6 +127,13 @@ public abstract class TSBaseModule extends AbstractModule {
 		bind(ExperimentDataTracker.class).to(MySQLDataTracker.class);
 	}
 	
+	public class MysqlCPDSProvider implements Provider<MysqlConnectionPoolDataSource> {
+		@Override
+		public MysqlConnectionPoolDataSource get() {
+			return TSConfig.getMysqlCPDS(conf);			
+		}	
+	}
+
 	public static class TSTestModule extends TSBaseModule {
 		public TSTestModule(String path) throws FileNotFoundException, ConfigurationException {
 			super(path);			

@@ -55,7 +55,9 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	
 	QSets _sets = QSets.sets;
 	QExperiment _experiment = QExperiment.experiment;
-	QSession _session = QSession.session;	
+	QRound _round = QRound.round;
+	QSession _session = QSession.session;
+	QQual _qual = QQual.qual1;
 	QQuiz _quiz = QQuiz.quiz;
 	QWorker _worker = QWorker.worker;
 	
@@ -225,12 +227,27 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 		return null;
 	}
 
+	private void ensureWorkerExists(Connection conn, String workerId) {
+		/* creates
+		 * INSERT IGNORE INTO worker(id) VALUES ("workerId");
+		 */
+		new SQLInsertClause(conn, dialect, _worker)
+		.columns(_worker.id)
+		.values(workerId)
+		.addFlag(Position.START_OVERRIDE, "INSERT IGNORE INTO ")
+		.execute();
+	}
+
 	@Override
 	protected void saveSession(Session record) {
 		Connection conn = null;		
 		try {
 			conn = pbds.getConnection();
 			
+			// Make sure worker exists
+			ensureWorkerExists(conn, record.getWorkerId());
+			
+			// TODO: perhaps an INSERT ... ON DUPLICATE KEY UPDATE, statement here
 			new SQLInsertClause(conn, dialect, _session)
 			.populate(record)
 			.addFlag(Position.START_OVERRIDE, "REPLACE ")
@@ -284,11 +301,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			/*
 			 * INSERT IGNORE INTO worker(id) VALUES (?)
 			 */
-			new SQLInsertClause(conn, dialect, _worker)
-			.columns(_worker.id)
-			.values(workerId)
-			.addFlag(Position.START_OVERRIDE, "INSERT IGNORE INTO ")
-			.execute();
+			ensureWorkerExists(conn, workerId);
 			
 			/*
 			 * UPDATE session SET assignmentId=?, workerId=? WHERE hitId=?
@@ -315,16 +328,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 		try {
 			conn = pbds.getConnection();
 			
-			// Make sure the worker table contains this workerId first, but ignore if already exists
-			new SQLInsertClause(conn, dialect, _worker)
-			.columns(_worker.id)
-			.values(workerId)
-			.addFlag(Position.START_OVERRIDE, "INSERT IGNORE INTO ")
-			.execute();
-			
-			/* creates
-			 * INSERT IGNORE INTO worker(id) VALUES ("workerId");
-			 */
+			ensureWorkerExists(conn, workerId);
 			
 			double score = 1.0*results.correct/results.total;
 			
@@ -516,6 +520,32 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 		else	
 			System.out.println("Exited with error code " + exitVal);
 		return exitVal;
+	}
+
+	public void clearDatabase() {		
+		Connection conn = null;		
+		try {
+			conn = pbds.getConnection();
+			
+			// clear all tables						
+			new SQLDeleteClause(conn, dialect, _round).execute();
+			new SQLDeleteClause(conn, dialect, _qual).execute();
+			new SQLDeleteClause(conn, dialect, _quiz).execute();
+			new SQLDeleteClause(conn, dialect, _session).execute();
+			new SQLDeleteClause(conn, dialect, _experiment).execute();
+			new SQLDeleteClause(conn, dialect, _worker).execute();
+			new SQLDeleteClause(conn, dialect, _sets).execute();
+			
+			System.out.println("Database emptied.");
+			
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		} finally {
+			if( conn != null ) {
+				try { conn.close(); }
+				catch (SQLException e) { e.printStackTrace(); }
+			}
+		}		
 	}
 	
 }

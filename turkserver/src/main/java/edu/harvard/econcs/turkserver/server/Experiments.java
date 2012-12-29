@@ -1,6 +1,5 @@
 package edu.harvard.econcs.turkserver.server;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;

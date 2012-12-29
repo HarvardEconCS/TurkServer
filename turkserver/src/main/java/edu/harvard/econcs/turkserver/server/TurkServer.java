@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.*;
 import org.apache.commons.configuration.Configuration;
 
 import com.amazonaws.mturk.requester.QualificationRequirement;
+import com.google.inject.Binding;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -34,6 +35,10 @@ public class TurkServer {
 		checkNotNull(injector.getBinding(Key.get(Configurator.class, Names.named(TSConfig.EXP_CONFIGURATOR))),
 				"experiment configurator not specified");
 		
+		Binding<QuizFactory> qf = injector.getBinding(Key.get(QuizFactory.class));
+		Binding<QuizPolicy> qp = injector.getBinding(Key.get(QuizPolicy.class));
+		checkArgument((qf == null) == (qp == null), "Either both QuizFactory and QuizPolicy must be specified, or neither");
+		
 		// Check properties
 		checkNotNull(conf.getProperty(TSConfig.CONCURRENCY_LIMIT), "concurrent limit not specified");
 		checkNotNull(conf.getProperty(TSConfig.EXP_REPEAT_LIMIT), "set limit not specified");
@@ -49,6 +54,8 @@ public class TurkServer {
 			
 			checkNotNull(conf.getInteger(TSConfig.MTURK_HIT_FRAME_HEIGHT, null),
 					"frame height not set");
+			checkNotNull(conf.getInteger(TSConfig.MTURK_HIT_LIFETIME, null),
+					"hit lifetime not set");
 			checkNotNull(conf.getString(TSConfig.MTURK_HIT_EXTERNAL_URL, null),
 					"external url not set");
 	
