@@ -6,6 +6,8 @@ package edu.harvard.econcs.turkserver.server;
 import edu.harvard.econcs.turkserver.*;
 import edu.harvard.econcs.turkserver.api.*;
 import edu.harvard.econcs.turkserver.mturk.HITController;
+import edu.harvard.econcs.turkserver.server.gui.ServerPanel;
+import edu.harvard.econcs.turkserver.server.gui.TSTabbedPanel;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 
 import java.util.*;
@@ -33,7 +35,7 @@ public final class GroupServer extends SessionServer {
 
 	// GUI
 	final GUIListener guiListener;
-	private final ServerFrame serverGUI;
+	private final ServerPanel serverGUI;
 	
 	@Inject
 	public GroupServer(			
@@ -43,7 +45,8 @@ public final class GroupServer extends SessionServer {
 			Experiments experiments,
 			JettyCometD jetty,
 			Configuration config,
-			Lobby lobby
+			Lobby lobby,
+			TSTabbedPanel guiTabs
 			) throws ClassNotFoundException {		
 		super(tracker, hitCont, workerAuth, experiments, jetty, config);
 		
@@ -54,7 +57,7 @@ public final class GroupServer extends SessionServer {
 						
 		jetty.addServlet(GroupServlet.class, "/exp");						
 		
-		serverGUI = new ServerFrame(this);
+		guiTabs.addPanel("Server", serverGUI = new ServerPanel(this, lobby));
 		
 		this.guiListener = new GUIListener();
 		experiments.registerListener(guiListener);
@@ -83,7 +86,16 @@ public final class GroupServer extends SessionServer {
 			groupCompleted(exp.group);
 			serverGUI.finishedExperiment(exp);
 			completed.incrementAndGet();
-		}	
+		}		
+	}
+
+	// TODO: refactor these somewhere better
+	public int getExpsInProgress() {
+		return guiListener.inProgress.get();
+	}
+
+	public int getExpsCompleted() {
+		return guiListener.completed.get();
 	}
 
 	class ServerLobbyListener implements LobbyListener {

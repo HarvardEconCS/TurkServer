@@ -2,6 +2,8 @@ package edu.harvard.econcs.turkserver.server;
 
 import static com.google.common.base.Preconditions.*;
 
+import javax.swing.UIManager;
+
 import org.apache.commons.configuration.Configuration;
 
 import com.amazonaws.mturk.requester.QualificationRequirement;
@@ -13,6 +15,8 @@ import com.google.inject.name.Names;
 
 import edu.harvard.econcs.turkserver.api.Configurator;
 import edu.harvard.econcs.turkserver.mturk.HITController;
+import edu.harvard.econcs.turkserver.server.gui.ServerFrame;
+import edu.harvard.econcs.turkserver.server.gui.TSTabbedPanel;
 
 /**
  * The main TurkServer class.
@@ -23,6 +27,14 @@ import edu.harvard.econcs.turkserver.mturk.HITController;
  *
  */
 public class TurkServer {
+	
+	static {
+		// Set GUI LnF
+		try {
+			// com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel.class.getCanonicalName();			
+			UIManager.setLookAndFeel("com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel");			
+		} catch (Exception e) {	e.printStackTrace(); }	
+	}
 	
 	/*
 	 * Last check of sanity before we launch a server
@@ -72,14 +84,14 @@ public class TurkServer {
 		
 	}
 
-	public static SessionServer testExperiment(TSBaseModule testModule) {		
-		
+	public static SessionServer testExperiment(TSBaseModule testModule) {				
 		Injector injector = Guice.createInjector(testModule);		
 		Configuration conf = testModule.getConfiguration();				
 		checkConfiguration(injector, conf);
 		
 		HITController thm = injector.getInstance(HITController.class);
-				
+		new ServerFrame(injector.getInstance(TSTabbedPanel.class));
+		
 		SessionServer ss = getSessionServer(injector);
 		
 		// TODO this may not be in conf, but in injector
@@ -101,8 +113,7 @@ public class TurkServer {
 		return ss;
 	}
 
-	public static SessionServer runExperiment(TSBaseModule module) {
-		
+	public static SessionServer runExperiment(TSBaseModule module) {		
 		return null;		
 	}
 
@@ -117,6 +128,10 @@ public class TurkServer {
 			throw new RuntimeException("No binding found for session server. " +
 					"Try bindSingleExperiments() or bindGroupExperiments() in your module.");
 		}		
-	}
+	}	
 	
+	public static void main(String[] args) {
+		// TODO start this from an injector, or it won't be able to launch experiments
+		new ServerFrame(new TSTabbedPanel());
+	}
 }

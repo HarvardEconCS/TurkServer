@@ -1,8 +1,12 @@
-package edu.harvard.econcs.turkserver.server;
+package edu.harvard.econcs.turkserver.server.gui;
 
 import edu.harvard.econcs.turkserver.client.JTextFieldLimit;
 import edu.harvard.econcs.turkserver.client.LobbyPanel;
 import edu.harvard.econcs.turkserver.client.SortedListModel;
+import edu.harvard.econcs.turkserver.server.ExperimentControllerImpl;
+import edu.harvard.econcs.turkserver.server.GroupServer;
+import edu.harvard.econcs.turkserver.server.HITWorkerImpl;
+import edu.harvard.econcs.turkserver.server.Lobby;
 
 import java.awt.Component;
 import java.awt.Dimension;
@@ -16,7 +20,6 @@ import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
@@ -28,7 +31,7 @@ import javax.swing.Timer;
 
 import net.andrewmao.misc.Utils;
 
-public class ServerFrame extends JFrame implements ActionListener {
+public class ServerPanel extends JPanel implements ActionListener {
 
 	private static final long serialVersionUID = -5350221106754787412L;
 	
@@ -56,15 +59,11 @@ public class ServerFrame extends JFrame implements ActionListener {
 	
 	private Timer timeTicker;
 	
-	public ServerFrame(GroupServer host) {
-		super("Experiment Monitor");
-		this.server = host;
-		this.lobby = host.lobby;
-		
-		setMinimumSize(new Dimension(800, 600));
-		
+	public ServerPanel(GroupServer host, Lobby lobby) {
 		// Put lobby on left and experiments on right
-		getContentPane().setLayout(new GridLayout(1, 2));
+		super(new GridLayout(1, 2));
+		this.server = host;
+		this.lobby = lobby;					
 		
 		// Lobby
 		JPanel lobbyPanel = new JPanel();
@@ -132,11 +131,6 @@ public class ServerFrame extends JFrame implements ActionListener {
 		add(lobbyPanel);
 		add(expPanel);
 		
-		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-		pack();
-		setLocationRelativeTo(null);
-		setVisible(true);
-		
 		timeTicker = new Timer(1000, this);
 		timeTicker.start();
 	}	
@@ -189,7 +183,7 @@ public class ServerFrame extends JFrame implements ActionListener {
 	public void newExperiment(final ExperimentControllerImpl exp) {
 		SwingUtilities.invokeLater(new Runnable() {
 			public void run() {				
-				runningExpsLabel.setText(runningExpsText + server.guiListener.inProgress.get());
+				runningExpsLabel.setText(runningExpsText + server.getExpsInProgress());
 				runningExpModel.addElement(exp);				
 			}			
 		});
@@ -204,8 +198,8 @@ public class ServerFrame extends JFrame implements ActionListener {
 			ExperimentControllerImpl exp = (ExperimentControllerImpl) value;
 			
 			setText( String.format("%s %s (%d)",
-					Utils.paddedClockString(System.currentTimeMillis() - exp.expStartTime), 
-					exp.toString(), exp.group.groupSize()
+					Utils.paddedClockString(System.currentTimeMillis() - exp.getStartTime()), 
+					exp.toString(), exp.getGroup().groupSize()
 					));			
 			
 			setEnabled(true); // not list.isEnabled()); otherwise the icon won't draw
@@ -220,10 +214,10 @@ public class ServerFrame extends JFrame implements ActionListener {
 	public void finishedExperiment(final ExperimentControllerImpl exp) {
 		SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
-				runningExpsLabel.setText(runningExpsText + server.guiListener.inProgress.get());
+				runningExpsLabel.setText(runningExpsText + server.getExpsInProgress());
 				runningExpModel.removeElement(exp);
 				
-				doneExpsLabel.setText(doneExpsText + server.guiListener.completed.get());
+				doneExpsLabel.setText(doneExpsText + server.getExpsCompleted());
 				doneExpModel.addElement(exp);
 			}			
 		});	

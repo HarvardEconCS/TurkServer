@@ -24,6 +24,7 @@ import edu.harvard.econcs.turkserver.api.*;
 import edu.harvard.econcs.turkserver.mturk.HITController;
 import edu.harvard.econcs.turkserver.mturk.TurkHITController;
 import edu.harvard.econcs.turkserver.schema.Experiment;
+import edu.harvard.econcs.turkserver.server.gui.TSTabbedPanel;
 import edu.harvard.econcs.turkserver.server.mturk.FakeHITController;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDummyTracker;
@@ -60,9 +61,12 @@ public abstract class TSBaseModule extends AbstractModule {
 		bind(WorkerAuthenticator.class);
 				
 		bind(ExperimentLog.class).to(ServerExperimentLog.class);
-		bind(Lobby.class).to(ReadyStateLobby.class);
+		bind(Lobby.class).to(ReadyStateLobby.class);			
 		
 		bind(MysqlConnectionPoolDataSource.class).toProvider(new MysqlCPDSProvider()).asEagerSingleton();
+		
+		// GUI stuff
+		bind(TSTabbedPanel.class).toInstance(new TSTabbedPanel());
 	}
 	
 	protected void bindBoolean(String setting, boolean value) {
