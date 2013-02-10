@@ -24,7 +24,7 @@ import com.google.common.io.Files;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
-import com.mchange.v2.c3p0.PoolBackedDataSource;
+import com.jolbox.bonecp.BoneCPDataSource;
 import com.mysema.query.QueryFlag.Position;
 import com.mysema.query.sql.MySQLTemplates;
 import com.mysema.query.sql.SQLQuery;
@@ -63,7 +63,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	
 	private final String setID;		
 	
-	private final PoolBackedDataSource pbds;	
+	private final BoneCPDataSource pbds;	
 	private final SQLTemplates dialect;	
 
 	@Inject
@@ -74,9 +74,18 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 		
 		this.setID = setID;
 		
-		pbds = new PoolBackedDataSource();
-		pbds.setConnectionPoolDataSource(ds);
-		 								
+		/*
+		 * Setup BoneCP
+		 * TODO fix these settings more flexibly
+		 */
+		pbds = new BoneCPDataSource();		
+		pbds.setDatasourceBean(ds);
+		pbds.setMinConnectionsPerPartition(1);
+		pbds.setMaxConnectionsPerPartition(5);
+		pbds.setIdleConnectionTestPeriodInMinutes(60);
+		pbds.setIdleMaxAgeInMinutes(240);
+		pbds.setPartitionCount(1);
+						 							
 		dialect = new MySQLTemplates();					
 		
 		Connection conn = null;		
