@@ -1,8 +1,8 @@
 package edu.harvard.econcs.turkserver.server.mysql;
 
 import edu.harvard.econcs.turkserver.QuizResults;
+import edu.harvard.econcs.turkserver.config.TSConfig;
 import edu.harvard.econcs.turkserver.schema.*;
-import edu.harvard.econcs.turkserver.server.TSConfig;
 
 import java.beans.PropertyVetoException;
 import java.io.File;

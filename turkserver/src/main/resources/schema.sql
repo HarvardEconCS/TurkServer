@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.1.62, for pc-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.1.67, for pc-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: turkserver
 -- ------------------------------------------------------
--- Server version	5.1.62-log
+-- Server version	5.1.67-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -116,6 +116,7 @@ CREATE TABLE `round` (
   `roundnum` int(11) NOT NULL,
   `startTime` timestamp NULL DEFAULT NULL,
   `endTime` timestamp NULL DEFAULT NULL,
+  `inputdata` varchar(24) DEFAULT NULL,
   `results` text,
   PRIMARY KEY (`experimentId`,`roundnum`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
@@ -189,7 +190,7 @@ CREATE TABLE `sets` (
   `descript` text,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -233,4 +234,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2012-12-05 19:58:24
+-- Dump completed on 2013-02-11 15:23:08

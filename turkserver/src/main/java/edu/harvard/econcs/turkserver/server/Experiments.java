@@ -33,7 +33,9 @@ import edu.harvard.econcs.turkserver.api.Configurator;
 import edu.harvard.econcs.turkserver.api.ExperimentController;
 import edu.harvard.econcs.turkserver.api.HITWorker;
 import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
+import edu.harvard.econcs.turkserver.config.TSConfig;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
+import edu.harvard.econcs.turkserver.util.RoundRobinAssigner;
 
 @Singleton
 public class Experiments implements Runnable {
@@ -153,7 +155,7 @@ public class Experiments implements Runnable {
 			final ExperimentControllerImpl cont, Object experimentBean) {		
 		
 		// Initialize the experiment data
-		String inputData = assigner.getAssignment(null);
+		String inputData = assigner.getAssignment();
 		configurator.configure(experimentBean, inputData);
 		
 		// Create a unique ID for an experiment, based on current timestamp

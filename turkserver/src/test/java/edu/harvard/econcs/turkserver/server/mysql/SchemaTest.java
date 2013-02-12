@@ -8,7 +8,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import edu.harvard.econcs.turkserver.server.TSConfig;
+import edu.harvard.econcs.turkserver.config.TSConfig;
 
 public class SchemaTest {
 

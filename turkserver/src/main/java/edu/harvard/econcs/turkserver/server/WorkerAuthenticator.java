@@ -20,6 +20,7 @@ import edu.harvard.econcs.turkserver.SessionOverlapException;
 import edu.harvard.econcs.turkserver.SimultaneousSessionsException;
 import edu.harvard.econcs.turkserver.TooManyFailsException;
 import edu.harvard.econcs.turkserver.TooManySessionsException;
+import edu.harvard.econcs.turkserver.config.TSConfig;
 import edu.harvard.econcs.turkserver.schema.Quiz;
 import edu.harvard.econcs.turkserver.schema.Session;
 import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;

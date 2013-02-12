@@ -27,6 +27,8 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 
+import edu.harvard.econcs.turkserver.config.TSConfig;
+
 @Singleton
 public class JettyCometD {
 	

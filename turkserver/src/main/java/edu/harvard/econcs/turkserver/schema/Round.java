@@ -10,6 +10,8 @@ public class Round {
 
     private String experimentId;
 
+    private String inputdata;
+
     private String results;
 
     private Integer roundnum;
@@ -30,6 +32,14 @@ public class Round {
 
     public void setExperimentId(String experimentId) {
         this.experimentId = experimentId;
+    }
+
+    public String getInputdata() {
+        return inputdata;
+    }
+
+    public void setInputdata(String inputdata) {
+        this.inputdata = inputdata;
     }
 
     public String getResults() {

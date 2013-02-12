@@ -15,6 +15,7 @@ import net.andrewmao.misc.ConcurrentBooleanCounter;
 import com.google.inject.Inject;
 
 import edu.harvard.econcs.turkserver.api.HITWorker;
+import edu.harvard.econcs.turkserver.config.TSConfig;
 
 /**
  * Default lobby implementation where users that are ready are grouped into 

@@ -13,7 +13,8 @@ import com.google.common.collect.ImmutableMap;
 
 import edu.harvard.econcs.turkserver.client.LobbyClient;
 import edu.harvard.econcs.turkserver.client.TestClient;
-import edu.harvard.econcs.turkserver.server.TSBaseModule.TSTestModule;
+import edu.harvard.econcs.turkserver.config.TSConfig;
+import edu.harvard.econcs.turkserver.config.TSBaseModule.TSTestModule;
 
 public class SimpleGroupTest {
 

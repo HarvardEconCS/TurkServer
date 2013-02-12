@@ -1,4 +1,4 @@
-package edu.harvard.econcs.turkserver.tools;
+package edu.harvard.econcs.turkserver.util;
 
 import java.io.File;
 import java.math.BigInteger;

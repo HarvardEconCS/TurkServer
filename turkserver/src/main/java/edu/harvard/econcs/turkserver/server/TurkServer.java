@@ -14,6 +14,8 @@ import com.google.inject.Key;
 import com.google.inject.name.Names;
 
 import edu.harvard.econcs.turkserver.api.Configurator;
+import edu.harvard.econcs.turkserver.config.TSBaseModule;
+import edu.harvard.econcs.turkserver.config.TSConfig;
 import edu.harvard.econcs.turkserver.mturk.HITController;
 import edu.harvard.econcs.turkserver.server.gui.ServerFrame;
 import edu.harvard.econcs.turkserver.server.gui.TSTabbedPanel;

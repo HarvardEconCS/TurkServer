@@ -7,6 +7,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import edu.harvard.econcs.turkserver.config.TSConfig;
+
 public class ConfigTest {
 
 	@Before

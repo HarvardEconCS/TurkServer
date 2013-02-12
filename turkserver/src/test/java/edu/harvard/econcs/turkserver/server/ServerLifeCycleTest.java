@@ -6,7 +6,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import edu.harvard.econcs.turkserver.server.TSBaseModule.TSTestModule;
+import edu.harvard.econcs.turkserver.config.TSConfig;
+import edu.harvard.econcs.turkserver.config.TSBaseModule.TSTestModule;
 
 /**
  * Test that the server starts and shuts down correctly

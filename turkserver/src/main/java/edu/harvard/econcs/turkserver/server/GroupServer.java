@@ -5,6 +5,7 @@ package edu.harvard.econcs.turkserver.server;
 
 import edu.harvard.econcs.turkserver.*;
 import edu.harvard.econcs.turkserver.api.*;
+import edu.harvard.econcs.turkserver.config.TSConfig;
 import edu.harvard.econcs.turkserver.mturk.HITController;
 import edu.harvard.econcs.turkserver.server.gui.ServerPanel;
 import edu.harvard.econcs.turkserver.server.gui.TSTabbedPanel;

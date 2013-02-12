@@ -1,4 +1,4 @@
-package edu.harvard.econcs.turkserver.server;
+package edu.harvard.econcs.turkserver.config;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -24,11 +24,26 @@ import edu.harvard.econcs.turkserver.api.*;
 import edu.harvard.econcs.turkserver.mturk.HITController;
 import edu.harvard.econcs.turkserver.mturk.TurkHITController;
 import edu.harvard.econcs.turkserver.schema.Experiment;
+import edu.harvard.econcs.turkserver.server.Assigner;
+import edu.harvard.econcs.turkserver.server.EventAnnotationManager;
+import edu.harvard.econcs.turkserver.server.ExperimentLogImpl;
+import edu.harvard.econcs.turkserver.server.Experiments;
+import edu.harvard.econcs.turkserver.server.FakeExperimentLog;
+import edu.harvard.econcs.turkserver.server.GroupServer;
+import edu.harvard.econcs.turkserver.server.JettyCometD;
+import edu.harvard.econcs.turkserver.server.Lobby;
+import edu.harvard.econcs.turkserver.server.QuizFactory;
+import edu.harvard.econcs.turkserver.server.QuizPolicy;
+import edu.harvard.econcs.turkserver.server.ReadyStateLobby;
+import edu.harvard.econcs.turkserver.server.ServerExperimentLog;
+import edu.harvard.econcs.turkserver.server.SimpleExperimentServer;
+import edu.harvard.econcs.turkserver.server.WorkerAuthenticator;
 import edu.harvard.econcs.turkserver.server.gui.TSTabbedPanel;
 import edu.harvard.econcs.turkserver.server.mturk.FakeHITController;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDummyTracker;
 import edu.harvard.econcs.turkserver.server.mysql.MySQLDataTracker;
+import edu.harvard.econcs.turkserver.util.RoundRobinAssigner;
 
 public abstract class TSBaseModule extends AbstractModule {	
 	
@@ -53,13 +68,13 @@ public abstract class TSBaseModule extends AbstractModule {
 		// Prevent unwanted initializations
 		// binder().requireExplicitBindings();
 		
-		// Things that were previously JIT bound
-		bind(Assigner.class);
+		// Things that were previously JIT bound		
 		bind(EventAnnotationManager.class);
 		bind(Experiments.class);
 		bind(JettyCometD.class);
 		bind(WorkerAuthenticator.class);
 				
+		bind(Assigner.class).to(RoundRobinAssigner.class);
 		bind(ExperimentLog.class).to(ServerExperimentLog.class);
 		bind(Lobby.class).to(ReadyStateLobby.class);			
 		

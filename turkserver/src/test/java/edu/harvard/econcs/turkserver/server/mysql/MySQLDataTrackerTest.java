@@ -6,10 +6,10 @@ import java.net.InetAddress;
 import java.util.Collection;
 import java.util.Date;
 
+import edu.harvard.econcs.turkserver.config.TSConfig;
 import edu.harvard.econcs.turkserver.schema.Session;
 import edu.harvard.econcs.turkserver.server.HITWorkerImpl;
 import edu.harvard.econcs.turkserver.server.SessionRecord;
-import edu.harvard.econcs.turkserver.server.TSConfig;
 import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
 
 import org.apache.commons.configuration.Configuration;

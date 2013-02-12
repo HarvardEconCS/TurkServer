@@ -1,4 +1,4 @@
-package edu.harvard.econcs.turkserver.server;
+package edu.harvard.econcs.turkserver.config;
 
 import java.io.File;
 

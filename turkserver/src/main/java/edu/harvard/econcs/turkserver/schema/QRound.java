@@ -23,6 +23,8 @@ public class QRound extends com.mysema.query.sql.RelationalPathBase<Round> {
 
     public final StringPath experimentId = createString("experimentId");
 
+    public final StringPath inputdata = createString("inputdata");
+
     public final StringPath results = createString("results");
 
     public final NumberPath<Integer> roundnum = createNumber("roundnum", Integer.class);
