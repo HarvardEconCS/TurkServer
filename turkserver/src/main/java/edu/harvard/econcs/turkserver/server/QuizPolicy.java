@@ -26,6 +26,43 @@ public interface QuizPolicy {
 	 * @return
 	 */
 	boolean overallFail(Collection<Quiz> pastResults);
+	
+	public static class PercentageQuizPolicy implements QuizPolicy {
+		
+		final double passRate;
+		final double maxFails;
+		
+		public PercentageQuizPolicy(double passRate, int maxFails) {
+			this.passRate = passRate;
+			this.maxFails = maxFails;
+		}
+		
+		@Override
+		public boolean quizPasses(QuizResults results) {			
+			return 1.0 * results.correct / results.total >= passRate;
+		}
+
+		@Override
+		public boolean requiresQuiz(Collection<Quiz> pastResults) {			
+			for( Quiz result : pastResults ) {
+				if( 1.0 * result.getNumCorrect() / result.getNumTotal() >= passRate ) return false;
+			}				
+			return true;
+		}
+
+		@Override
+		public boolean overallFail(Collection<Quiz> pastResults) {
+			int numFails = 0;
+			
+			for( Quiz result : pastResults ) {
+				if(  1.0 * result.getNumCorrect() / result.getNumTotal() < passRate )
+					numFails++;
+			}							
+			
+			return numFails >= maxFails;
+		}				
+		
+	}
 
 	public static class DefaultQuizPolicy implements QuizPolicy {		
 		

@@ -24,6 +24,12 @@ class TSClient
   @disconnect_callback = undefined
   @error_callback = undefined  
 
+  @quizneeded_cb = undefined
+  @quizfail_cb = undefined
+  @requestUsername_cb = undefined
+  @enterLobby_cb = undefined
+  @preSubmit_cb = undefined
+
   @startExperiment_cb = undefined    
   @startRound_cb = undefined
   @timeLimit_cb = undefined
@@ -33,7 +39,26 @@ class TSClient
   @serviceMessage_cb = undefined
 
   ###
-  Callback registration
+  Pre-Experiment callbacks
+  ###
+
+  @QuizRequired: (callback) ->
+    @quizneeded_cb = callback
+
+  @QuizFailed: (callback) ->
+    @quizfail_cb = callback
+  
+  @RequestUsername: (callback) ->
+    @requestUsername_cb = callback
+  
+  @EnterLobby: (callback) ->
+    @enterLobby_cb = callback
+  
+  @PreSubmit: (callback) ->
+    @preSubmit_cb = callback
+
+  ###
+  Experiment callback registration
   ###
 
   @StartExperiment: (callback) ->
@@ -106,7 +131,7 @@ class TSClient
     $.cometd.addListener "/meta/disconnect", (message) ->
       @connected = false if message.successful
     
-    # Initialize CometD 
+    # Initialize CometD - TODO un-fix the specific port
     cometURL = location.protocol + "//" + location.hostname + ":9876" + contextPath + "/cometd"
     $.cometd.websocketEnabled = true
     $.cometd.init
@@ -164,19 +189,33 @@ class TSClient
     @disconnect_callback?()
     # alert("It appears that we lost the connection to the server."
     # + "If this persists, please return the HIT.");
+
+  @sendQuizResults: (correct, total) =>
+    @channelSend "/service/user",
+      status: Codec.quizResults
+      correct: correct
+      total: total
     
   @userData: (message) =>
     data = message.data
     status = data.status
     console.log "Status: " + status
     switch status
+      when Codec.quizNeeded
+        @quizneeded_cb?()
+      when Codec.quizFail
+        @quizfail_cb?()
+      when Codec.username  
+        @requestUsername_cb?()
+      when Codec.connectLobbyAck
+        @enterLobby_cb?()
       when Codec.connectExpAck
         @subscribeExp data.channel
         @startExperiment_cb?()
       when Codec.roundStartMsg
         @startRound_cb? data.round
       when Codec.doneExpMsg
-        @finishExperiment_cb?()
+        @finishExperiment_cb?()      
     
   @subscribeExp: (channel) ->
     @expServiceSubscription = $.cometd.subscribe Codec.expSvcPrefix + channel, (message) => @serviceMessage_cb? message.data

@@ -201,15 +201,13 @@ public abstract class SessionServer extends Thread {
 		try {
 			if( workerAuth.workerRequiresQuiz(workerId) ) {				
 				QuizMaterials qm = workerAuth.getQuiz();
-				
-				if( qm != null ) {
-					Map<String, Object> data = ImmutableMap.of(
-							"status", Codec.quizNeeded,
-							"quiz", qm.toData()
-							);			
-					
-					SessionUtils.sendServiceMsg(session, data);									
-				}				
+								
+				// TODO: null quiz is passed for static client-side 											
+				Map<String, Object> data = qm == null ?
+						ImmutableMap.of("status", (Object) Codec.quizNeeded) :
+							ImmutableMap.of("status", Codec.quizNeeded,	"quiz", qm.toData() );
+				SessionUtils.sendServiceMsg(session, data);									
+								
 				return null;
 			}
 		} catch (TooManyFailsException e) {			
@@ -337,13 +335,13 @@ public abstract class SessionServer extends Thread {
 
 		// check if quiz failed
 		if( workerAuth.quizPasses(qr) ) {
-			/* TODO quiz passed? allow lobby login
+			/* TODO quiz passed? allow lobby login or request username
 			 * careful - this assumes that quiz always precedes username
-			 */
-			SessionUtils.sendStatus(session, "username");	
+			 */			
+			SessionUtils.sendStatus(session, Codec.usernameNeeded);	
 		}
 		else {
-			SessionUtils.sendStatus(session, "quizfail");	
+			SessionUtils.sendStatus(session, Codec.quizFail);	
 		}		
 	}
 

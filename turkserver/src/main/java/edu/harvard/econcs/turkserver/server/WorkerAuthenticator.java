@@ -155,8 +155,7 @@ public class WorkerAuthenticator {
 		if( quizPolicy.overallFail(results) ) 
 			throw new TooManyFailsException();		
 		
-		return true;
-		
+		return true;		
 	}
 
 	/**

@@ -13,11 +13,11 @@ public class TSTabbedPanel extends JPanel {
 	
 	public TSTabbedPanel() {
 		super(new GridLayout(1, 1));
-		
+				
+		tabbedPane = new JTabbedPane();
 		// Enable scrolling tabs.
 		tabbedPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
-		
-		tabbedPane = new JTabbedPane();
+				
 		add(tabbedPane);
 		
 		ControlPanel controlPanel = new ControlPanel();

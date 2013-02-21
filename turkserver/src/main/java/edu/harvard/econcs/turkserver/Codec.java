@@ -14,8 +14,10 @@ public class Codec {
 	public final static String connectErrorAck = "error";
 		
 	// Update messages
-	public static final String quizNeeded = "quiz";			
+	public static final String quizNeeded = "quiz.required";			
 	public static final String quizResults = "quiz.results";
+	
+	public static final String quizFail = "quiz.failed";	
 	
 	public static final String usernameNeeded = "username";	
 	public static final String usernameReply = "username.reply";

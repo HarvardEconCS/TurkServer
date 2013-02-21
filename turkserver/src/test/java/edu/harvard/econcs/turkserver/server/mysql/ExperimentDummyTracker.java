@@ -9,6 +9,7 @@ import edu.harvard.econcs.turkserver.server.HITWorkerImpl;
 import java.net.InetAddress;
 import java.sql.Timestamp;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -61,9 +62,8 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	public Collection<Quiz> getSetQuizRecords(String workerId) {
-		// TODO Auto-generated method stub
-		return null;
+	public Collection<Quiz> getSetQuizRecords(String workerId) {		
+		return Collections.emptyList();
 	}
 	
 	@Override

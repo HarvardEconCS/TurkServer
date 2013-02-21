@@ -68,6 +68,8 @@ public abstract class TSBaseModule extends AbstractModule {
 		// Prevent unwanted initializations
 		// binder().requireExplicitBindings();
 		
+		bind(Configuration.class).toInstance(conf);
+		
 		// Things that were previously JIT bound		
 		bind(EventAnnotationManager.class);
 		bind(Experiments.class);
@@ -174,9 +176,8 @@ public abstract class TSBaseModule extends AbstractModule {
 			bindTestClasses();
 			
 			bind(QuizFactory.class).toProvider(Providers.of((QuizFactory) null));
-			bind(QuizPolicy.class).toProvider(Providers.of((QuizPolicy) null));
+			bind(QuizPolicy.class).toProvider(Providers.of((QuizPolicy) null));			
 			
-			bind(Configuration.class).toInstance(conf);
 			bind(Resource[].class).annotatedWith(Names.named(TSConfig.SERVER_RESOURCES)).toInstance(new Resource[] {});
 			
 			bind(new TypeLiteral<List<String>>() {})

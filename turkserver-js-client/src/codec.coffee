@@ -6,7 +6,16 @@ class Codec
   @hitAccept = "accept.hit"
   @hitSubmit = "submit.hit"
   
+  @quizNeeded = "quiz.required"
+  @quizResults = "quiz.results"
+  @quizFail = "quiz.failed"
+  
+  @usernameNeeded = "username"
+  @usernameReply = "username.reply"
+  
+  @connectLobbyAck = "lobby"
   @connectExpAck = "startexp"
+  
   @roundStartMsg = "roundstart"
   @doneExpMsg = "finishexp"
   
