@@ -216,6 +216,11 @@ class TSClient
         @startRound_cb? data.round
       when Codec.doneExpMsg
         @finishExperiment_cb?()      
+        
+  @submitHIT: (data) =>
+    @channelSend "/service/user",
+      status: Codec.hitSubmit
+      data: data
     
   @subscribeExp: (channel) ->
     @expServiceSubscription = $.cometd.subscribe Codec.expSvcPrefix + channel, (message) => @serviceMessage_cb? message.data

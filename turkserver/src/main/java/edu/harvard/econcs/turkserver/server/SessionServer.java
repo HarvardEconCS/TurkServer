@@ -55,6 +55,7 @@ public abstract class SessionServer extends Thread {
 	
 	protected final boolean debugMode;
 	protected final int hitGoal;		
+	
 	protected final JettyCometD jettyCometD;
 	
 	protected BayeuxServer bayeux;	
@@ -87,6 +88,7 @@ public abstract class SessionServer extends Thread {
 		/*
 		 * Process configuration
 		 */
+				
 		this.debugMode = config.getBoolean(TSConfig.SERVER_DEBUGMODE);
 		this.hitGoal = config.getInt(TSConfig.SERVER_HITGOAL);					
 		
@@ -198,6 +200,11 @@ public abstract class SessionServer extends Thread {
 			return null;
 		}		
 		
+		// Save some extra information that we can access later, for comparison 					
+		session.setAttribute("hitId", hitId);
+		session.setAttribute("assignmentId", assignmentId);
+		session.setAttribute("workerId", workerId);
+		
 		try {
 			if( workerAuth.workerRequiresQuiz(workerId) ) {				
 				QuizMaterials qm = workerAuth.getQuiz();
@@ -239,11 +246,6 @@ public abstract class SessionServer extends Thread {
 			// Successful registration, save info
 			tracker.saveIP(hitw, bayeux.getContext().getRemoteAddress().getAddress(), new Date());			
 
-			// Save some extra information that we can access later, for comparison 					
-			session.setAttribute("hitId", hitId);
-			session.setAttribute("assignmentId", assignmentId);
-			session.setAttribute("workerId", workerId);
-
 		} catch (ExpServerException e) {		
 
 			if (e instanceof SessionExpiredException ) {					
@@ -254,7 +256,6 @@ public abstract class SessionServer extends Thread {
 			else if (e instanceof SessionOverlapException ) {
 				SessionUtils.sendStatus(session, null, Messages.SESSION_OVERLAP);
 			}
-
 			else {
 				SessionUtils.sendStatus(session, null, "Unknown Error: " + e.toString());
 			}				
@@ -326,6 +327,7 @@ public abstract class SessionServer extends Thread {
 	void rcvQuizResults(ServerSession session, QuizResults qr) {
 		String workerId = (String) session.getAttribute("workerId");
 		String hitId = (String) session.getAttribute("hitId");
+		String assignmentId = (String) session.getAttribute("assignmentId");
 		
 		if( workerId == null ) {
 			logger.error("Can't save quiz: unknown worker for {}", session.getId());
@@ -335,12 +337,12 @@ public abstract class SessionServer extends Thread {
 
 		// check if quiz failed
 		if( workerAuth.quizPasses(qr) ) {
-			/* TODO quiz passed? allow lobby login or request username
-			 * careful - this assumes that quiz always precedes username
-			 */			
-			SessionUtils.sendStatus(session, Codec.usernameNeeded);	
+			logger.info("{} passed quiz", workerId);
+			// Run the accept HIT checks again		
+			sessionAccept(session, hitId, assignmentId, workerId);
 		}
 		else {
+			logger.info("{} failed quiz", workerId);
 			SessionUtils.sendStatus(session, Codec.quizFail);	
 		}		
 	}

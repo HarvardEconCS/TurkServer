@@ -9,7 +9,6 @@ import edu.harvard.econcs.turkserver.server.HITWorkerImpl;
 import java.net.InetAddress;
 import java.sql.Timestamp;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -32,8 +31,10 @@ import com.google.inject.Singleton;
 @Singleton
 public class ExperimentDummyTracker extends ExperimentDataTracker {		
 	
-	private final ConcurrentMap<String, Session> hitIdToSessions;		
+	private final ConcurrentMap<String, Session> hitIdToSessions;
+	
 	private final Multimap<String, Session> workerIdToSessions;
+	private final Multimap<String, Quiz> workerIdToQuizzes;
 	
 	// Experiment tracking - FALSE if in progress and TRUE if finished
 	protected final ConcurrentMap<String, Experiment> experiments; 
@@ -45,7 +46,11 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 		// TODO double-check the concurrency of this if it becomes important		
 		@SuppressWarnings("unused")
 		SetMultimap<String, Session> temp;
-		workerIdToSessions = Multimaps.synchronizedSetMultimap(temp = HashMultimap.create()); 				
+		@SuppressWarnings("unused")
+		SetMultimap<String, Quiz> temp2;
+		
+		workerIdToSessions = Multimaps.synchronizedSetMultimap(temp = HashMultimap.create());
+		workerIdToQuizzes = Multimaps.synchronizedSetMultimap(temp2 = HashMultimap.create());
 		
 		// Experiment trackers
 		experiments = new ConcurrentHashMap<String, Experiment>();
@@ -63,7 +68,7 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 
 	@Override
 	public Collection<Quiz> getSetQuizRecords(String workerId) {		
-		return Collections.emptyList();
+		return workerIdToQuizzes.get(workerId);
 	}
 	
 	@Override
@@ -113,6 +118,17 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 	public void saveQuizResults(String hitId, String workerId, QuizResults qr) {		
 		logger.info(String.format("Session %s got %d out of %d correct", 
 				hitId, qr.correct, qr.total));
+		
+		Quiz q = new Quiz();
+		
+		q.setNumCorrect(qr.correct);
+		q.setNumTotal(qr.total);
+		q.setScore(1.0*qr.correct/qr.total);
+		q.setSessionId(hitId);
+		q.setWorkerId(workerId);
+		q.setSetId("");
+		
+		workerIdToQuizzes.put(workerId, q);
 	}
 
 	@Override

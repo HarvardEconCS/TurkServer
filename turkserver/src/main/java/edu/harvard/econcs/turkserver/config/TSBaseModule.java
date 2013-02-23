@@ -53,6 +53,8 @@ public abstract class TSBaseModule extends AbstractModule {
 		File confFile = new File(TSBaseModule.class.getClassLoader().getResource(path).getFile());
 		if( !confFile.exists() ) throw new FileNotFoundException("configuration doesn't exist!");
 		conf = TSConfig.getCustom(confFile);
+		
+		System.out.println("Loaded custom config file " + confFile);
 	}
 	
 	protected TSBaseModule() {

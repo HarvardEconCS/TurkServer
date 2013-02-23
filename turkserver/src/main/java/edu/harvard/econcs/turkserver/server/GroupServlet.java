@@ -69,11 +69,9 @@ public class GroupServlet extends SessionServlet {
 			
 			String status = data.get("status").toString();
 			
-			 if( Codec.usernameReply.equals(status) ) {
-				
+			 if( Codec.usernameReply.equals(status) ) {				
 				String username = data.get("username").toString();
-				theServer.lobbyLogin(session, username);
-				
+				theServer.lobbyLogin(session, username);				
 			}
 			
 		}

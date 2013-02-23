@@ -84,8 +84,8 @@ public class SessionServlet extends GenericServlet {
 		@Listener("/service/user")
 		public void userStatus(ServerSession session, ServerMessage message) {
 			Map<String, Object> data = message.getDataAsMap();
-			String status = data.get("status").toString();
-						
+			
+			String status = data.get("status").toString();						
 			String clientId = session.getId();
 			
 			/* 
@@ -127,9 +127,10 @@ public class SessionServlet extends GenericServlet {
 				long inactiveTime = Long.parseLong(data.get("time").toString());
 				sessions.rcvInactiveTime(session, inactiveTime);
 			}
-			else if( Codec.hitSubmit .equals(status) ) {								
+			else if( Codec.hitSubmit.equals(status) ) {								
 				Log.getRootLogger().info("HIT " + hitId + " submitting");
 				
+				// TODO: store data from exit survey/any other final stuff
 				sessions.sessionSubmit(session);
 			}
 			else {
