@@ -1,9 +1,8 @@
 package edu.harvard.econcs.turkserver.logging;
 
-import edu.harvard.econcs.turkserver.api.ExperimentLog;
-import edu.harvard.econcs.turkserver.logging.LogController;
+import edu.harvard.econcs.turkserver.logging.ServerLogController;
 
-public class FakeExperimentLog implements ExperimentLog, LogController {	
+public class FakeExperimentLog implements ServerLogController {	
 	
 	volatile int lastRound;
 	

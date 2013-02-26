@@ -133,7 +133,7 @@ public class RoundRobinAssigner implements Assigner {
 		completeAssignment(item);
 	}
 	
-	static class CountingEntry<E extends Comparable<? super E>> {
+	static class CountingEntry<E extends Comparable<? super E>> implements Comparable<CountingEntry<E>> {
 		final E obj;
 		final AtomicInteger count = new AtomicInteger(0);
 		CountingEntry(E asst) { this.obj = asst; }

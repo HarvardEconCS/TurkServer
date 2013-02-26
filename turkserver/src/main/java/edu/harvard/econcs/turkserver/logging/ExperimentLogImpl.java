@@ -5,11 +5,9 @@ import java.io.PrintStream;
 
 import com.google.common.collect.ObjectArrays;
 
-import edu.harvard.econcs.turkserver.api.ExperimentLog;
-
 import net.andrewmao.misc.Utils;
 
-public class ExperimentLogImpl implements ExperimentLog, LogController {
+public class ExperimentLogImpl implements ServerLogController {
 	
 	private static final String NOT_INIT_MSG = "Log not initialized! Make sure you call start() first!";
 	
@@ -81,7 +79,7 @@ public class ExperimentLogImpl implements ExperimentLog, LogController {
 	
 	@Override
 	public long printf(String format, Object... args) {
-		if( expId == null ) throw new RuntimeException(NOT_INIT_MSG);
+		if( this.expId == null ) throw new RuntimeException(NOT_INIT_MSG);
 		
 		long start = currentRound > 0 ? roundStartTime: startTime;
 		StringBuffer sb = currentRound > 0 ? roundBuffer : buffer;	

@@ -23,7 +23,7 @@ import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 import edu.harvard.econcs.turkserver.api.*;
 import edu.harvard.econcs.turkserver.logging.ExperimentLogImpl;
 import edu.harvard.econcs.turkserver.logging.FakeExperimentLog;
-import edu.harvard.econcs.turkserver.logging.LogController;
+import edu.harvard.econcs.turkserver.logging.ServerLogController;
 import edu.harvard.econcs.turkserver.mturk.HITController;
 import edu.harvard.econcs.turkserver.mturk.TurkHITController;
 import edu.harvard.econcs.turkserver.schema.Experiment;
@@ -139,13 +139,17 @@ public abstract class TSBaseModule extends AbstractModule {
 	}
 	
 	protected void bindTestClasses() {		
-		bind(LogController.class).to(FakeExperimentLog.class);
+		bind(ExperimentLog.class).to(ServerLogController.class);
+		bind(ServerLogController.class).to(FakeExperimentLog.class);		
+		
 		bind(HITController.class).to(FakeHITController.class);
 		bind(ExperimentDataTracker.class).to(ExperimentDummyTracker.class);
 	}
 	
 	protected void bindRealClasses() {
-		bind(LogController.class).to(ExperimentLogImpl.class);
+		bind(ExperimentLog.class).to(ServerLogController.class);
+		bind(ServerLogController.class).to(ExperimentLogImpl.class);		
+		
 		bind(HITController.class).to(TurkHITController.class);
 		bind(ExperimentDataTracker.class).to(MySQLDataTracker.class);
 	}

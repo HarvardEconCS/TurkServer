@@ -12,7 +12,7 @@ import edu.harvard.econcs.turkserver.Codec;
 import edu.harvard.econcs.turkserver.api.ExperimentController;
 import edu.harvard.econcs.turkserver.api.HITWorker;
 import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
-import edu.harvard.econcs.turkserver.logging.LogController;
+import edu.harvard.econcs.turkserver.logging.ServerLogController;
 
 /**
  * Simple controls for an experiment
@@ -22,7 +22,7 @@ import edu.harvard.econcs.turkserver.logging.LogController;
  */
 public class ExperimentControllerImpl implements ExperimentController {
 
-	final LogController log;
+	final ServerLogController log;
 	final HITWorkerGroup group;	
 	final Experiments experiments;	
 	
@@ -38,7 +38,7 @@ public class ExperimentControllerImpl implements ExperimentController {
 	
 	@Inject
 	public ExperimentControllerImpl(
-			LogController log,
+			ServerLogController log,
 			HITWorkerGroup group,
 			Experiments experiments) {
 		this.log = log;

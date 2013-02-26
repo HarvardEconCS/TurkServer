@@ -1,5 +1,7 @@
 package edu.harvard.econcs.turkserver.server;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -186,16 +188,18 @@ public class ReadyStateLobby implements Lobby {
 		data.put("currentexps", lobbyListener.getNumExperimentsRunning());
 		data.put("totalusers", lobbyListener.getNumUsersConnected());
 		
-		// TODO could be some race conditions here if lobby size changes?
-		Object[] users = new Object[lobbyStatus.size()];		
-		int i = 0;
+		/* TODO could be some race conditions here if lobby size changes?
+		 * i.e. ArrayIndexOutOfBounds when array size changes 
+		 */
+		List<Object> users = new LinkedList<Object>();		
+		
 		for( Map.Entry<HITWorkerImpl, Boolean> e : lobbyStatus.entrySet() ) {
 			HITWorkerImpl user = e.getKey();
 			ServerSession session = user.cometdSession.get();
 			if( session == null ) continue;
 			
 			// clientId, username, and status
-			users[i++]= new Object[] { session.getId(),	user.getUsername(), e.getValue() };
+			users.add(new Object[] { session.getId(),	user.getUsername(), e.getValue() });
 		}
 		data.put("users", users);
 		

@@ -1,6 +1,8 @@
 package edu.harvard.econcs.turkserver.logging;
 
-public interface LogController {
+import edu.harvard.econcs.turkserver.api.ExperimentLog;
+
+public interface ServerLogController extends ExperimentLog {
 
 	void initialize(long startTime, String experimentId);
 
