@@ -1,13 +1,18 @@
 package edu.harvard.econcs.turkserver.logging;
 
 import java.io.IOException;
+
 import java.io.PrintStream;
 
 import com.google.common.collect.ObjectArrays;
 
+import edu.harvard.econcs.turkserver.api.ExperimentLog;
+import edu.harvard.econcs.turkserver.server.ExperimentScoped;
+
 import net.andrewmao.misc.Utils;
 
-public class ExperimentLogImpl implements ServerLogController {
+@ExperimentScoped
+public class ExperimentLogImpl implements LogController, ExperimentLog {
 	
 	private static final String NOT_INIT_MSG = "Log not initialized! Make sure you call start() first!";
 	

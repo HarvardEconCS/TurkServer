@@ -23,12 +23,14 @@ import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 import edu.harvard.econcs.turkserver.api.*;
 import edu.harvard.econcs.turkserver.logging.ExperimentLogImpl;
 import edu.harvard.econcs.turkserver.logging.FakeExperimentLog;
-import edu.harvard.econcs.turkserver.logging.ServerLogController;
+import edu.harvard.econcs.turkserver.logging.LogController;
 import edu.harvard.econcs.turkserver.mturk.HITController;
 import edu.harvard.econcs.turkserver.mturk.TurkHITController;
 import edu.harvard.econcs.turkserver.schema.Experiment;
 import edu.harvard.econcs.turkserver.server.Assigner;
 import edu.harvard.econcs.turkserver.server.EventAnnotationManager;
+import edu.harvard.econcs.turkserver.server.ExperimentControllerImpl;
+import edu.harvard.econcs.turkserver.server.ExperimentScoped;
 import edu.harvard.econcs.turkserver.server.Experiments;
 import edu.harvard.econcs.turkserver.server.GroupServer;
 import edu.harvard.econcs.turkserver.server.JettyCometD;
@@ -37,6 +39,7 @@ import edu.harvard.econcs.turkserver.server.QuizFactory;
 import edu.harvard.econcs.turkserver.server.QuizPolicy;
 import edu.harvard.econcs.turkserver.server.ReadyStateLobby;
 import edu.harvard.econcs.turkserver.server.SimpleExperimentServer;
+import edu.harvard.econcs.turkserver.server.ThreadLocalScope;
 import edu.harvard.econcs.turkserver.server.WorkerAuthenticator;
 import edu.harvard.econcs.turkserver.server.gui.TSTabbedPanel;
 import edu.harvard.econcs.turkserver.server.mturk.FakeHITController;
@@ -66,11 +69,16 @@ public abstract class TSBaseModule extends AbstractModule {
 	}
 
 	@Override
-	protected void configure() {
+	protected void configure() {		
 		// Prevent unwanted initializations
 		// binder().requireExplicitBindings();
+				
+		bind(Configuration.class).toInstance(conf);		
 		
-		bind(Configuration.class).toInstance(conf);
+		// create thread-local scope for initializing experiments
+		ThreadLocalScope scope = new ThreadLocalScope();
+		bindScope(ExperimentScoped.class, scope);
+		bind(ThreadLocalScope.class).toInstance(scope);
 		
 		// Things will be JIT bound anyway, but required for explicit bindings		
 		bind(EventAnnotationManager.class);
@@ -79,8 +87,13 @@ public abstract class TSBaseModule extends AbstractModule {
 		bind(WorkerAuthenticator.class);
 				
 		bind(Assigner.class).to(RoundRobinAssigner.class);
-		// bind(ExperimentLog.class).to(LogController.class);
-		bind(Lobby.class).to(ReadyStateLobby.class);			
+		bind(Lobby.class).to(ReadyStateLobby.class);
+		
+		// bind(ExperimentLog.class).to(LogController.class);		
+		bind(ExperimentController.class).to(ExperimentControllerImpl.class);
+		
+		bind(HITWorker.class).toProvider(ThreadLocalScope.<HITWorker>seededKeyProvider()).in(ExperimentScoped.class);
+		bind(HITWorkerGroup.class).toProvider(ThreadLocalScope.<HITWorkerGroup>seededKeyProvider()).in(ExperimentScoped.class);
 		
 		bind(MysqlConnectionPoolDataSource.class).toProvider(new MysqlCPDSProvider()).asEagerSingleton();
 		
@@ -139,19 +152,23 @@ public abstract class TSBaseModule extends AbstractModule {
 	}
 	
 	protected void bindTestClasses() {		
-		bind(ExperimentLog.class).to(ServerLogController.class);
-		bind(ServerLogController.class).to(FakeExperimentLog.class);		
+		bind(ExperimentLog.class).to(FakeExperimentLog.class);
+		bind(LogController.class).to(FakeExperimentLog.class);		
 		
 		bind(HITController.class).to(FakeHITController.class);
 		bind(ExperimentDataTracker.class).to(ExperimentDummyTracker.class);
 	}
 	
 	protected void bindRealClasses() {
-		bind(ExperimentLog.class).to(ServerLogController.class);
-		bind(ServerLogController.class).to(ExperimentLogImpl.class);		
+		bind(ExperimentLog.class).to(ExperimentLogImpl.class);
+		bind(LogController.class).to(ExperimentLogImpl.class);		
 		
 		bind(HITController.class).to(TurkHITController.class);
 		bind(ExperimentDataTracker.class).to(MySQLDataTracker.class);
+	}
+	
+	protected void bindResources(Resource[] rscs) {
+		bind(Resource[].class).annotatedWith(Names.named(TSConfig.SERVER_RESOURCES)).toInstance(rscs);
 	}
 	
 	public class MysqlCPDSProvider implements Provider<MysqlConnectionPoolDataSource> {
@@ -159,7 +176,7 @@ public abstract class TSBaseModule extends AbstractModule {
 		public MysqlConnectionPoolDataSource get() {
 			return TSConfig.getMysqlCPDS(conf);			
 		}	
-	}
+	}		
 
 	public static class TSTestModule extends TSBaseModule {
 		public TSTestModule(String path) throws FileNotFoundException, ConfigurationException {
@@ -184,7 +201,7 @@ public abstract class TSBaseModule extends AbstractModule {
 			bind(QuizFactory.class).toProvider(Providers.of((QuizFactory) null));
 			bind(QuizPolicy.class).toProvider(Providers.of((QuizPolicy) null));			
 			
-			bind(Resource[].class).annotatedWith(Names.named(TSConfig.SERVER_RESOURCES)).toInstance(new Resource[] {});
+			bindResources(new Resource[] {});
 			
 			bind(new TypeLiteral<List<String>>() {})
 			.annotatedWith(Names.named(TSConfig.EXP_SPECIAL_WORKERS)).toInstance(new LinkedList<String>());

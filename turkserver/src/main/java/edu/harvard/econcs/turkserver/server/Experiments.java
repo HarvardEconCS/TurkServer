@@ -21,16 +21,13 @@ import net.andrewmao.misc.Utils;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.MapMaker;
-import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 
 import edu.harvard.econcs.turkserver.Codec;
 import edu.harvard.econcs.turkserver.api.Configurator;
-import edu.harvard.econcs.turkserver.api.ExperimentController;
 import edu.harvard.econcs.turkserver.api.HITWorker;
 import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
 import edu.harvard.econcs.turkserver.config.TSConfig;
@@ -107,44 +104,49 @@ public class Experiments implements Runnable {
 	 * TODO replace both stuff below with custom experiment scope
 	 */
 	
-	ExperimentControllerImpl startSingle(final HITWorkerImpl hitw) {				
+	ExperimentControllerImpl startSingle(final HITWorkerImpl hitw) {						
+		ExperimentControllerImpl cont = null;
+		Object experimentBean = null;
 		
-		// Create an experiment instance with specific binding to this HITWorker
-		Injector child = injector.createChildInjector(new AbstractModule() {
-			@Override
-			protected void configure() {
-				bind(HITWorker.class).toInstance(hitw);
-				bind(HITWorkerGroup.class).toInstance(hitw);				
-				bind(ExperimentController.class).to(ExperimentControllerImpl.class);
-				bind(ExperimentControllerImpl.class).in(Scopes.SINGLETON);
-			}			
-		});
-				
-		ExperimentControllerImpl cont = child.getInstance(ExperimentControllerImpl.class);
-		hitw.setExperiment(cont);
-		Object experimentBean = child.getInstance(expClass);
-				
+		ThreadLocalScope scope = injector.getInstance(ThreadLocalScope.class); 		
+		scope.enter();
+		
+		try {
+			// Create an experiment instance with specific binding to this HITWorker		
+			scope.seed(HITWorker.class, hitw);
+			scope.seed(HITWorkerGroup.class, hitw);
+
+							
+			injector.getInstance(ExperimentControllerImpl.class);
+			hitw.setExperiment(cont);
+			injector.getInstance(expClass);
+		}
+		finally {
+			scope.exit();
+		}
+		
 		startExperiment(hitw, cont, experimentBean);
 		
 		return cont;
 	}
 	
 	ExperimentControllerImpl startGroup(final HITWorkerGroupImpl group) {
-				
-		// Create an experiment instance with specific binding to this HITWorkerGroup
-		Injector child = injector.createChildInjector(new AbstractModule() {
-			@Override
-			protected void configure() {				
-				bind(HITWorkerGroup.class).toInstance(group);				
-				bind(ExperimentController.class).to(ExperimentControllerImpl.class);
-				bind(ExperimentControllerImpl.class).in(Scopes.SINGLETON);				
-			}			
-		});
+		ExperimentControllerImpl cont = null;
+		Object experimentBean = null;
 		
-		ExperimentControllerImpl cont = child.getInstance(ExperimentControllerImpl.class);
-		group.setExperiment(cont);
-		Object experimentBean = child.getInstance(expClass);
-				
+		ThreadLocalScope scope = injector.getInstance(ThreadLocalScope.class); 		
+		scope.enter();
+		
+		try {
+			// Create an experiment instance with specific binding to this HITWorkerGroup
+			scope.seed(HITWorkerGroup.class, group);					
+
+			cont = injector.getInstance(ExperimentControllerImpl.class);
+			group.setExperiment(cont);
+			experimentBean = injector.getInstance(expClass);				
+		} finally {
+			scope.exit();
+		}
 		startExperiment(group, cont, experimentBean);
 		
 		return cont;

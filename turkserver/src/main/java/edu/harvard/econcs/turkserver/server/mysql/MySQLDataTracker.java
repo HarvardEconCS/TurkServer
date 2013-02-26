@@ -209,13 +209,20 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 		try( Connection conn = pbds.getConnection() ) {	
 			
 			// Make sure worker exists
-			ensureWorkerExists(conn, record.getWorkerId());
+			ensureWorkerExists(conn, record.getWorkerId());						
 			
-			// TODO: perhaps an INSERT ... ON DUPLICATE KEY UPDATE, statement here
-			new SQLInsertClause(conn, dialect, _session)
-			.populate(record)
-			.addFlag(Position.START_OVERRIDE, "REPLACE ")
+			// TODO: INSERT ... ON DUPLICATE KEY UPDATE is the safest thing to do here			
+//			new SQLInsertClause(conn, dialect, _session)			
+//			.populate(record)
+//			.addFlag(Position.END, TemplateExpressionImpl.create(String.class,
+//					" ON DUPLICATE KEY UPDATE ", args))
+//			.execute();
+			
+			new SQLUpdateClause(conn, dialect, _session)
+			.where(_session.hitId.eq(record.getHitId()))
+			.populate(record)			
 			.execute();
+			
 		} catch (SQLException e) {			
 			e.printStackTrace();
 		} 
