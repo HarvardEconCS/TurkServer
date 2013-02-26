@@ -24,6 +24,12 @@ public class FakeHITWorkerGroup implements HITWorkerGroup {
 	}
 
 	@Override
+	public boolean contains(HITWorker hitWorker) {		
+		String hitId = hitWorker.getHitId();
+		return idMap.containsKey(hitId) && idMap.get(hitId).equals(hitWorker);
+	}
+
+	@Override
 	public Collection<? extends HITWorker> getHITWorkers() {		
 		return idMap.values();
 	}

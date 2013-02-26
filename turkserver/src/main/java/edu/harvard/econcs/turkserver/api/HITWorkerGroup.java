@@ -7,6 +7,8 @@ public interface HITWorkerGroup {
 	
 	int groupSize();
 		
+	boolean contains(HITWorker hitWorker);
+
 	Collection<? extends HITWorker> getHITWorkers();
 	
 	/**

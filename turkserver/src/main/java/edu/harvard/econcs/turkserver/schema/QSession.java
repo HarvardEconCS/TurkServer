@@ -21,7 +21,9 @@ public class QSession extends com.mysema.query.sql.RelationalPathBase<Session> {
 
     public final StringPath assignmentId = createString("assignmentId");
 
-    public final NumberPath<java.math.BigDecimal> bonusPaid = createNumber("bonusPaid", java.math.BigDecimal.class);
+    public final NumberPath<java.math.BigDecimal> bonus = createNumber("bonus", java.math.BigDecimal.class);
+
+    public final BooleanPath bonusPaid = createBoolean("bonusPaid");
 
     public final StringPath comment = createString("comment");
 
@@ -41,7 +43,9 @@ public class QSession extends com.mysema.query.sql.RelationalPathBase<Session> {
 
     public final NumberPath<Integer> numDisconnects = createNumber("numDisconnects", Integer.class);
 
-    public final NumberPath<java.math.BigDecimal> paid = createNumber("paid", java.math.BigDecimal.class);
+    public final BooleanPath paid = createBoolean("paid");
+
+    public final NumberPath<java.math.BigDecimal> payment = createNumber("payment", java.math.BigDecimal.class);
 
     public final StringPath setId = createString("setId");
 

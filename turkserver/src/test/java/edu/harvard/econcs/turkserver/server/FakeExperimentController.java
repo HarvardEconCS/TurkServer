@@ -55,6 +55,11 @@ public class FakeExperimentController implements ExperimentController {
 	}
 
 	@Override
+	public void setBonusAmount(HITWorker hitWorker, double amount) {
+		// TODO Auto-generated method stub		
+	}
+
+	@Override
 	public void startRounds() {
 		roundNum = new AtomicInteger(1);
 		callbacks.triggerRound(expId, roundNum.get());

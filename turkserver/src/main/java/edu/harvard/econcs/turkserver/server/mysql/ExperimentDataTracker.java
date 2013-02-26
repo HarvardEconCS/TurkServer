@@ -11,6 +11,7 @@ import edu.harvard.econcs.turkserver.schema.Session;
 import edu.harvard.econcs.turkserver.server.ExperimentControllerImpl;
 import edu.harvard.econcs.turkserver.server.HITWorkerImpl;
 
+import java.math.BigDecimal;
 import java.net.InetAddress;
 import java.sql.Timestamp;
 import java.util.Collection;
@@ -118,13 +119,24 @@ public abstract class ExperimentDataTracker {
 	 * @param session
 	 * @param remoteSocketAddress
 	 */	
-	public void saveIP(HITWorkerImpl session, InetAddress remoteAddress, Date lobbyTime) {
-		
-		
+	public void saveIP(HITWorkerImpl session, InetAddress remoteAddress, Date lobbyTime) {			
 		Session record = session.getSessionRecord();
 		
 		record.setIpAddr(remoteAddress.getHostAddress());
 		record.setLobbyTime(new Timestamp(lobbyTime.getTime()));
+		
+		saveSession(record);
+	}
+
+	/**
+	 * Save a bonus that will be paid to a particular worker
+	 * @param hitWorker
+	 * @param amount
+	 */
+	public void saveBonusAmount(HITWorkerImpl hitWorker, double amount) {
+		Session record = hitWorker.getSessionRecord();
+			
+		record.setBonus(BigDecimal.valueOf(amount));		
 		
 		saveSession(record);
 	}

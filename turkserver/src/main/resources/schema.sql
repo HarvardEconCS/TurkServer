@@ -150,8 +150,10 @@ CREATE TABLE `session` (
   `numDisconnects` int(11) DEFAULT NULL,
   `inactivePercent` double DEFAULT NULL,
   `inactiveData` text,
-  `paid` decimal(10,2) DEFAULT NULL,
-  `bonusPaid` decimal(10,2) DEFAULT NULL,
+  `payment` decimal(10,2) DEFAULT NULL,
+  `bonus` decimal(10,2) DEFAULT NULL,
+  `paid` bit(1) DEFAULT b'0',
+  `bonusPaid` bit(1) DEFAULT b'0',
   `hitStatus` varchar(16) DEFAULT NULL,
   `comment` text,
   PRIMARY KEY (`hitId`),
@@ -234,4 +236,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2013-02-11 15:23:08
+-- Dump completed on 2013-02-26  0:39:00

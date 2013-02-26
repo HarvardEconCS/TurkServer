@@ -15,6 +15,13 @@ public interface ExperimentController {
 	void sendExperimentBroadcast(Map<String, Object> msg) throws MessageException;	
 	
 	/**
+	 * Set the bonus that a worker will be paid upon completion.
+	 * @param hitWorker
+	 * @param amount
+	 */
+	void setBonusAmount(HITWorker hitWorker, double amount);
+
+	/**
 	 * Set the experiment up to enable round tracking
 	 */
 	void startRounds();

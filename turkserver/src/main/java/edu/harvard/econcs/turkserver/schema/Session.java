@@ -8,7 +8,9 @@ public class Session {
 
     private String assignmentId;
 
-    private java.math.BigDecimal bonusPaid;
+    private java.math.BigDecimal bonus;
+
+    private Boolean bonusPaid;
 
     private String comment;
 
@@ -28,7 +30,9 @@ public class Session {
 
     private Integer numDisconnects;
 
-    private java.math.BigDecimal paid;
+    private Boolean paid;
+
+    private java.math.BigDecimal payment;
 
     private String setId;
 
@@ -44,11 +48,19 @@ public class Session {
         this.assignmentId = assignmentId;
     }
 
-    public java.math.BigDecimal getBonusPaid() {
+    public java.math.BigDecimal getBonus() {
+        return bonus;
+    }
+
+    public void setBonus(java.math.BigDecimal bonus) {
+        this.bonus = bonus;
+    }
+
+    public Boolean getBonusPaid() {
         return bonusPaid;
     }
 
-    public void setBonusPaid(java.math.BigDecimal bonusPaid) {
+    public void setBonusPaid(Boolean bonusPaid) {
         this.bonusPaid = bonusPaid;
     }
 
@@ -124,12 +136,20 @@ public class Session {
         this.numDisconnects = numDisconnects;
     }
 
-    public java.math.BigDecimal getPaid() {
+    public Boolean getPaid() {
         return paid;
     }
 
-    public void setPaid(java.math.BigDecimal paid) {
+    public void setPaid(Boolean paid) {
         this.paid = paid;
+    }
+
+    public java.math.BigDecimal getPayment() {
+        return payment;
+    }
+
+    public void setPayment(java.math.BigDecimal payment) {
+        this.payment = payment;
     }
 
     public String getSetId() {

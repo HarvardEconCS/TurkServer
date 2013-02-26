@@ -1,5 +1,6 @@
 package edu.harvard.econcs.turkserver.server;
 
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
@@ -284,6 +285,10 @@ public class Experiments implements Runnable {
 		 * TODO save proper end time		
 		 */
 		tracker.experimentRoundComplete(expCont, System.currentTimeMillis(), roundLog);		
+	}
+
+	public void setBonusAmount(HITWorkerImpl hitWorker, double amount) {
+		tracker.saveBonusAmount(hitWorker, amount);		
 	}
 
 	public void rcvServiceMsg(HITWorkerImpl worker, Map<String, Object> message) {

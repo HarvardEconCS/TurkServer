@@ -28,6 +28,12 @@ public class HITWorkerGroupImpl implements HITWorkerGroup {
 	}
 
 	@Override
+	public boolean contains(HITWorker hitWorker) {		
+		String hitId = hitWorker.getHitId();
+		return workerSet.containsKey(hitId) && workerSet.get(hitId).equals(hitWorker);
+	}
+
+	@Override
 	public Collection<? extends HITWorker> getHITWorkers() {		
 		return workerSet.values();
 	}

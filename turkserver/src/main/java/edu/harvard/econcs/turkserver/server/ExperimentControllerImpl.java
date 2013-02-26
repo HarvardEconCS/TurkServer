@@ -10,6 +10,7 @@ import com.google.inject.Inject;
 
 import edu.harvard.econcs.turkserver.Codec;
 import edu.harvard.econcs.turkserver.api.ExperimentController;
+import edu.harvard.econcs.turkserver.api.HITWorker;
 import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
 import edu.harvard.econcs.turkserver.logging.LogController;
 
@@ -72,6 +73,15 @@ public class ExperimentControllerImpl implements ExperimentController {
 	@Override
 	public void sendExperimentBroadcast(Map<String, Object> msg) throws MessageException {		
 		source.getChannel(Codec.expChanPrefix + expChannel).publish(msg);		
+	}
+
+	@Override
+	public void setBonusAmount(HITWorker hitWorker, double amount) {
+		if( !group.contains(hitWorker) ) {
+			throw new RuntimeException("Tried to set bonus for worker not in experiment");			
+		}
+		
+		experiments.setBonusAmount((HITWorkerImpl) hitWorker, amount);		
 	}
 
 	@Override
