@@ -152,11 +152,27 @@ public abstract class ExperimentDataTracker {
 	protected abstract void saveExpStartTime(String expId, int size, String inputdata, long startTime);
 
 	/**
+	 * Initialize a round in the database
+	 * @param expId
+	 * @param currentRound
+	 */
+	protected abstract void saveExpRoundStart(String expId, int round, long startTime);
+
+	/**
+	 * Save the results of a round to the database
+	 * @param expId
+	 * @param round
+	 * @param roundLog
+	 */
+	protected abstract void saveExpRoundEnd(String expId, long endTime, int round, String roundLog);
+
+	/**
 	 * Saves an experiment end time in the db
 	 * @param expId
 	 * @param endTime
+	 * @param logOutput 
 	 */
-	protected abstract void saveExpEndTime(String expId, long endTime);
+	protected abstract void saveExpEndInfo(String expId, long endTime, String logOutput);
 	
 	/**
 	 * Saves the amount of time (percent) a client was inactive over the entire experiment
@@ -202,10 +218,23 @@ public abstract class ExperimentDataTracker {
 		}			
 	}
 
-	public final void experimentFinished(ExperimentControllerImpl expCont) {
+	public void experimentRoundStarted(ExperimentControllerImpl expCont, long startTime) {		
+		saveExpRoundStart(expCont.getExpId(), expCont.getCurrentRound(), startTime);
+	}
+
+	public final void experimentRoundComplete(ExperimentControllerImpl expCont, long endTime, String roundLog) {
+		saveExpRoundEnd(expCont.getExpId(), endTime, expCont.getCurrentRound(), roundLog);		
+	}
+
+	/**
+	 * Record that experiment is finished and log output
+	 * @param expCont
+	 * @param logOutput
+	 */
+	public final void experimentFinished(ExperimentControllerImpl expCont, String logOutput) {
 		String expId = expCont.getExpId();
 		// Doing DB commits first so there is no limbo state
-		saveExpEndTime(expId, expCont.getFinishTime());
+		saveExpEndInfo(expId, expCont.getFinishTime(), logOutput);
 		
 		// store final client info, with inactive time measured properly for disconnections
 		for( HITWorker session : expCont.getGroup().getHITWorkers() ) {

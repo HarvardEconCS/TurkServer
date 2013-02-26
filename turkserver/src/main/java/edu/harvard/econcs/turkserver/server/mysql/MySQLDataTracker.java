@@ -88,9 +88,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 						 							
 		dialect = new MySQLTemplates();					
 		
-		Connection conn = null;		
-		try {
-			conn = pbds.getConnection();
+		try( Connection conn = pbds.getConnection() ) {	
 			
 			// ensure this setId exists
 			new SQLInsertClause(conn, dialect, _sets)
@@ -100,19 +98,12 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			.execute();
 		} catch (SQLException e) {			
 			e.printStackTrace();
-		} finally {
-			if( conn != null) {
-				try { conn.close(); }
-				catch (SQLException e) { e.printStackTrace(); }
-			}
 		}
 	}
 	
 	@Override
 	public Collection<Experiment> getSetExperiments() {
-		Connection conn = null;		
-		try {
-			conn = pbds.getConnection();
+		try( Connection conn = pbds.getConnection() ) {	
 			
 			return new SQLQueryImpl(conn, dialect)
 			.from(_experiment)
@@ -120,20 +111,13 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			.list(_experiment);
 		} catch (SQLException e) {			
 			e.printStackTrace();
-		} finally {
-			if( conn != null ) {
-				try { conn.close(); }
-				catch (SQLException e) { e.printStackTrace(); }
-			}
-		}
+		} 
 		return null;
 	}
 
 	@Override
 	public boolean hitExistsInDB(String hitId) {
-		Connection conn = null;		
-		try {
-			conn = pbds.getConnection();
+		try( Connection conn = pbds.getConnection() ) {	
 						
 			long count = new SQLQueryImpl(conn, dialect)
 			.from(_session)
@@ -153,21 +137,13 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			
 		} catch (SQLException e) {			
 			e.printStackTrace();
-		} finally {
-			if( conn != null ) {
-				try { conn.close(); }
-				catch (SQLException e) { e.printStackTrace(); }
-			}
-		}
-		
+		} 
 		return false;		
 	}
 
 	@Override
 	public Collection<Quiz> getSetQuizRecords(String workerId) {
-		Connection conn = null;		
-		try {
-			conn = pbds.getConnection();
+		try( Connection conn = pbds.getConnection() ) {	
 			
 			SQLQuery query = new SQLQueryImpl(conn, dialect);
 			
@@ -178,20 +154,13 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			
 		} catch (SQLException e) {			
 			e.printStackTrace();
-		} finally {
-			if( conn != null ) {
-				try { conn.close(); }
-				catch (SQLException e) { e.printStackTrace(); }
-			}
 		}
 		return null;		
 	}
 
 	@Override
 	public Collection<Session> getSetSessionInfoForWorker(String workerId) {
-		Connection conn = null;		
-		try {
-			conn = pbds.getConnection();
+		try( Connection conn = pbds.getConnection() ) {	
 			
 			SQLQuery query = new SQLQueryImpl(conn, dialect);
 			
@@ -202,20 +171,13 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			
 		} catch (SQLException e) {			
 			e.printStackTrace();
-		} finally {
-			if( conn != null ) {
-				try { conn.close(); }
-				catch (SQLException e) { e.printStackTrace(); }
-			}
 		}
 		return null;
 	}
 
 	@Override
 	public Session getStoredSessionInfo(String hitId) {
-		Connection conn = null;		
-		try {
-			conn = pbds.getConnection();
+		try( Connection conn = pbds.getConnection() ) {	
 			
 			List<Session> result = new SQLQueryImpl(conn, dialect)
 			.from(_session)
@@ -227,12 +189,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			
 		} catch (SQLException e) {			
 			e.printStackTrace();
-		} finally {
-			if( conn != null ) {
-				try { conn.close(); }
-				catch (SQLException e) { e.printStackTrace(); }
-			}
-		}
+		} 
 		return null;
 	}
 
@@ -249,9 +206,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 
 	@Override
 	protected void saveSession(Session record) {
-		Connection conn = null;		
-		try {
-			conn = pbds.getConnection();
+		try( Connection conn = pbds.getConnection() ) {	
 			
 			// Make sure worker exists
 			ensureWorkerExists(conn, record.getWorkerId());
@@ -263,19 +218,12 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			.execute();
 		} catch (SQLException e) {			
 			e.printStackTrace();
-		} finally {
-			if( conn != null ) {
-				try { conn.close(); }
-				catch (SQLException e) { e.printStackTrace(); }
-			}
-		}		
+		} 
 	}
 
 	@Override
 	public void saveHITId(String hitId) {
-		Connection conn = null;		
-		try {
-			conn = pbds.getConnection();
+		try( Connection conn = pbds.getConnection() ) {	
 			
 			/*
 			 * INSERT INTO session (hitId, setId) VALUES (?, ?)
@@ -291,20 +239,13 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			
 		} catch (SQLException e) {			
 			e.printStackTrace();
-		} finally {
-			if( conn != null ) {
-				try { conn.close(); }
-				catch (SQLException e) { e.printStackTrace(); }
-			}
-		}	
+		} 
 	}
 
 	@Override
 	public void saveAssignmentForSession(String hitId,
 			String assignmentId, String workerId) {
-		Connection conn = null;		
-		try {
-			conn = pbds.getConnection();
+		try( Connection conn = pbds.getConnection() ) {	
 			
 			// Make sure the worker table contains this workerId first, but ignore if already exists
 			/*
@@ -323,19 +264,12 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			
 		} catch (SQLException e) {			
 			e.printStackTrace();
-		} finally {
-			if( conn != null ) {
-				try { conn.close(); }
-				catch (SQLException e) { e.printStackTrace(); }
-			}
-		}				
+		} 		
 	}
 
 	@Override
-	public void saveQuizResults(String hitId, String workerId, QuizResults results) {					
-		Connection conn = null;		
-		try {
-			conn = pbds.getConnection();
+	public void saveQuizResults(String hitId, String workerId, QuizResults results) {						
+		try( Connection conn = pbds.getConnection() ) {	
 			
 			ensureWorkerExists(conn, workerId);
 			
@@ -348,59 +282,76 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			
 		} catch (SQLException e) {			
 			e.printStackTrace();
-		} finally {
-			if( conn != null ) {
-				try { conn.close(); }
-				catch (SQLException e) { e.printStackTrace(); }
-			}
-		}					
+		} 				
 	}
 
 	@Override
 	protected void saveExpStartTime(String expId, int size, String inputdata, long startTime) {
-		Connection conn = null;		
-		try {
-			conn = pbds.getConnection();
+		try( Connection conn = pbds.getConnection() ) {	
 			
 			new SQLInsertClause(conn, dialect, _experiment)
 			.columns(_experiment.id, _experiment.setId, _experiment.participants, _experiment.inputdata, _experiment.startTime)
 			.values(expId, setID, size, inputdata, new Timestamp(startTime))
 			.execute();
+			
 		} catch (SQLException e) {			
 			e.printStackTrace();
-		} finally {
-			if( conn != null ) {
-				try { conn.close(); }
-				catch (SQLException e) { e.printStackTrace(); }
-			}
-		}				
+		} 		
 	}
 
 	@Override
-	protected void saveExpEndTime(String expId, long endTime) {
-		Connection conn = null;		
-		try {
-			conn = pbds.getConnection();
+	protected void saveExpRoundStart(String expId, int round, long startTime) {
+		try( Connection conn = pbds.getConnection() ) {			
+			
+			Round r = new Round();
+			
+			// TODO: save round input data
+			r.setExperimentId(expId);
+			r.setStartTime(new Timestamp(startTime));
+			r.setRoundnum(round);
+			
+			new SQLInsertClause(conn, dialect, _round)
+			.populate(r)			
+			.execute();							
+			
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	protected void saveExpRoundEnd(String expId, long endTime, int round, String roundLog) {
+		try( Connection conn = pbds.getConnection() ) {			
+		
+			new SQLUpdateClause(conn, dialect, _round)
+			.where(_round.experimentId.eq(expId), _round.roundnum.eq(round))
+			.set(_round.endTime, new Timestamp(endTime))
+			.set(_round.results, roundLog)
+			.execute();							
+			
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	protected void saveExpEndInfo(String expId, long endTime, String logOutput) {			
+		try( Connection conn = pbds.getConnection() ) {			
 			
 			new SQLUpdateClause(conn, dialect, _experiment)
 			.where(_experiment.id.eq(expId))
 			.set(_experiment.endTime, new Timestamp(endTime))
-			.execute();	
+			.set(_experiment.results, logOutput)
+			.execute();							
+			
 		} catch (SQLException e) {			
 			e.printStackTrace();
-		} finally {
-			if( conn != null ) {
-				try { conn.close(); }
-				catch (SQLException e) { e.printStackTrace(); }
-			}
 		}
 	}
 
 	@Override
 	public void clearWorkerForSession(String hitId) {
-		Connection conn = null;		
-		try {
-			conn = pbds.getConnection();
+		try( Connection conn = pbds.getConnection() ) {	
 			
 			/*
 			 * TODO this used to be set to default but not sure how to do with QueryDSL
@@ -415,19 +366,12 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			logger.info(String.format("HIT %s has workerId cleared", hitId));
 		} catch (SQLException e) {			
 			e.printStackTrace();
-		} finally {
-			if( conn != null ) {
-				try { conn.close(); }
-				catch (SQLException e) { e.printStackTrace(); }
-			}
-		}		
+		}	
 	}
 	
 	@Override
 	public List<Session> expireUnusedSessions() {
-		Connection conn = null;		
-		try {
-			conn = pbds.getConnection();
+		try( Connection conn = pbds.getConnection() ) {	
 			
 			/*
 			 * SELECT * FROM session WHERE setId=? AND experimentId IS NULL
@@ -453,11 +397,6 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			
 		} catch (SQLException e) {			
 			e.printStackTrace();
-		} finally {
-			if( conn != null ) {
-				try { conn.close(); }
-				catch (SQLException e) { e.printStackTrace(); }
-			}
 		}
 		return null;
 	}
@@ -532,9 +471,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	}
 
 	public void clearDatabase() {		
-		Connection conn = null;		
-		try {
-			conn = pbds.getConnection();
+		try( Connection conn = pbds.getConnection() ) {	
 			
 			// clear all tables						
 			new SQLDeleteClause(conn, dialect, _round).execute();
@@ -549,12 +486,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			
 		} catch (SQLException e) {			
 			e.printStackTrace();
-		} finally {
-			if( conn != null ) {
-				try { conn.close(); }
-				catch (SQLException e) { e.printStackTrace(); }
-			}
-		}		
+		}
 	}
 	
 }

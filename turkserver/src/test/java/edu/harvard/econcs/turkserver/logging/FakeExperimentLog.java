@@ -1,6 +1,9 @@
-package edu.harvard.econcs.turkserver.server;
+package edu.harvard.econcs.turkserver.logging;
 
-public class FakeExperimentLog implements ServerExperimentLog {	
+import edu.harvard.econcs.turkserver.api.ExperimentLog;
+import edu.harvard.econcs.turkserver.logging.LogController;
+
+public class FakeExperimentLog implements ExperimentLog, LogController {	
 	
 	volatile int lastRound;
 	
@@ -30,7 +33,12 @@ public class FakeExperimentLog implements ServerExperimentLog {
 
 	@Override
 	public void finishRound() {
-		System.out.println("ExpLog: Finishing round " + lastRound);	
+		System.out.println("ExpLog: Finishing round " + lastRound);
+	}
+
+	@Override
+	public String getRoundOutput() {
+		return "Fake round output; was printed to screen";
 	}
 
 	@Override

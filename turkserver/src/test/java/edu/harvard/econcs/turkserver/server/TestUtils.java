@@ -8,6 +8,7 @@ import java.util.List;
 import edu.harvard.econcs.turkserver.api.ExperimentLog;
 import edu.harvard.econcs.turkserver.api.HITWorker;
 import edu.harvard.econcs.turkserver.client.SessionClient;
+import edu.harvard.econcs.turkserver.logging.FakeExperimentLog;
 
 public class TestUtils {
 	

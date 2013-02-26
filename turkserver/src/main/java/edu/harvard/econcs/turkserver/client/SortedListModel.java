@@ -7,7 +7,7 @@ import java.util.TreeSet;
 
 import javax.swing.AbstractListModel;
 
-public class SortedListModel<T> extends AbstractListModel {
+public class SortedListModel<T> extends AbstractListModel<T> {
 
 	private static final long serialVersionUID = 2032594302192371295L;
 

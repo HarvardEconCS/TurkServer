@@ -172,12 +172,25 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	protected void saveExpEndTime(String expId, long endTime) {
+	protected void saveExpRoundStart(String expId, int currentRound,
+			long startTime) {
+		logger.info(expId + " round " + currentRound + " started");		
+	}
+
+	@Override
+	protected void saveExpRoundEnd(String expId, long endTime, int round, String roundLog) {
+		logger.info(expId + " round " + round);
+		logger.info(roundLog);		
+	}
+
+	@Override
+	protected void saveExpEndInfo(String expId, long endTime, String logOutput) {
 		Timestamp end = new Timestamp(endTime);
 		
 		Experiment e = experiments.get(expId);
 				
 		e.setEndTime(end);
+		e.setResults(logOutput);
 		
 		logger.info(String.format(expId + " ended at " + end));		
 	}

@@ -47,10 +47,10 @@ public class ServerPanel extends JPanel implements ActionListener {
 	
 	private SortedListModel<HITWorkerImpl> userListModel;
 	
-	private DefaultListModel runningExpModel;
-	private JList runningExpList;
-	private DefaultListModel doneExpModel;
-	private JList doneExpList;
+	private DefaultListModel<ExperimentControllerImpl> runningExpModel;
+	private JList<ExperimentControllerImpl> runningExpList;
+	private DefaultListModel<ExperimentControllerImpl> doneExpModel;
+	private JList<ExperimentControllerImpl> doneExpList;
 	
 	private JLabel currentUsers;		
 	
@@ -91,7 +91,7 @@ public class ServerPanel extends JPanel implements ActionListener {
 		currentUsers = new JLabel();
 		lobbyPanel.add(currentUsers);
 		userListModel = new SortedListModel<HITWorkerImpl>(new UsernameComparator());
-		JList userList = new JList(userListModel);
+		JList<HITWorkerImpl> userList = new JList<>(userListModel);
 		userList.setCellRenderer(new ServerLobbyCellRenderer());
 		lobbyPanel.add(new JScrollPane(userList));
 		
@@ -108,8 +108,8 @@ public class ServerPanel extends JPanel implements ActionListener {
 		runningExpsLabel = new JLabel(runningExpsText + 0);
 		runningExpPanel.add(runningExpsLabel);
 		
-		runningExpModel = new DefaultListModel();		
-		runningExpList = new JList(runningExpModel);
+		runningExpModel = new DefaultListModel<ExperimentControllerImpl>();		
+		runningExpList = new JList<ExperimentControllerImpl>(runningExpModel);
 		runningExpList.setCellRenderer(new RunningExpCellRenderer());
 		runningExpPanel.add(new JScrollPane(runningExpList));
 		
@@ -121,8 +121,8 @@ public class ServerPanel extends JPanel implements ActionListener {
 		doneExpsLabel = new JLabel(doneExpsText + 0);
 		doneExpPanel.add(doneExpsLabel);
 		
-		doneExpModel = new DefaultListModel();
-		doneExpList = new JList(doneExpModel);
+		doneExpModel = new DefaultListModel<ExperimentControllerImpl>();
+		doneExpList = new JList<ExperimentControllerImpl>(doneExpModel);
 		doneExpPanel.add(new JScrollPane(doneExpList));
 		
 		expPanel.add(runningExpPanel);
@@ -158,13 +158,12 @@ public class ServerPanel extends JPanel implements ActionListener {
 		});		
 	}
 	
-	private class ServerLobbyCellRenderer extends JLabel implements ListCellRenderer {							
+	private class ServerLobbyCellRenderer extends JLabel implements ListCellRenderer<HITWorkerImpl> {							
 		private static final long serialVersionUID = -9092662058995935206L;
 
 		@Override
-		public Component getListCellRendererComponent(JList list, Object value,
-				int index, boolean isSelected, boolean cellHasFocus) {
-			HITWorkerImpl id = (HITWorkerImpl) value;
+		public Component getListCellRendererComponent(JList<? extends HITWorkerImpl> list, 
+				HITWorkerImpl id, int index, boolean isSelected, boolean cellHasFocus) {			
 			
 			Object status = lobby.getStatus(id);			
 			if( status != null) setIcon( (Boolean) status == true ? LobbyPanel.ready : LobbyPanel.notReady );			
@@ -189,13 +188,12 @@ public class ServerPanel extends JPanel implements ActionListener {
 		});
 	}
 	
-	private class RunningExpCellRenderer extends JLabel implements ListCellRenderer {
+	private class RunningExpCellRenderer extends JLabel implements ListCellRenderer<ExperimentControllerImpl> {
 		private static final long serialVersionUID = 5708685323712954603L;
 
 		@Override
-		public Component getListCellRendererComponent(JList list, Object value,
-				int index, boolean isSelected, boolean cellHasFocus) {
-			ExperimentControllerImpl exp = (ExperimentControllerImpl) value;
+		public Component getListCellRendererComponent(JList<? extends ExperimentControllerImpl> list,
+				ExperimentControllerImpl exp,	int index, boolean isSelected, boolean cellHasFocus) {			
 			
 			setText( String.format("%s %s (%d)",
 					Utils.paddedClockString(System.currentTimeMillis() - exp.getStartTime()), 

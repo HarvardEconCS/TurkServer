@@ -41,7 +41,7 @@ public class LobbyPanel extends JPanel {
 	private JLabel serverMessage;
 	
 	private JPanel listPanel;
-	private JList userList;
+	private JList<UserStatus> userList;
 	private SortedListModel<UserStatus> listModel;
 	private JScrollPane listScrollPane;
 	
@@ -76,7 +76,7 @@ public class LobbyPanel extends JPanel {
 			serverMessage.setAlignmentX(CENTER_ALIGNMENT);
 			
 			listModel = new SortedListModel<UserStatus>(new UserStatus.UsernameComparator());
-			userList = new JList(listModel);
+			userList = new JList<UserStatus>(listModel);
 			userList.setBorder(BorderFactory.createLoweredBevelBorder());
 			
 			// Give enough room to draw icons
@@ -243,13 +243,12 @@ public class LobbyPanel extends JPanel {
 		});		
 	}
 
-	private class LobbyCellRenderer extends JLabel implements ListCellRenderer {
+	private class LobbyCellRenderer extends JLabel implements ListCellRenderer<UserStatus> {
 		private static final long serialVersionUID = -5549036239396720773L;	
 			
 		@Override
-		public Component getListCellRendererComponent(JList list, Object value,
-				int index, boolean isSelected, boolean cellHasFocus) {
-			UserStatus u = (UserStatus) value;
+		public Component getListCellRendererComponent(JList<? extends UserStatus> list,
+				UserStatus u, int index, boolean isSelected, boolean cellHasFocus) {			
 			
 			if ( gc.clientCont.getHitId().equals( u.sessionID ) ) {
 				// Myself is the one selected

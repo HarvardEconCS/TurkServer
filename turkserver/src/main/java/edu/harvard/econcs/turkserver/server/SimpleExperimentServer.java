@@ -46,11 +46,11 @@ public final class SimpleExperimentServer extends SessionServer {
 			String hitId, String assignmentId, String workerId) {
 		
 		/*
-		 * At this point, the session is successfully authenticated, so we create an experiment
-		 * TODO match up with in-progress experiments at some point 
+		 * At this point, the session is successfully authenticated, so we create an experiment  
 		 */
 		HITWorkerImpl hitw = super.sessionAccept(session, hitId, assignmentId, workerId);
-
+		if( hitw == null ) return null;
+		
 		if( experiments.workerIsInProgress(hitw) ) {
 			super.sessionReconnect(session, hitw);			
 		}

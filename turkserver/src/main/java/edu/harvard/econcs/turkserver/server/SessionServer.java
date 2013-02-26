@@ -261,6 +261,8 @@ public abstract class SessionServer extends Thread {
 			}				
 		}
 		
+		// subclasses continue with additional logic if necessary 
+		
 		return hitw;
 	}
 

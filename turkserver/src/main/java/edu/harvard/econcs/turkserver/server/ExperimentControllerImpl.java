@@ -11,6 +11,7 @@ import com.google.inject.Inject;
 import edu.harvard.econcs.turkserver.Codec;
 import edu.harvard.econcs.turkserver.api.ExperimentController;
 import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
+import edu.harvard.econcs.turkserver.logging.LogController;
 
 /**
  * Simple controls for an experiment
@@ -20,7 +21,7 @@ import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
  */
 public class ExperimentControllerImpl implements ExperimentController {
 
-	final ServerExperimentLog log;
+	final LogController log;
 	final HITWorkerGroup group;	
 	final Experiments experiments;	
 	
@@ -36,7 +37,7 @@ public class ExperimentControllerImpl implements ExperimentController {
 	
 	@Inject
 	public ExperimentControllerImpl(
-			ServerExperimentLog log,
+			LogController log,
 			HITWorkerGroup group,
 			Experiments experiments) {
 		this.log = log;
@@ -84,9 +85,10 @@ public class ExperimentControllerImpl implements ExperimentController {
 
 	@Override
 	public void finishRound() {
-		if( currentRound == null ) throw new RuntimeException("Not configured for rounds!");
+		if( currentRound == null ) 
+			throw new RuntimeException("Not configured for rounds!");
 		
-		log.finishRound();
+		logFinishRound();
 		
 		log.startRound(currentRound.incrementAndGet());
 		experiments.scheduleRound(this, currentRound.get());		
@@ -94,11 +96,21 @@ public class ExperimentControllerImpl implements ExperimentController {
 
 	@Override
 	public void finishExperiment() {
-		if( currentRound != null ) log.finishRound();
+		if( currentRound != null ) {
+			logFinishRound();
+		}
 		
 		this.expFinishTime = log.conclude();					
 		
+		// This should take care of any non-round logs
 		experiments.scheduleFinishExperiment(this);		
+	}
+
+	private void logFinishRound() {
+		log.finishRound();		
+		String roundLog = log.getRoundOutput();
+		
+		experiments.saveLogRound(this, roundLog);
 	}
 
 	@Override

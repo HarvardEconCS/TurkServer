@@ -35,7 +35,6 @@ import edu.harvard.econcs.turkserver.api.HITWorker;
 import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
 import edu.harvard.econcs.turkserver.config.TSConfig;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
-import edu.harvard.econcs.turkserver.util.RoundRobinAssigner;
 
 @Singleton
 public class Experiments implements Runnable {
@@ -265,6 +264,9 @@ public class Experiments implements Runnable {
 	}
 	
 	private void startRound(ExperimentControllerImpl expCont, int round) {
+		// TODO use proper start time here
+		tracker.experimentRoundStarted(expCont, System.currentTimeMillis());
+		
 		Object data = ImmutableMap.of(
 				"status", Codec.roundStartMsg,
 				"round", round);
@@ -275,6 +277,13 @@ public class Experiments implements Runnable {
 			el.roundStarted(expCont);
 		
 		manager.triggerRound(expCont.getExpId(), round);
+	}
+
+	public void saveLogRound(ExperimentControllerImpl expCont, String roundLog) {
+		/* save log results for this round
+		 * TODO save proper end time		
+		 */
+		tracker.experimentRoundComplete(expCont, System.currentTimeMillis(), roundLog);		
 	}
 
 	public void rcvServiceMsg(HITWorkerImpl worker, Map<String, Object> message) {
@@ -342,16 +351,14 @@ public class Experiments implements Runnable {
 		if( (toRemove = bayeux.getChannel(Codec.expSvcPrefix + cont.expChannel)) != null ) {
 			toRemove.setPersistent(false);
 		}
-	
-		tracker.experimentFinished(cont);				
-		
-		// TODO save the log where it is supposed to be saved
-		String logOutput = cont.log.getOutput();		
+
+		// save the log to db
+		String logOutput = cont.log.getOutput();
+		tracker.experimentFinished(cont, logOutput);					
 		
 //		String filename = String.format("%s/%s %d.log", path, expFile, clients.groupSize());
 //		logger.info("Trying to open file " + filename);		
-		// Save to db
-//		tracker.saveSessionLog(logId, data);
+		// Save to db		
 		
 		for( ExperimentListener el : listeners ) {
 			el.experimentFinished(cont);
