@@ -19,6 +19,8 @@ class Codec
   @roundStartMsg = "roundstart"
   @doneExpMsg = "finishexp"
   
+  @errorMsg = "error"
+  
   # channels
   @expChanPrefix = "/experiment/"
   @expSvcPrefix = "/service/experiment/"

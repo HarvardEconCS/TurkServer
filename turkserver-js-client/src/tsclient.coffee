@@ -38,6 +38,8 @@ class TSClient
   @broadcastMessage_cb = undefined
   @serviceMessage_cb = undefined
 
+  @errorMessage_cb = undefined
+
   ###
   Pre-Experiment callbacks
   ###
@@ -81,6 +83,9 @@ class TSClient
 
   @ServiceMessage: (callback) ->
     @serviceMessage_cb = callback        
+      
+  @ErrorMessage: (callback) ->
+    @errorMessage_cb = callback
     
   ###
   Other functions
@@ -199,7 +204,7 @@ class TSClient
   @userData: (message) =>
     data = message.data
     status = data.status
-    console.log "Status: " + status
+    console.log "Status: " + status + " msg: " + data.msg
     switch status
       when Codec.quizNeeded
         @quizneeded_cb?()
@@ -215,7 +220,9 @@ class TSClient
       when Codec.roundStartMsg
         @startRound_cb? data.round
       when Codec.doneExpMsg
-        @finishExperiment_cb?()      
+        @finishExperiment_cb?()     
+      when Codec.errorMsg
+        @errorMessage_cb?(data.msg)
         
   @submitHIT: (data) =>
     @channelSend "/service/user",
