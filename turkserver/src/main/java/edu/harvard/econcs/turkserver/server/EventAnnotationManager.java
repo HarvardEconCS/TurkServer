@@ -3,6 +3,8 @@ package edu.harvard.econcs.turkserver.server;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
@@ -11,7 +13,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ListMultimap;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
@@ -39,39 +40,37 @@ public class EventAnnotationManager {
 	
 	final Multimap<Class<?>, Method> starts;
 	final Multimap<Class<?>, Method> rounds;
-	final Multimap<Class<?>, Method> timeouts;
+	final Multimap<Class<?>, Method> intervals;
+	final Multimap<Class<?>, Method> timeouts;	
 	final Multimap<Class<?>, Method> connects;
 	final Multimap<Class<?>, Method> disconnects;
 	
 	final Multimap<Class<?>, Method> broadcasts;
 	final Multimap<Class<?>, Method> services;
-	
-	@SuppressWarnings("unused")
+		
 	EventAnnotationManager() {		
 		beans = new MapMaker().makeMap();
 		
-		HashMultimap<Class<?>, Object> map;
-		
 		beanClasses = Multimaps.synchronizedSetMultimap(
-				 map = HashMultimap.create());
-		
-		ListMultimap<Class<?>, Method> m;		
+				HashMultimap.<Class<?>, Object>create());	
 		
 		starts = Multimaps.synchronizedListMultimap(
-				m = ArrayListMultimap.create());
+				ArrayListMultimap.<Class<?>, Method>create());
 		rounds = Multimaps.synchronizedListMultimap(
-				m = ArrayListMultimap.create());
+				ArrayListMultimap.<Class<?>, Method>create());
+		intervals = Multimaps.synchronizedListMultimap(
+				ArrayListMultimap.<Class<?>, Method>create());
 		timeouts = Multimaps.synchronizedListMultimap(
-				m = ArrayListMultimap.create());
+				ArrayListMultimap.<Class<?>, Method>create());
 		connects = Multimaps.synchronizedListMultimap(
-				m = ArrayListMultimap.create());
+				ArrayListMultimap.<Class<?>, Method>create());
 		disconnects = Multimaps.synchronizedListMultimap(
-				m = ArrayListMultimap.create());
+				ArrayListMultimap.<Class<?>, Method>create());
 		
 		broadcasts = Multimaps.synchronizedListMultimap(
-				m = ArrayListMultimap.create());
+				ArrayListMultimap.<Class<?>, Method>create());
 		services = Multimaps.synchronizedListMultimap(
-				m = ArrayListMultimap.create());
+				ArrayListMultimap.<Class<?>, Method>create());
 	}
 	
 	/**
@@ -115,6 +114,8 @@ public class EventAnnotationManager {
             			starts, StartExperiment.class);
             	result |= processVoid(c, method, 
             			timeouts, TimeLimit.class);
+            	result |= processVoid(c, method,
+            			intervals, IntervalEvent.class);
             	
             	result |= processInt(c, method,
             			rounds, StartRound.class);
@@ -221,7 +222,7 @@ public class EventAnnotationManager {
         
 		return true;
 	}
-
+	
 	private Object invokeMethod(Object bean, Method m, Object... args) {
 		boolean accessible = m.isAccessible();
 		try {
@@ -235,6 +236,18 @@ public class EventAnnotationManager {
 		} finally {
 			m.setAccessible(accessible);
 		}
+	}
+
+	List<Method> getIntervalEvents(String expId) {
+		Object bean = beans.get(expId);
+		
+		List<Method> l = new LinkedList<>();
+		
+		synchronized(intervals) {
+			l.addAll(intervals.get(bean.getClass()));
+		}
+		
+		return l;
 	}
 
 	/**
@@ -308,6 +321,17 @@ public class EventAnnotationManager {
 				invokeMethod(bean, m, round);
 			}
 		}
+	}
+	
+	/**
+	 * Special method to activate interval events, which are not all the same
+	 * @param expId
+	 * @param method
+	 */
+	void triggerInterval(String expId, Method method) {
+		Object bean = beans.get(expId);
+		
+		invokeMethod(bean, method);		
 	}
 
 	void triggerWorkerConnect(String expId, HITWorkerImpl source) {

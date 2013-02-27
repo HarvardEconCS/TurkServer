@@ -3,6 +3,8 @@ package edu.harvard.econcs.turkserver.server;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.configuration.Configuration;
@@ -406,9 +408,7 @@ public abstract class SessionServer extends Thread {
 		}
 		
 		bayeux = jettyCometD.getBayeux();		
-		experiments.setReferences(bayeux, this);
-		Thread expThread = new Thread(experiments);
-		expThread.start();
+		experiments.setReferences(bayeux);
 		
 		Thread hcThread = null;
 		if( hitCont != null ) {
@@ -444,26 +444,25 @@ public abstract class SessionServer extends Thread {
 		
 		// TODO send a message to people that took HITs after the deadline		
 		
-			try {	
-				// Sleep for a bit before shutting down jetty server
-				if( debugMode ) Thread.sleep(1000); 
-				else Thread.sleep(5 * 60 * 1000);
-			}
-			catch (Exception e ) {
-				e.printStackTrace();
-			}
-		
-				
-		// Stop experiments thread		 
-		try {
-			experiments.stop();
-			expThread.join();
+		try {	
+			// Sleep for a bit before shutting down jetty server
+			if( debugMode ) Thread.sleep(1000); 
+			else Thread.sleep(5 * 60 * 1000);
+		}
+		catch (Exception e ) {
+			e.printStackTrace();
+		}
+
+		// Stop experiments thread
+		ScheduledExecutorService exec = experiments.stop();			
+		System.out.println("Waiting for experiment scheduler to stop...");
+		do try {						
+			exec.awaitTermination(1000, TimeUnit.MILLISECONDS);
 		} catch (InterruptedException e) {			
 			e.printStackTrace();
-		}		
+		} while( !exec.isTerminated() );	
 		
-		System.out.println("Shutting down jetty server");
-		
+		System.out.println("Shutting down jetty server");		
 		try {			
 			server.stop();
 			server.join();

@@ -13,6 +13,7 @@ import edu.harvard.econcs.turkserver.api.ExperimentLog;
 import edu.harvard.econcs.turkserver.api.ExperimentServer;
 import edu.harvard.econcs.turkserver.api.HITWorker;
 import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
+import edu.harvard.econcs.turkserver.api.IntervalEvent;
 import edu.harvard.econcs.turkserver.api.ServiceMessage;
 import edu.harvard.econcs.turkserver.api.StartExperiment;
 import edu.harvard.econcs.turkserver.api.StartRound;
@@ -31,6 +32,8 @@ class TestExperiment {
 	int setSize;
 	int rounds;
 	Set<String> uniqueMessages;
+	
+	int intervalCalls = 0;
 	
 	@Inject
 	public TestExperiment(
@@ -53,12 +56,18 @@ class TestExperiment {
 	void startExp() {
 		lastCall = "startExp";
 		
-		cont.startRounds();
+		if( cont != null ) cont.startRounds();
 	}
 	
 	@StartRound
 	void startRound(int n) {
 		lastCall = "startRound";
+	}
+	
+	@IntervalEvent
+	void interval() {
+		intervalCalls++;
+		lastCall = "intervalEvent";
 	}
 	
 	@TimeLimit

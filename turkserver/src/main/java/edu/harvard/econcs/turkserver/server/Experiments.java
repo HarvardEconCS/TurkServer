@@ -1,11 +1,16 @@
 package edu.harvard.econcs.turkserver.server;
 
+import java.lang.reflect.Method;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import org.cometd.bayeux.server.BayeuxServer;
 import org.cometd.bayeux.server.ConfigurableServerChannel;
@@ -30,16 +35,17 @@ import edu.harvard.econcs.turkserver.Codec;
 import edu.harvard.econcs.turkserver.api.Configurator;
 import edu.harvard.econcs.turkserver.api.HITWorker;
 import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
+import edu.harvard.econcs.turkserver.api.IntervalEvent;
+import edu.harvard.econcs.turkserver.cometd.FakeLocalSession;
 import edu.harvard.econcs.turkserver.config.TSConfig;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 
 @Singleton
-public class Experiments implements Runnable {
+public class Experiments {
 	// Injector for creating bean classes
 	@Inject Injector injector;
 		
-	BayeuxServer bayeux;	
-	SessionServer server;
+	BayeuxServer bayeux;		
 	
 	protected final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 	
@@ -60,10 +66,10 @@ public class Experiments implements Runnable {
 		
 	final ConcurrentMap<HITWorker, String> currentExps;
 	final Queue<ExperimentListener> listeners;
-	
-	volatile boolean isRunning = true;
-	final BlockingQueue<Runnable> expEvents;
-	
+		
+	final ScheduledExecutorService eventScheduler;	
+	final ConcurrentMap<String, List<ScheduledFuture<?>>> scheduledIntervals;
+
 	@Inject
 	Experiments(
 			@Named(TSConfig.EXP_CLASS) Class<?> expClass,
@@ -72,6 +78,8 @@ public class Experiments implements Runnable {
 			ExperimentDataTracker tracker,
 			EventAnnotationManager manager
 			) {
+		MapMaker concMapMaker = new MapMaker();
+		
 		this.expClass = expClass;
 		this.configurator = configurator;
 		
@@ -79,17 +87,16 @@ public class Experiments implements Runnable {
 		this.assigner = assigner;
 		this.manager = manager;
 		
-		this.currentExps = new MapMaker().makeMap();
+		this.currentExps = concMapMaker.makeMap();
 		this.listeners = new ConcurrentLinkedQueue<ExperimentListener>();
 		
-		this.expEvents = new LinkedBlockingQueue<Runnable>();
+		this.eventScheduler = Executors.newScheduledThreadPool(1);
+		this.scheduledIntervals = concMapMaker.makeMap();
 	}
 
 	// TODO remove this hack once things are properly wired up
-	public void setReferences(BayeuxServer bayeux,
-			SessionServer server) {
-		this.bayeux = bayeux;
-		this.server = server;		
+	public void setReferences(BayeuxServer bayeux) {
+		this.bayeux = bayeux;		
 	}	
 	
 	void registerListener(ExperimentListener listener) {
@@ -99,11 +106,12 @@ public class Experiments implements Runnable {
 	int getMinGroupSize() {
 		return configurator.groupSize();	
 	}
-
-	/*
-	 * TODO replace both stuff below with custom experiment scope
-	 */
 	
+	/**
+	 * Injects classes for a single-worker experiment
+	 * @param hitw
+	 * @return
+	 */
 	ExperimentControllerImpl startSingle(final HITWorkerImpl hitw) {						
 		ExperimentControllerImpl cont = null;
 		Object experimentBean = null;
@@ -130,6 +138,11 @@ public class Experiments implements Runnable {
 		return cont;
 	}
 	
+	/**
+	 * Injects classes for a group experiment.
+	 * @param group
+	 * @return
+	 */
 	ExperimentControllerImpl startGroup(final HITWorkerGroupImpl group) {
 		ExperimentControllerImpl cont = null;
 		Object experimentBean = null;
@@ -152,7 +165,7 @@ public class Experiments implements Runnable {
 		return cont;
 	}
 
-	private void startExperiment(final HITWorkerGroup group,
+	void startExperiment(final HITWorkerGroup group,
 			final ExperimentControllerImpl cont, Object experimentBean) {		
 		
 		// Initialize the experiment data
@@ -171,10 +184,18 @@ public class Experiments implements Runnable {
 		 * Create necessary channels for this experiment
 		 * Note that hostServlet automatically routes these already
 		 */
-				
-		bayeux.createIfAbsent(Codec.expChanPrefix + expChannel, persistent);
-		bayeux.createIfAbsent(Codec.expSvcPrefix + expChannel, persistent);				
-
+		LocalSession ls = null;
+		if( bayeux == null ) {
+			logger.warn("Skipping bayeux channel creation...we'd better be in test mode!");
+			ls = new FakeLocalSession();
+		}
+		else {
+			bayeux.createIfAbsent(Codec.expChanPrefix + expChannel, persistent);
+			bayeux.createIfAbsent(Codec.expSvcPrefix + expChannel, persistent);
+			ls = bayeux.newLocalSession(expId);
+			ls.handshake();	
+		}
+		
 		/*
 		 * Send experiment channel to clients to notify connection
 		 * TODO this may be unnecessary, fix protocol
@@ -188,9 +209,7 @@ public class Experiments implements Runnable {
 			} catch (MessageException e) { e.printStackTrace();	}			
 		}				
 		
-		// Initialize controller, which also initializes the log
-		LocalSession ls = bayeux.newLocalSession(expId);
-		ls.handshake();				
+		// Initialize controller, which also initializes the log			
 		cont.initialize(startTime, expId, inputData, expChannel, ls);
 		
 		/* Update tracking information for experiment
@@ -202,18 +221,35 @@ public class Experiments implements Runnable {
 		for( ExperimentListener el : listeners ) {
 			el.experimentStarted(cont);
 		}
-				
+
+		int initialDelayMillis = 1000;
+		
 		/*
 		 * TODO this may not be enough time for every client to register channel...
 		 * reconcile this with the timing stuff above
+		 * fix how clients find channels
 		 */
-		new Thread() {
+		eventScheduler.schedule(new Runnable() {
 			public void run() {				
-				try { Thread.sleep(1000); }
-				catch (InterruptedException e) { e.printStackTrace(); }				
 				manager.triggerStart(expId);				
 			}
-		}.start();
+		}, initialDelayMillis, TimeUnit.MILLISECONDS);
+		
+		// Schedule interval tasks
+		List<ScheduledFuture<?>> scheduled = new LinkedList<>();
+		List<Method> intervals = manager.getIntervalEvents(expId);		
+		for( final Method method : intervals ) {
+			IntervalEvent ie = method.getAnnotation(IntervalEvent.class);  
+			ScheduledFuture<?> f = eventScheduler.scheduleAtFixedRate(new Runnable() {				
+				public void run() {
+					manager.triggerInterval(expId, method);				
+				}				
+			},
+			ie.unit().convert(initialDelayMillis, TimeUnit.MILLISECONDS) + ie.interval(), 
+			ie.interval(), ie.unit());
+			scheduled.add(f);
+		}
+		scheduledIntervals.put(expId, scheduled);
 	}
 	
 	private void mapWorkers(HITWorkerGroup hitw, String expId) {
@@ -257,12 +293,12 @@ public class Experiments implements Runnable {
 	}
 
 	public void scheduleRound(final ExperimentControllerImpl expCont, final int round) {
-		expEvents
-		.add(new Runnable() {
+		eventScheduler.schedule(new Runnable() {
 			public void run() {										
 				startRound( expCont, round );
 			}
-		});
+		},
+		0, TimeUnit.MILLISECONDS);
 	}
 	
 	private void startRound(ExperimentControllerImpl expCont, int round) {
@@ -333,16 +369,20 @@ public class Experiments implements Runnable {
 	}
 
 	void scheduleFinishExperiment(final ExperimentControllerImpl cont) {
-		expEvents
-		.add(new Runnable() {
+		eventScheduler.schedule(new Runnable() {
 			public void run() {
 				finishExperiment(cont);
 			}
-		});
+		},
+		0, TimeUnit.MILLISECONDS);
 	}
 	
 	private void finishExperiment(ExperimentControllerImpl cont) {
-
+		// Cancel all scheduled interval tasks
+		List<ScheduledFuture<?>> scheduled = scheduledIntervals.remove(cont.getExpId());
+		for( ScheduledFuture<?> future : scheduled )
+			future.cancel(true);
+		
 		// Tell clients they are done!
 		for( HITWorker id : cont.group.getHITWorkers() )			
 			SessionUtils.sendStatus(((HITWorkerImpl) id).cometdSession.get(), Codec.doneExpMsg);	
@@ -350,12 +390,16 @@ public class Experiments implements Runnable {
 		manager.deprocessExperiment(cont.getExpId());
 		
 		// unsubscribe from and/or remove channels
-		ServerChannel toRemove = null;
-		if( (toRemove = bayeux.getChannel(Codec.expChanPrefix + cont.expChannel)) != null ) {
-			toRemove.setPersistent(false);
-		}
-		if( (toRemove = bayeux.getChannel(Codec.expSvcPrefix + cont.expChannel)) != null ) {
-			toRemove.setPersistent(false);
+		if( bayeux == null )
+			logger.warn("Skipping bayeux channel destruction...we'd better be in test mode!");					
+		else {
+			ServerChannel toRemove = null;
+			if( (toRemove = bayeux.getChannel(Codec.expChanPrefix + cont.expChannel)) != null ) {
+				toRemove.setPersistent(false);
+			}
+			if( (toRemove = bayeux.getChannel(Codec.expSvcPrefix + cont.expChannel)) != null ) {
+				toRemove.setPersistent(false);
+			}
 		}
 
 		// save the log to db
@@ -364,7 +408,6 @@ public class Experiments implements Runnable {
 		
 //		String filename = String.format("%s/%s %d.log", path, expFile, clients.groupSize());
 //		logger.info("Trying to open file " + filename);		
-		// Save to db		
 		
 		for( ExperimentListener el : listeners ) {
 			el.experimentFinished(cont);
@@ -377,19 +420,9 @@ public class Experiments implements Runnable {
 			
 	}
 	
-	public void stop() {
-		isRunning = false;
-		expEvents
-		.add(new Runnable() {
-			public void run() {}			
-		});
+	public ScheduledExecutorService stop() {
+		eventScheduler.shutdown();
+		return eventScheduler;
 	}
-	
-	@Override
-	public void run() {
-		while( isRunning ) {
-			try { expEvents.take().run(); }
-			catch (InterruptedException e) {}
-		}				
-	}
+
 }

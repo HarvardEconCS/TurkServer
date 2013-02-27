@@ -2,6 +2,8 @@ package edu.harvard.econcs.turkserver.server;
 
 import static org.junit.Assert.*;
 
+import java.lang.reflect.Method;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -25,6 +27,8 @@ public class EventAnnotationManagerTest {
 		TestExperiment e = new TestExperiment(null, null, null);		
 		m.processExperiment("test", e);
 		
+		Method interval = m.getIntervalEvents("test").get(0);
+		
 		/*
 		 * Test all callbacks
 		 */
@@ -33,6 +37,9 @@ public class EventAnnotationManagerTest {
 		
 		m.triggerRound("test", 0);
 		assertEquals("startRound", e.lastCall);
+		
+		m.triggerInterval("test", interval);
+		assertEquals("intervalEvent", e.lastCall);
 		
 		m.triggerTimelimit("test");
 		assertEquals("timeLimit", e.lastCall);

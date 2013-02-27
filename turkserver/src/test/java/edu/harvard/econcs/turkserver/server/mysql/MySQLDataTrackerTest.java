@@ -56,6 +56,7 @@ public class MySQLDataTrackerTest {
 		record.setAssignmentId(assignmentId);
 		record.setWorkerId(workerId);
 		
+		dt.saveHITId(hitId);
 		dt.saveSession(record);
 		
 		Session saved = dt.getStoredSessionInfo(hitId);

@@ -211,7 +211,10 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			// Make sure worker exists
 			ensureWorkerExists(conn, record.getWorkerId());						
 			
-			// TODO: INSERT ... ON DUPLICATE KEY UPDATE is the safest thing to do here			
+			/* TODO: INSERT ... ON DUPLICATE KEY UPDATE is the safest thing to do here
+			 * but not well supported yet. We're okay using saveHITId first.
+			 */
+			
 //			new SQLInsertClause(conn, dialect, _session)			
 //			.populate(record)
 //			.addFlag(Position.END, TemplateExpressionImpl.create(String.class,
