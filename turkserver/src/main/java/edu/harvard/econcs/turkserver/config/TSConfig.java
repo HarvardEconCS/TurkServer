@@ -7,6 +7,7 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 
+import com.amazonaws.mturk.util.ClientConfig;
 import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 
 public class TSConfig {
@@ -30,6 +31,19 @@ public class TSConfig {
 	public static final String MTURK_HIT_LIFETIME = "mturk.lifetimeInSeconds";		
 	
 	/* ****************************************************
+	 * Data dependencies
+	 ******************************************************/
+	
+	public static final String AWS_ACCESSKEYID = "aws.accessKeyID";
+	public static final String AWS_SECRETACCESSKEY = "aws.secretAccessKey";
+	public static final String AWS_SANDBOX = "aws.sandbox";
+	
+	public static final String MYSQL_HOST = "mysql.host";
+	public static final String MYSQL_DATABASE = "mysql.database";
+	public static final String MYSQL_USER = "mysql.username";
+	public static final String MYSQL_PASSWORD = "mysql.password";
+	
+	/* ****************************************************
 	 * Other things that will need to be set
 	 ******************************************************/
 	
@@ -39,11 +53,6 @@ public class TSConfig {
 	public static final String EXP_SPECIAL_WORKERS = "experiment.special.workers";
 	public static final String EXP_INPUT_LIST = "experiment.inputdata";	
 	public static final String EXP_REPEAT_LIMIT = "experiment.set.limit";		
-	
-	public static final String MYSQL_HOST = "mysql.host";
-	public static final String MYSQL_DATABASE = "mysql.database";
-	public static final String MYSQL_USER = "mysql.username";
-	public static final String MYSQL_PASSWORD = "mysql.password";
 	
 	public static final String MTURK_HIT_TITLE = "mturk.hit.title";
 	public static final String MTURK_HIT_DESCRIPTION = "mturk.hit.description";
@@ -97,21 +106,35 @@ public class TSConfig {
 	public static MysqlConnectionPoolDataSource getMysqlCPDS(Configuration conf) {
 		MysqlConnectionPoolDataSource ds = new MysqlConnectionPoolDataSource();
 		
-		ds.setDatabaseName(conf.getString(TSConfig.MYSQL_DATABASE));
+		ds.setDatabaseName(conf.getString(MYSQL_DATABASE));
 		
-		if( conf.containsKey(TSConfig.MYSQL_HOST))
-			ds.setServerName(conf.getString(TSConfig.MYSQL_HOST));
+		if( conf.containsKey(MYSQL_HOST))
+			ds.setServerName(conf.getString(MYSQL_HOST));
 		
-		if( conf.containsKey(TSConfig.MYSQL_USER))
-			ds.setUser(conf.getString(TSConfig.MYSQL_USER));
+		if( conf.containsKey(MYSQL_USER))
+			ds.setUser(conf.getString(MYSQL_USER));
 		
-		if( conf.containsKey(TSConfig.MYSQL_PASSWORD))			
-			ds.setPassword(conf.getString(TSConfig.MYSQL_PASSWORD));
+		if( conf.containsKey(MYSQL_PASSWORD))			
+			ds.setPassword(conf.getString(MYSQL_PASSWORD));
 		
 		// To avoid unexpected lost data
 		ds.setStrictUpdates(false);
 		
 		return ds;
+	}
+
+	public static ClientConfig getClientConfig(Configuration conf) {		
+		String accessKeyID = conf.getString(AWS_ACCESSKEYID); 
+		String secretAccessKey = conf.getString(AWS_SECRETACCESSKEY);
+		boolean sandbox = conf.getBoolean(AWS_SANDBOX, true);
+		
+		ClientConfig config = new ClientConfig();
+
+		config.setAccessKeyId(accessKeyID);
+		config.setSecretAccessKey(secretAccessKey);				
+		config.setServiceURL(sandbox ? ClientConfig.SANDBOX_SERVICE_URL : ClientConfig.PRODUCTION_SERVICE_URL);
+
+		return config;		
 	}
 	
 }

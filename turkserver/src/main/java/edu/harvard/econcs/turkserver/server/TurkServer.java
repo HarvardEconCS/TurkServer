@@ -1,12 +1,15 @@
 package edu.harvard.econcs.turkserver.server;
 
-import static com.google.common.base.Preconditions.*;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import javax.swing.UIManager;
 
 import org.apache.commons.configuration.Configuration;
 
 import com.amazonaws.mturk.requester.QualificationRequirement;
+import com.google.common.collect.Lists;
+import com.google.inject.AbstractModule;
 import com.google.inject.Binding;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -14,7 +17,7 @@ import com.google.inject.Key;
 import com.google.inject.name.Names;
 
 import edu.harvard.econcs.turkserver.api.Configurator;
-import edu.harvard.econcs.turkserver.config.TSBaseModule;
+import edu.harvard.econcs.turkserver.config.DataModule;
 import edu.harvard.econcs.turkserver.config.TSConfig;
 import edu.harvard.econcs.turkserver.mturk.HITController;
 import edu.harvard.econcs.turkserver.server.gui.ServerFrame;
@@ -99,10 +102,11 @@ public class TurkServer {
 		}		
 	}
 
-	public static SessionServer testExperiment(TSBaseModule testModule) {				
-		Injector injector = Guice.createInjector(testModule);
+	public static SessionServer testExperiment(DataModule dataModule, AbstractModule... otherModules) {
 		
-		Configuration conf = testModule.getConfiguration();				
+		Injector injector = Guice.createInjector(Lists.asList(dataModule, otherModules));
+		
+		Configuration conf = dataModule.getConfiguration();				
 		checkConfiguration(injector, conf);
 		
 		HITController thm = injector.getInstance(HITController.class);
@@ -129,7 +133,7 @@ public class TurkServer {
 		return ss;
 	}
 
-	public static SessionServer runExperiment(TSBaseModule module) {		
+	public static SessionServer runExperiment(DataModule dataModule, AbstractModule... otherModules) {		
 		return null;		
 	}
 

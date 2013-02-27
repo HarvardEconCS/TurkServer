@@ -13,8 +13,13 @@ import com.google.common.collect.ImmutableMap;
 
 import edu.harvard.econcs.turkserver.client.LobbyClient;
 import edu.harvard.econcs.turkserver.client.TestClient;
+import edu.harvard.econcs.turkserver.config.DataModule;
+import edu.harvard.econcs.turkserver.config.DatabaseType;
+import edu.harvard.econcs.turkserver.config.ExperimentType;
+import edu.harvard.econcs.turkserver.config.HITCreation;
+import edu.harvard.econcs.turkserver.config.LoggingType;
 import edu.harvard.econcs.turkserver.config.TSConfig;
-import edu.harvard.econcs.turkserver.config.TSBaseModule.TSTestModule;
+import edu.harvard.econcs.turkserver.config.TestServerModule;
 
 public class SimpleGroupTest {
 
@@ -37,14 +42,11 @@ public class SimpleGroupTest {
 		}
 	}
 
-	class GroupModule extends TSTestModule {
+	class GroupModule extends TestServerModule {
 		@Override
 		public void configure() {
 			super.configure();
-			
-			setHITLimit(clients);
-			
-			bindGroupExperiments();
+						
 			bindExperimentClass(TestExperiment.class);				
 			bindConfigurator(new TestConfigurator(groupSize, 0));
 			bindString(TSConfig.EXP_SETID, "test");
@@ -73,7 +75,16 @@ public class SimpleGroupTest {
 
 	@Test(timeout=10000)
 	public void test() throws Exception {
-		ss = TurkServer.testExperiment(new GroupModule());
+		DataModule dm = new DataModule();
+		dm.setHITLimit(clients);
+		
+		ss = TurkServer.testExperiment(
+				dm,
+				ExperimentType.GROUP_EXPERIMENTS,
+				DatabaseType.TEMP_DATABASE,
+				HITCreation.NO_HITS,
+				LoggingType.SCREEN_LOGGING,
+				new GroupModule());
 		
 		TestListener tl = new TestListener();
 		ss.experiments.registerListener(tl);					

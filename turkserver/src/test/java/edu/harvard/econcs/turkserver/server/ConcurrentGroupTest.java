@@ -12,8 +12,13 @@ import com.google.common.collect.Lists;
 
 import edu.harvard.econcs.turkserver.client.LobbyClient;
 import edu.harvard.econcs.turkserver.client.TestClient;
+import edu.harvard.econcs.turkserver.config.DataModule;
+import edu.harvard.econcs.turkserver.config.DatabaseType;
+import edu.harvard.econcs.turkserver.config.ExperimentType;
+import edu.harvard.econcs.turkserver.config.HITCreation;
+import edu.harvard.econcs.turkserver.config.LoggingType;
 import edu.harvard.econcs.turkserver.config.TSConfig;
-import edu.harvard.econcs.turkserver.config.TSBaseModule.TSTestModule;
+import edu.harvard.econcs.turkserver.config.TestServerModule;
 
 public class ConcurrentGroupTest {
 	
@@ -39,14 +44,11 @@ public class ConcurrentGroupTest {
 		}
 	}
 	
-	class GroupModule extends TSTestModule {
+	class GroupModule extends TestServerModule {
 		@Override
 		public void configure() {
 			super.configure();
 			
-			setHITLimit(clients);
-			
-			bindGroupExperiments();
 			bindExperimentClass(TestExperiment.class);				
 			bindConfigurator(new TestConfigurator(groupSize, rounds));
 			bindString(TSConfig.EXP_SETID, "test");
@@ -55,7 +57,17 @@ public class ConcurrentGroupTest {
 
 	@Test(timeout=12000)
 	public void test() throws Exception {
-		ss = TurkServer.testExperiment(new GroupModule());
+		DataModule dataModule = new DataModule();
+		dataModule.setHITLimit(clients);
+		
+		ss = TurkServer.testExperiment(
+				dataModule,
+				DatabaseType.TEMP_DATABASE,
+				ExperimentType.GROUP_EXPERIMENTS,
+				HITCreation.NO_HITS,
+				LoggingType.SCREEN_LOGGING,
+				new GroupModule()
+				);
 		
 		// Give server enough time to initialize
 		Thread.sleep(500);
