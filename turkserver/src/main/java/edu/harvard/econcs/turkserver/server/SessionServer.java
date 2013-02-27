@@ -434,7 +434,7 @@ public abstract class SessionServer extends Thread {
 		System.out.println("Deleting remaining HITs");
 		
 		if( hitCont != null ) {
-			hitCont.disableRemainingHITs();
+			hitCont.disableAndShutdown();
 			try {
 				hcThread.join();
 			} catch (InterruptedException e) {

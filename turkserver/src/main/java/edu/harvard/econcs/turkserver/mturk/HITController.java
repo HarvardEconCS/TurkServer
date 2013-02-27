@@ -34,6 +34,6 @@ public interface HITController extends Runnable {
 	/**
 	 * Called by the server to expire all remaining HITs once a set is finished
 	 */
-	void disableRemainingHITs();
+	void disableAndShutdown();
 	
 }

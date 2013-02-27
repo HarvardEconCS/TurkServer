@@ -218,8 +218,8 @@ public abstract class ExperimentDataTracker {
 	/**
 	 * Record that an experiment has started with a set of clients
 	 * @param expId
-	 * @param group TODO
-	 * @param startTime TODO
+	 * @param group 
+	 * @param startTime 
 	 */
 	public final void newExperimentStarted(ExperimentControllerImpl expCont) {
 		String expId = expCont.getExpId();

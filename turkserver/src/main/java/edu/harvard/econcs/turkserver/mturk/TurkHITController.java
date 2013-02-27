@@ -111,10 +111,9 @@ public class TurkHITController implements HITController {
 	}		
 	
 	@Override
-	public void disableRemainingHITs() {
+	public void disableAndShutdown() {
 		expireFlag = true;
-		jobs.offer(new int[] {});
-		
+		jobs.offer(new int[] {});		
 	}
 	
 	@Override
@@ -167,8 +166,7 @@ public class TurkHITController implements HITController {
 				}
 			
 				logger.info(String.format("Created %d HITs", i));
-			}
-						
+			}						
 		}								
 		
 		// Wait around until server tells us to expire HITs
@@ -181,23 +179,8 @@ public class TurkHITController implements HITController {
 		List<Session> unusedHITs = tracker.expireUnusedSessions();
 		
 		for( Session session : unusedHITs ) {
-			String hitId = session.getHitId();
-			// TODO fix this ugly ass code
-			do {			
-				try {
-					requester.disableHIT(hitId);					
-					
-					break;					
-				} catch (ServiceException e) {					
-					e.printStackTrace();
-					
-					logger.info("Throttling HIT disabling");
-					// Throttle it a bit
-					try { Thread.sleep(SERVICE_UNAVAILABLE_MILLIS); } 
-					catch (InterruptedException e1) { e1.printStackTrace();	}	
-					continue;
-				}
-			} while(true);
+			String hitId = session.getHitId();									
+			requester.safeDisableHIT(hitId);			
 			
 			try { Thread.sleep(HIT_SLEEP_MILLIS); } 
 			catch (InterruptedException e1) { e1.printStackTrace();	}

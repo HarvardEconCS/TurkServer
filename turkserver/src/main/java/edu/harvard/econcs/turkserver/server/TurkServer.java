@@ -86,8 +86,22 @@ public class TurkServer {
 		
 	}
 
+	private static SessionServer getSessionServer(Injector injector) {
+		if( injector.getExistingBinding(new Key<SimpleExperimentServer>() {}) != null ) {
+			return injector.getInstance(SimpleExperimentServer.class);
+		}
+		else if( injector.getExistingBinding(new Key<GroupServer>() {}) != null ) {
+			return injector.getInstance(GroupServer.class);
+		}
+		else {
+			throw new RuntimeException("No binding found for session server. " +
+					"Try bindSingleExperiments() or bindGroupExperiments() in your module.");
+		}		
+	}
+
 	public static SessionServer testExperiment(TSBaseModule testModule) {				
-		Injector injector = Guice.createInjector(testModule);		
+		Injector injector = Guice.createInjector(testModule);
+		
 		Configuration conf = testModule.getConfiguration();				
 		checkConfiguration(injector, conf);
 		
@@ -119,19 +133,6 @@ public class TurkServer {
 		return null;		
 	}
 
-	static SessionServer getSessionServer(Injector injector) {
-		if( injector.getExistingBinding(new Key<SimpleExperimentServer>() {}) != null ) {
-			return injector.getInstance(SimpleExperimentServer.class);
-		}
-		else if( injector.getExistingBinding(new Key<GroupServer>() {}) != null ) {
-			return injector.getInstance(GroupServer.class);
-		}
-		else {
-			throw new RuntimeException("No binding found for session server. " +
-					"Try bindSingleExperiments() or bindGroupExperiments() in your module.");
-		}		
-	}	
-	
 	public static void main(String[] args) {
 		// TODO start this from an injector, or it won't be able to launch experiments
 		new ServerFrame(new TSTabbedPanel());

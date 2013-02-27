@@ -40,7 +40,7 @@ public class FakeHITController implements HITController {
 	}
 
 	@Override
-	public void disableRemainingHITs() {
+	public void disableAndShutdown() {
 		// TODO Auto-generated method stub
 
 	}
