@@ -159,6 +159,17 @@ public class WorkerAuthenticator {
 	}
 
 	/**
+	 * After taking a quiz (and failing), should this worker be locked out?
+	 * @param workerId
+	 * @return
+	 */
+	public boolean tooManyFails(String workerId) {
+		Collection<Quiz> results = tracker.getSetQuizRecords(workerId);
+		
+		return quizPolicy.overallFail(results);
+	}
+	
+	/**
 	 * Checks the login information for this user. 
 	 * 
 	 * TODO fix this to check if a quiz is required for someone connecting

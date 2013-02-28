@@ -87,6 +87,7 @@ public class SessionClient<C> implements ClientController {
 		
 		logger = Logger.getLogger(this.getClass().getSimpleName() + this.getHitId());
 		
+		// TODO: update this to use websocket
 		bayeuxClient = new BayeuxClient(url, LongPollingTransport.create(null));		
 		
 		bayeuxClient.addExtension(new TimesyncClientExtension());
@@ -235,12 +236,12 @@ public class SessionClient<C> implements ClientController {
 			Object status = m.get("status");
 			
 			if( status != null ) {										
-				if( Codec.expFinishedAck.equals(status.toString() ) ) {
+				if( Codec.status_expfinished.equals(status.toString() ) ) {
 					logger.info("Connected to experiment that is already done");
-					clientWrapper.triggerClientError(Codec.expFinishedAck);														
+					clientWrapper.triggerClientError(Codec.status_expfinished);														
 					disconnect();
 				}
-				else if( Codec.connectExpAck.equals(status.toString())) {					
+				else if( Codec.status_connectexp.equals(status.toString())) {					
 					// Subscribe to this channel
 					String chan = m.get("channel").toString();					
 					subscribeExpChannel(chan);					
@@ -254,8 +255,8 @@ public class SessionClient<C> implements ClientController {
 					clientWrapper.triggerFinishExperiment();			
 					// Do nothing
 				} 
-				else if( Codec.batchFinishedMsg.equals(status.toString())) {
-					clientWrapper.triggerClientError(Codec.batchFinishedMsg);					
+				else if( Codec.status_batchfinished.equals(status.toString())) {
+					clientWrapper.triggerClientError(Codec.status_batchfinished);					
 					disconnect();					
 				}
 				else if( "error".equals(status.toString()) ) {					

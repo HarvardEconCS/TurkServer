@@ -31,6 +31,13 @@ public interface HITWorker {
 	boolean isConnected();
 	
 	/**
+	 * Gets the number of milliseconds this worker has been disconnected.
+	 * -1 if the worker is not disconnected.
+	 * @return
+	 */
+	long getDisconnectedTime();
+	
+	/**
 	 * Gets the actual number of disconnects since the worker has accepted the HIT.
 	 * @return
 	 */

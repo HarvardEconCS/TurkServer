@@ -135,7 +135,7 @@ public final class GroupServer extends SessionServer {
 		// Ask for username if we require it or somehow didn't get it last time		
 		if( this.requireUsernames && hitw.getUsername() == null ) {
 			Map<String, String> data = ImmutableMap.of(
-					"status", Codec.usernameNeeded
+					"status", Codec.status_usernameneeded
 					);			
 			
 			SessionUtils.sendServiceMsg(session, data);
@@ -147,7 +147,7 @@ public final class GroupServer extends SessionServer {
 		} 
 		else {
 			Map<String, String> data = ImmutableMap.of(
-					"status", Codec.connectLobbyAck					
+					"status", Codec.status_connectlobby					
 					);
 			
 			SessionUtils.sendServiceMsg(session, data);
@@ -164,7 +164,7 @@ public final class GroupServer extends SessionServer {
 	@Override
 	void sessionReconnect(ServerSession session, HITWorkerImpl hitw) {
 		Map<String, String> data = ImmutableMap.of(
-				"status", Codec.connectExpAck,
+				"status", Codec.status_connectexp,
 				"channel", hitw.expCont.expChannel
 				);
 
@@ -217,7 +217,7 @@ public final class GroupServer extends SessionServer {
 		if ( completed = super.groupCompleted(group) ) {
 			// Only notify people in lobby, not (experiment people need to submit)
 			for( HITWorkerImpl worker : lobby.getLobbyUsers() )
-				SessionUtils.sendStatus(worker.cometdSession.get(), Codec.batchFinishedMsg);
+				SessionUtils.sendStatus(worker.cometdSession.get(), Codec.status_batchfinished);
 		}
 		
 		return completed;

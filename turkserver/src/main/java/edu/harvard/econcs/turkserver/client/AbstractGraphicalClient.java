@@ -99,7 +99,7 @@ public abstract class AbstractGraphicalClient<GC extends GUIController> {
 	
 	@ClientError
 	public void gotError(String msg) {
-		if( Codec.expFinishedAck.equals(msg) ) {
+		if( Codec.status_expfinished.equals(msg) ) {
 			// Connected to exp that is already finished. Enable the submit.
 			// TODO fix this if want to allow view graph for finished exp
 			gc.blankRedraw("Experiment already finished");
@@ -116,7 +116,7 @@ public abstract class AbstractGraphicalClient<GC extends GUIController> {
 					"You may try again, or just return the HIT.",
 					"Internal Server Error", JOptionPane.ERROR_MESSAGE);
 		}
-		else if( Codec.batchFinishedMsg.equals(msg) ) {
+		else if( Codec.status_batchfinished.equals(msg) ) {
 			gc.blankRedraw("All games finished");
 			gc.setStatus(StatusBar.batchFinishedMsg);
 			gc.popMsg("All games for this batch have been completed.\n" +

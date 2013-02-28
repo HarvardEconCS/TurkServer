@@ -184,21 +184,17 @@ public abstract class SessionServer extends Thread {
 			logger.info("Client connected to experiment after completion: "	+ hitId.toString());
 			return null;
 		} catch (SessionOverlapException e) {
-			SessionUtils.sendStatus(session, null, Messages.SESSION_OVERLAP);
+			SessionUtils.sendStatus(session, Codec.status_sessionoverlap, Messages.SESSION_OVERLAP);
 			return null;
 		}
 		
 		try {
 			workerAuth.checkWorkerLimits(hitId, assignmentId, workerId);
 		} catch (SimultaneousSessionsException e) {			
-			SessionUtils.sendStatus(session, null, 
-					"There is another HIT registered to you right now. Look for it in your dashboard. " +
-					"If you returned that HIT, please try participating later.");
+			SessionUtils.sendStatus(session, Codec.status_simultaneoussessions, Messages.SIMULTANEOUS_SESSIONS);
 			return null;
 		} catch (TooManySessionsException e) {			
-			SessionUtils.sendStatus(session, null, 
-					"You've already done enough for today. " +
-					"Please return this HIT and come back tomorrow.");
+			SessionUtils.sendStatus(session, Codec.status_toomanysessions, Messages.TOO_MANY_SESSIONS);
 			return null;
 		}		
 		
@@ -213,16 +209,14 @@ public abstract class SessionServer extends Thread {
 								
 				// TODO: null quiz is passed for static client-side 											
 				Map<String, Object> data = qm == null ?
-						ImmutableMap.of("status", (Object) Codec.quizNeeded) :
-							ImmutableMap.of("status", Codec.quizNeeded,	"quiz", qm.toData() );
+						ImmutableMap.of("status", (Object) Codec.status_quizneeded) :
+							ImmutableMap.of("status", Codec.status_quizneeded,	"quiz", qm.toData() );
 				SessionUtils.sendServiceMsg(session, data);									
 								
 				return null;
 			}
-		} catch (TooManyFailsException e) {			
-			SessionUtils.sendStatus(session, null, 
-					"Sorry, you've failed the quiz too many times. " +
-					"Please return this HIT and try again later.");
+		} catch (TooManyFailsException e) {
+			SessionUtils.sendStatus(session, Codec.status_failsauce, Messages.TOO_MANY_FAILS); 					
 			return null;
 		}
 		
@@ -256,7 +250,7 @@ public abstract class SessionServer extends Thread {
 				logger.warn("Unexpected connection on expired session: " + hitId.toString());
 			}
 			else if (e instanceof SessionOverlapException ) {
-				SessionUtils.sendStatus(session, null, Messages.SESSION_OVERLAP);
+				SessionUtils.sendStatus(session, Codec.status_sessionoverlap, Messages.SESSION_OVERLAP);
 			}
 			else {
 				SessionUtils.sendStatus(session, null, "Unknown Error: " + e.toString());
@@ -346,8 +340,14 @@ public abstract class SessionServer extends Thread {
 			sessionAccept(session, hitId, assignmentId, workerId);
 		}
 		else {
-			logger.info("{} failed quiz", workerId);
-			SessionUtils.sendStatus(session, Codec.quizFail);	
+			if( workerAuth.tooManyFails(workerId) ) {
+				logger.info("{} failed quiz too many times", workerId);
+				SessionUtils.sendStatus(session, Codec.status_failsauce);
+			}
+			else {
+				logger.info("{} failed quiz", workerId);
+				SessionUtils.sendStatus(session, Codec.status_quizfail);
+			}
 		}		
 	}
 

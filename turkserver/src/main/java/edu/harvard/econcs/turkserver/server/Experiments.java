@@ -201,7 +201,7 @@ public class Experiments {
 		 * TODO this may be unnecessary, fix protocol
 		 */
 		Map<String, Object> data = ImmutableMap.of(
-				"status", Codec.connectExpAck,
+				"status", Codec.status_connectexp,
 				"channel", (Object) expChannel);
 
 		for( HITWorker hitw : group.getHITWorkers() ) {
@@ -334,7 +334,7 @@ public class Experiments {
 			logger.info("{} not in experiment, ignoring service message", worker);
 			return;
 		}
-		System.out.println(message.toString());
+
 		manager.deliverServiceMsg(expId, worker, message);
 	}
 

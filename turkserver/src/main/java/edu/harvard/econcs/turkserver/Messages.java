@@ -12,22 +12,28 @@ public class Messages {
 		"You may have taken a HIT that was already completed but not submitted.\n" +
 		"Please return the HIT, and accept a different HIT in this group.\n";
 
-	public static final String SIMULTANEOUS_SESSIONS = 
-		"It appears that you have already accepted another HIT for this game.\n" +
-		"Please return this HIT and finish your other games before accepting\n" +
-		"more HITs. Look for your current game in your dashboard." +
-		"Please e-mail us if you believe this message is in error.";
+	public static final String SIMULTANEOUS_SESSIONS =			
+			"There is another HIT registered to you right now. Look for it in your dashboard.\n" +
+			"If you returned that HIT, please try participating later.";
+					
+//		"It appears that you have already accepted another HIT for this game.\n" +
+//		"Please return this HIT and finish your other games before accepting\n" +
+//		"more HITs. Look for your current game in your dashboard." +
+//		"Please e-mail us if you believe this message is in error.";
 
 	public static final String EXPIRED_SESSION = 
 		"All games for this batch have been completed.\n" +
 		"If you have signed up for notifications, we will let you know\n" +
 		"when we post more games. Please return the HIT.";
 
-	public static final String TOO_MANY_SESSIONS = 
-		"It appears that you have already hit the limit for how many times\n" +
-		"you can play in this set of games. If you have asked us to notify you,\n" +
-		"we will contact you about future sets of games to participate in.\n" +
-		"Please return the HIT.";
+	public static final String TOO_MANY_SESSIONS =
+			"You've already done enough HITs for now.\n" +
+			"Please return this HIT and come back later.";
+	
+//		"It appears that you have already hit the limit for how many times\n" +
+//		"you can play in this set of games. If you have asked us to notify you,\n" +
+//		"we will contact you about future sets of games to participate in.\n" +
+//		"Please return the HIT.";
 
 	public static final String SESSION_OVERLAP = 
 		"This session belongs to someone that has already started a game,\n" +
@@ -50,8 +56,7 @@ public class Messages {
 		"be able to participate in any more games for this session.";
 
 	public static final String TOO_MANY_FAILS =
-		"Sorry, you have failed the quiz too many times!\n" +
-		"You must wait until our next set of games to participate.\n" +
-		"Please return the HIT.";
+			"Sorry, you've failed the quiz too many times.\n" +
+			"Please return this HIT and try again later.";
 
 }

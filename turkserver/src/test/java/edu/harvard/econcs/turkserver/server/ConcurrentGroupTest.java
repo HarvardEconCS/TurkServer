@@ -22,8 +22,8 @@ import edu.harvard.econcs.turkserver.config.TestServerModule;
 
 public class ConcurrentGroupTest {
 	
-	static int clients = 100;
-	static int groupSize = 5;	
+	static int clients = 150;
+	static int groupSize = 3;	
 	
 	static int rounds = 5;
 	static int delay = 1000;					

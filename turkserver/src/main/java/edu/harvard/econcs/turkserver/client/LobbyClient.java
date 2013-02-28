@@ -56,7 +56,7 @@ public class LobbyClient<C> extends SessionClient<C> implements ClientLobbyContr
 			
 			if( status != null ) {				
 				
-				if( Codec.quizNeeded.equals(status.toString()) ) {
+				if( Codec.status_quizneeded.equals(status.toString()) ) {
 					@SuppressWarnings("unchecked")
 					Map<String, Object> quizData = (Map<String, Object>) m.get("quiz");
 					
@@ -65,11 +65,11 @@ public class LobbyClient<C> extends SessionClient<C> implements ClientLobbyContr
 					
 					clientWrapper.triggerQuiz(qm);		
 				}
-				else if( Codec.usernameNeeded.equals(status.toString()) ) {
+				else if( Codec.status_usernameneeded.equals(status.toString()) ) {
 					// We need a username
 					clientWrapper.triggerRequestUsername();												
 				}
-				else if( Codec.connectLobbyAck.equals(status.toString()) ) {
+				else if( Codec.status_connectlobby.equals(status.toString()) ) {
 					// We should be in the lobby
 					state = State.LOBBY;
 					logger.info("Client connected to lobby");
@@ -77,7 +77,7 @@ public class LobbyClient<C> extends SessionClient<C> implements ClientLobbyContr
 					clientWrapper.triggerJoinLobby();																																							
 					updateLobbyStatus(null);
 				}
-				else if( Codec.connectExpAck.equals(status.toString())) {					
+				else if( Codec.status_connectexp.equals(status.toString())) {					
 					logger.info("Client is (re)connecting to an experiment");
 										
 					if( state == State.LOBBY ) {

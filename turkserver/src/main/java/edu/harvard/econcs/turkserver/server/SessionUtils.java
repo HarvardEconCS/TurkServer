@@ -15,7 +15,7 @@ public class SessionUtils {
 		Map<String, Object> errorMap = new HashMap<String, Object>();
 		
 		if( status != null ) errorMap.put("status", status);
-		else errorMap.put("status", Codec.connectErrorAck);
+		else errorMap.put("status", Codec.status_error);
 		
 		errorMap.put("msg", msg);
 						
@@ -28,7 +28,7 @@ public class SessionUtils {
 		if( status != null ) 
 			data = ImmutableMap.of("status", status);
 		else
-			data = ImmutableMap.of("status", Codec.connectErrorAck);				
+			data = ImmutableMap.of("status", Codec.status_error);				
 						
 		sendServiceMsg(session, data);
 	}	

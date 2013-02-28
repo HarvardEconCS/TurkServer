@@ -1,7 +1,6 @@
 package edu.harvard.econcs.turkserver.server;
 
 import java.lang.ref.WeakReference;
-import java.math.BigDecimal;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Collections;
@@ -80,6 +79,16 @@ public class HITWorkerImpl implements HITWorker, HITWorkerGroup {
 		if( session == null ) return false;
 		
 		return session.isConnected();
+	}
+
+	@Override
+	public long getDisconnectedTime() {
+		Long lastDisc = lastDisconnectTime.get();
+		
+		if( lastDisc == null )
+			return -1;
+		else
+			return System.currentTimeMillis() - lastDisc;
 	}
 
 	@Override
