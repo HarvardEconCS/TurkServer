@@ -26,6 +26,11 @@ public class HITWorkerGroupImpl implements HITWorkerGroup {
 	public int groupSize() {		
 		return workerSet.size();
 	}
+	
+	@Override
+	public String toString() {
+		return String.format("Group of %d: HITs %s", workerSet.size(), workerSet.keySet());
+	}
 
 	@Override
 	public boolean contains(HITWorker hitWorker) {		

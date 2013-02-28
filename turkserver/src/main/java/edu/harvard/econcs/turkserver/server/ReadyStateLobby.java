@@ -15,7 +15,9 @@ import org.slf4j.LoggerFactory;
 import net.andrewmao.misc.ConcurrentBooleanCounter;
 
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 
+import edu.harvard.econcs.turkserver.api.Configurator;
 import edu.harvard.econcs.turkserver.api.HITWorker;
 import edu.harvard.econcs.turkserver.config.TSConfig;
 
@@ -29,7 +31,7 @@ public class ReadyStateLobby implements Lobby {
 	protected final Logger logger = LoggerFactory.getLogger(getClass().getSimpleName());
 
 	final boolean debugMode;
-	final Experiments experiments;	
+	final Configurator configurator;	
 	
 	private final ConcurrentBooleanCounter<HITWorkerImpl> lobbyStatus;		
 	final AtomicReference<String> serverMessage;
@@ -38,11 +40,11 @@ public class ReadyStateLobby implements Lobby {
 	
 	@Inject
 	public ReadyStateLobby(
-			Experiments experiments,
+			@Named(TSConfig.EXP_CONFIGURATOR) Configurator configurator,
 			Configuration conf
 			) {
 		
-		this.experiments = experiments;
+		this.configurator = configurator;
 		this.debugMode = conf.getBoolean(TSConfig.SERVER_DEBUGMODE);
 		
 		lobbyStatus = new ConcurrentBooleanCounter<HITWorkerImpl>();								
@@ -81,11 +83,11 @@ public class ReadyStateLobby implements Lobby {
 	
 	private synchronized void tryExperimentStart() {
 		// whether to start experiments
-		if( lobbyStatus.getTrueCount() < experiments.getMinGroupSize() ) return;
+		if( lobbyStatus.getTrueCount() < configurator.groupSize() ) return;
 		
 		// Generate the list of experiment clients
 					
-		int expSize = experiments.getMinGroupSize();
+		int expSize = configurator.groupSize();
 		HITWorkerGroupImpl expClients = new HITWorkerGroupImpl();
 
 		// Count up exactly expSize people for the new experiment
@@ -117,7 +119,7 @@ public class ReadyStateLobby implements Lobby {
 		// are there enough people ready to start?
 		synchronized(this) {
 			lobbyStatus.put(hitw, debugMode || isReady);				
-			int neededPeople = experiments.getMinGroupSize();
+			int neededPeople = configurator.groupSize();
 			
 			logger.info("Lobby has " + lobbyStatus.getTrueCount() + " ready people");				
 			if( lobbyStatus.getTrueCount() >= neededPeople ) {				
@@ -176,7 +178,7 @@ public class ReadyStateLobby implements Lobby {
 		Map<String, Object> data = new TreeMap<String, Object>();
 		
 		int usersInLobby = lobbyStatus.size();
-		int usersNeeded = experiments.getMinGroupSize();
+		int usersNeeded = configurator.groupSize();
 		
 		data.put("status", "update");
 		
