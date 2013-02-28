@@ -141,22 +141,29 @@ public final class GroupServer extends SessionServer {
 			SessionUtils.sendServiceMsg(session, data);
 		}		
 		
-		// Check if we should reconnect this HITWorker to an existing experiment
-		if( experiments.workerIsInProgress(hitw) ) {									
+		/* Check if we should reconnect this HITWorker to an existing experiment
+		 * TODO: can workers double-join the lobby before they are actually in an experiment?
+		 */
+		boolean inExperiment;		
+		synchronized(lobby) {
+			inExperiment = experiments.workerIsInProgress(hitw);
+		}
+		
+		if( inExperiment ) {									
 			sessionReconnect(session, hitw);			
 		} 
 		else {
 			Map<String, String> data = ImmutableMap.of(
 					"status", Codec.connectLobbyAck					
 					);
-			
+
 			SessionUtils.sendServiceMsg(session, data);
-			
+
 			logger.info(hitw.toString() + "connected to lobby");
-			
+
 			lobby.userJoined(hitw);
 			serverGUI.updateLobbyModel();
-		}
+		}		
 		
 		return hitw;
 	}

@@ -102,10 +102,6 @@ public class Experiments {
 	void registerListener(ExperimentListener listener) {
 		listeners.add(listener);
 	}
-
-	int getMinGroupSize() {
-		return configurator.groupSize();	
-	}
 	
 	/**
 	 * Injects classes for a single-worker experiment
