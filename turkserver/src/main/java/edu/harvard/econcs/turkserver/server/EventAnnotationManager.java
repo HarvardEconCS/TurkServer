@@ -294,7 +294,7 @@ public class EventAnnotationManager {
 
 				if( ann.key().length > 0 ) {
 					String key = ann.key()[0];
-					if (!message.containsKey(key) ) continue;
+					if ( !message.containsKey(key) ) continue;
 					if ( ann.value().length > 0 && !message.get(key).equals(ann.value()[0])) continue;
 				}			
 
