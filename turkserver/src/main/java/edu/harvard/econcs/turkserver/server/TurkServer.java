@@ -3,9 +3,15 @@ package edu.harvard.econcs.turkserver.server;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.io.FileNotFoundException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+
 import javax.swing.UIManager;
 
 import org.apache.commons.configuration.Configuration;
+import org.apache.commons.configuration.ConfigurationException;
 
 import com.amazonaws.mturk.requester.QualificationRequirement;
 import com.google.common.collect.Lists;
@@ -15,13 +21,16 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.name.Names;
+import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 
 import edu.harvard.econcs.turkserver.api.Configurator;
 import edu.harvard.econcs.turkserver.config.DataModule;
+import edu.harvard.econcs.turkserver.config.ServerModule;
 import edu.harvard.econcs.turkserver.config.TSConfig;
 import edu.harvard.econcs.turkserver.mturk.HITController;
 import edu.harvard.econcs.turkserver.server.gui.ServerFrame;
 import edu.harvard.econcs.turkserver.server.gui.TSTabbedPanel;
+import edu.harvard.econcs.turkserver.server.mysql.MySQLDataTracker;
 
 /**
  * The main TurkServer class.
@@ -40,11 +49,100 @@ public class TurkServer {
 			UIManager.setLookAndFeel("com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel");			
 		} catch (Exception e) {	e.printStackTrace(); }	
 	}
+		
+	final DataModule dataModule;
+
+	// Parent injector that can still make DB connections and other stuff
+	final Injector parentInjector;
 	
+	final ServerFrame gui;
+	
+	Injector childInjector;
+	SessionServer sessionServer;
+	
+	public TurkServer(DataModule data) {	
+		this.dataModule = data;
+		
+		parentInjector = Guice.createInjector(dataModule);
+
+		gui = new ServerFrame(parentInjector.getInstance(TSTabbedPanel.class));
+	}
+	
+	public TurkServer(Configuration conf) {
+		this(new DataModule(conf));
+	}
+	
+	public TurkServer(String confFile) throws FileNotFoundException, ConfigurationException {	
+		this(new DataModule(confFile));
+	}
+	
+	public void runExperiment(ServerModule serverModule, AbstractModule... otherModules) {
+		if ( childInjector != null || sessionServer != null )
+			throw new RuntimeException("TurkServer doesn't support concurrent experiments yet.");
+		
+		childInjector = parentInjector.createChildInjector(Lists.asList(serverModule, otherModules));
+		
+		Configuration conf = dataModule.getConfiguration();				
+		checkExperimentConfiguration(childInjector, conf);
+		
+		HITController thm = childInjector.getInstance(HITController.class);			
+		
+		// GUI is automatically created from parent injector now
+		sessionServer = getSessionServerInstance(childInjector);
+		
+		// TODO this may not be in conf, but in injector (graph coloring stuff?)
+		thm.setHITType(
+				conf.getString(TSConfig.MTURK_HIT_TITLE),
+				conf.getString(TSConfig.MTURK_HIT_DESCRIPTION),
+				conf.getString(TSConfig.MTURK_HIT_KEYWORDS),
+				1.00, 
+				conf.getInt(TSConfig.MTURK_ASSIGNMENT_DURATION),
+				conf.getInt(TSConfig.MTURK_AUTO_APPROVAL_DELAY),
+				null);
+		
+		thm.setExternalParams("http://localhost:9294/", 1500, 604800);
+		
+		sessionServer.start();		
+		
+		thm.postBatchHITs(1, 5000, 10);				
+	}
+	
+	public SessionServer getSessionServer() {
+		return sessionServer;
+	}
+
+	private static SessionServer getSessionServerInstance(Injector injector) {
+		if( injector.getExistingBinding(new Key<SimpleExperimentServer>() {}) != null ) {
+			return injector.getInstance(SimpleExperimentServer.class);
+		}
+		else if( injector.getExistingBinding(new Key<GroupServer>() {}) != null ) {
+			return injector.getInstance(GroupServer.class);
+		}
+		else {
+			throw new RuntimeException("No binding found for session server. " +
+					"Try bindSingleExperiments() or bindGroupExperiments() in your module.");
+		}		
+	}
+
 	/*
 	 * Last check of sanity before we launch a server
 	 */
-	private static void checkConfiguration(Injector injector, Configuration conf) {
+	private static void checkExperimentConfiguration(Injector injector, Configuration conf) {
+		
+		// Check MySQL configuration if using
+		if( injector.getBinding(MySQLDataTracker.class) != null ) {
+			MysqlConnectionPoolDataSource ds = injector.getInstance(MysqlConnectionPoolDataSource.class);
+			
+			try( Connection conn = ds.getConnection() ) {
+				PreparedStatement sql = conn.prepareStatement("SHOW DATABASES");
+				sql.execute();
+			}
+			catch( SQLException e ) {
+				throw new RuntimeException("Database connection failed. Please check your settings.", e);
+			}
+		}
+		
+		// TODO check AWS config if using. Also could be a good chance to check for cash
 		
 		// Check bindings
 		checkNotNull(injector.getBinding(Key.get(String.class, Names.named(TSConfig.EXP_SETID))),
@@ -88,57 +186,63 @@ public class TurkServer {
 		}
 		
 	}
+	
+	/**
+	 * shuts down the experiment,
+	 * waits for threads to finish,
+	 * then disposes the GUI
+	 */
+	public void orderlyShutdown() {
+		stopExperiment();
+		awaitTermination();
+		disposeGUI();
+	}
 
-	private static SessionServer getSessionServer(Injector injector) {
-		if( injector.getExistingBinding(new Key<SimpleExperimentServer>() {}) != null ) {
-			return injector.getInstance(SimpleExperimentServer.class);
-		}
-		else if( injector.getExistingBinding(new Key<GroupServer>() {}) != null ) {
-			return injector.getInstance(GroupServer.class);
+	public void stopExperiment() {
+		if( sessionServer == null ) return;
+		
+		sessionServer.shutdown();
+	}
+	
+	/**
+	 * Wait for servers to stop, then destroys the GUI.
+	 */
+	public void awaitTermination() {		
+		if( sessionServer == null ) return;
+		
+		try {
+			sessionServer.join();
+		} catch (InterruptedException e) {}
+
+		sessionServer = null;				
+	}
+	
+	public void disposeGUI() {
+		gui.dispose();
+		
+		// VM should exit here?
+	}
+
+	@Override
+	protected void finalize() {
+		gui.dispose();
+	}
+
+	public static void main(String[] args) throws Exception {
+		DataModule dm;
+		
+		if( args.length > 0 ) {
+			String file = args[0];
+			System.out.println("Trying to start TurkServer with " + file);
+			dm = new DataModule(file);
 		}
 		else {
-			throw new RuntimeException("No binding found for session server. " +
-					"Try bindSingleExperiments() or bindGroupExperiments() in your module.");
-		}		
-	}
-
-	public static SessionServer testExperiment(DataModule dataModule, AbstractModule... otherModules) {
+			System.out.println("Starting TurkServer with default settings (can't do much)");
+			dm = new DataModule();
+		}
 		
-		Injector injector = Guice.createInjector(Lists.asList(dataModule, otherModules));
+		TurkServer ts = new TurkServer(dm);
 		
-		Configuration conf = dataModule.getConfiguration();				
-		checkConfiguration(injector, conf);
-		
-		HITController thm = injector.getInstance(HITController.class);
-		new ServerFrame(injector.getInstance(TSTabbedPanel.class));
-		
-		SessionServer ss = getSessionServer(injector);
-		
-		// TODO this may not be in conf, but in injector
-		thm.setHITType(
-				conf.getString(TSConfig.MTURK_HIT_TITLE),
-				conf.getString(TSConfig.MTURK_HIT_DESCRIPTION),
-				conf.getString(TSConfig.MTURK_HIT_KEYWORDS),
-				1.00, 
-				conf.getInt(TSConfig.MTURK_ASSIGNMENT_DURATION),
-				conf.getInt(TSConfig.MTURK_AUTO_APPROVAL_DELAY),
-				null);
-		
-		thm.setExternalParams("http://localhost:9294/", 1500, 604800);
-		
-		ss.start();		
-		
-		thm.postBatchHITs(1, 5000, 10);
-		
-		return ss;
-	}
-
-	public static SessionServer runExperiment(DataModule dataModule, AbstractModule... otherModules) {		
-		return null;		
-	}
-
-	public static void main(String[] args) {
-		// TODO start this from an injector, or it won't be able to launch experiments
-		new ServerFrame(new TSTabbedPanel());
+		ts.awaitTermination();
 	}
 }

@@ -24,7 +24,7 @@ public class ServerLifeCycleTest {
 	static int clients = 0;
 	static int groupSize = 5;
 	
-	SessionServer ss;
+	TurkServer ts;
 	
 	@Before
 	public void setUp() throws Exception {
@@ -32,8 +32,8 @@ public class ServerLifeCycleTest {
 
 	@After
 	public void tearDown() throws Exception {
-		if( ss != null )
-			ss.join();
+		if( ts != null )
+			ts.orderlyShutdown();
 	}
 
 	class GroupModule extends TestServerModule {
@@ -52,16 +52,30 @@ public class ServerLifeCycleTest {
 		DataModule dm = new DataModule();
 		dm.setHITLimit(clients);
 		
-		ss = TurkServer.testExperiment(
-				dm,
+		ts = new TurkServer(dm);
+		
+		ts.runExperiment(
+				new GroupModule(),
 				ExperimentType.GROUP_EXPERIMENTS,
 				DatabaseType.TEMP_DATABASE,
 				HITCreation.NO_HITS,
-				LoggingType.SCREEN_LOGGING,
-				new GroupModule());
+				LoggingType.SCREEN_LOGGING
+				);
 		
-		ss.join();
+		ts.sessionServer.join();		
+
+		Thread.sleep(1000);
 		
-		assertTrue(ss.jettyCometD.server.isStopped());
+		// Check that jetty is done
+		assertTrue(ts.sessionServer.jettyCometD.server.isStopped());
+		
+		// Redundant call
+		ts.awaitTermination();		
+		// Check that gui is gone
+		ts.disposeGUI();
+		
+		// TODO: shut down log4j/slf4j properly and check in here
+		
+		System.out.println(Thread.getAllStackTraces().keySet());
 	}
 }

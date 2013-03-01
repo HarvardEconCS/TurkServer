@@ -12,6 +12,8 @@ import com.google.inject.Provider;
 import com.google.inject.Scopes;
 import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 
+import edu.harvard.econcs.turkserver.server.gui.TSTabbedPanel;
+
 public class DataModule extends AbstractModule {
 
 	protected Configuration conf;	
@@ -24,10 +26,14 @@ public class DataModule extends AbstractModule {
 		System.out.println("Loaded custom config file " + confFile);
 	}
 	
+	public DataModule(Configuration conf) {
+		this.conf = conf;
+	}
+
 	public DataModule() {
 		conf = TSConfig.getDefault();
 	}
-	
+
 	public Configuration getConfiguration() {		
 		return conf;
 	}
@@ -49,6 +55,9 @@ public class DataModule extends AbstractModule {
 		
 		// Create AWS Requester, if any
 		bind(ClientConfig.class).toProvider(new ClientConfigProvider()).in(Scopes.SINGLETON);
+		
+		// GUI stuff
+		bind(TSTabbedPanel.class).in(Scopes.SINGLETON);
 	}
 	
 	public void setAWSConfig(String accessKeyId, String secretAccessKey, boolean sandbox) {

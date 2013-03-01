@@ -415,14 +415,6 @@ public abstract class SessionServer extends Thread {
 			(hcThread = new Thread(hitCont)).start();
 		}
 		
-		Runtime.getRuntime().addShutdownHook(new Thread() {
-			public void run() {
-				// TODO add stuff from above to in here, like auto expiring hits
-				
-				logger.info("Shutdown initiated");								
-			}
-		});
-		
 		runServerInit();
 		
 	    // Hang out until goal # of HITs are reached and shutdown jetty server
@@ -478,6 +470,14 @@ public abstract class SessionServer extends Thread {
 
 	public void shutdown() {
 		running = false;
+		
+		// TODO add stuff from above to in here, like auto expiring hits		
+//		Runtime.getRuntime().addShutdownHook(new Thread() {
+//			public void run() {				
+//				logger.info("Shutdown initiated");								
+//			}
+//		});
+		
 		this.interrupt();
 	}
 
