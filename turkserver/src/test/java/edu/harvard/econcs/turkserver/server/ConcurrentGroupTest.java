@@ -28,20 +28,26 @@ public class ConcurrentGroupTest {
 	static int rounds = 5;
 	static int delay = 1000;					
 	
-	SessionServer ss;
+	TurkServer ts;
+	ClientGenerator cg;
 	
 	@Before
 	public void setUp() throws Exception {
 		TestUtils.waitForPort(9876);
 		TestUtils.waitForPort(9877);
+		
+		// Make sure the ports are clear
+		Thread.sleep(500);
 	}
 
 	@After
 	public void tearDown() throws Exception {
-		if( ss != null ) {
-			ss.shutdown();
-			ss.join();
+		if( cg != null ) {
+			cg.disposeAllClients();
 		}
+		if( ts != null ) {
+			ts.orderlyShutdown();
+		}		
 	}
 	
 	class GroupModule extends TestServerModule {
@@ -60,19 +66,22 @@ public class ConcurrentGroupTest {
 		DataModule dataModule = new DataModule();
 		dataModule.setHITLimit(clients);
 		
-		ss = TurkServer.testExperiment(
-				dataModule,
+		TurkServer ts = new TurkServer(dataModule);
+		
+		ts.runExperiment(
+				new GroupModule(),
 				DatabaseType.TEMP_DATABASE,
 				ExperimentType.GROUP_EXPERIMENTS,
 				HITCreation.NO_HITS,
-				LoggingType.SCREEN_LOGGING,
-				new GroupModule()
+				LoggingType.SCREEN_LOGGING				
 				);
+		
+		SessionServer ss = ts.sessionServer;
 		
 		// Give server enough time to initialize
 		Thread.sleep(500);
 		
-		ClientGenerator cg = new ClientGenerator("http://localhost:9876/cometd/");
+		cg = new ClientGenerator("http://localhost:9876/cometd/");
 				
 		LinkedList<TestClient> ll = Lists.newLinkedList();
 		

@@ -26,19 +26,25 @@ public class SimpleGroupTest {
 	static int clients = 10;
 	static int groupSize = 5;
 	
-	SessionServer ss;	
+	TurkServer ts;	
+	ClientGenerator cg;
 	
 	@Before
 	public void setUp() throws Exception {
 		TestUtils.waitForPort(9876);
-		TestUtils.waitForPort(9877);				
+		TestUtils.waitForPort(9877);
+		
+		// Make sure the ports are clear
+		Thread.sleep(500);
 	}
 
 	@After
 	public void tearDown() throws Exception {
-		if( ss != null ) {
-			ss.shutdown();
-			ss.join();
+		if( cg != null ) {
+			cg.disposeAllClients();
+		}
+		if( ts != null ) {
+			ts.orderlyShutdown();
 		}
 	}
 
@@ -78,13 +84,17 @@ public class SimpleGroupTest {
 		DataModule dm = new DataModule();
 		dm.setHITLimit(clients);
 		
-		ss = TurkServer.testExperiment(
-				dm,
+		ts = new TurkServer(dm);
+		
+		ts.runExperiment(
+				new GroupModule(),
 				ExperimentType.GROUP_EXPERIMENTS,
 				DatabaseType.TEMP_DATABASE,
 				HITCreation.NO_HITS,
-				LoggingType.SCREEN_LOGGING,
-				new GroupModule());
+				LoggingType.SCREEN_LOGGING
+				);
+		
+		SessionServer ss = ts.sessionServer;
 		
 		TestListener tl = new TestListener();
 		ss.experiments.registerListener(tl);					
@@ -92,7 +102,7 @@ public class SimpleGroupTest {
 		// Give server enough time to initialize
 		Thread.sleep(500);
 		
-		ClientGenerator cg = new ClientGenerator("http://localhost:9876/cometd/");
+		cg = new ClientGenerator("http://localhost:9876/cometd/");
 		
 		// Add a group size
 		List<LobbyClient<TestClient>> clients1 = new ArrayList<LobbyClient<TestClient>>(groupSize);
@@ -147,7 +157,8 @@ public class SimpleGroupTest {
 		for( LobbyClient<TestClient> lc : clients1 )
 			assertEquals("finishExp", lc.getClientBean().lastCall );		
 				
-		ss.join();				
+		ts.awaitTermination();		
+
 	}
 
 }

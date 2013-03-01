@@ -5,7 +5,11 @@ import org.eclipse.jetty.util.resource.Resource;
 import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-import edu.harvard.econcs.turkserver.api.*;
+
+import edu.harvard.econcs.turkserver.api.Configurator;
+import edu.harvard.econcs.turkserver.api.ExperimentController;
+import edu.harvard.econcs.turkserver.api.HITWorker;
+import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
 import edu.harvard.econcs.turkserver.server.Assigner;
 import edu.harvard.econcs.turkserver.server.EventAnnotationManager;
 import edu.harvard.econcs.turkserver.server.ExperimentControllerImpl;
@@ -16,7 +20,6 @@ import edu.harvard.econcs.turkserver.server.Lobby;
 import edu.harvard.econcs.turkserver.server.ReadyStateLobby;
 import edu.harvard.econcs.turkserver.server.ThreadLocalScope;
 import edu.harvard.econcs.turkserver.server.WorkerAuthenticator;
-import edu.harvard.econcs.turkserver.server.gui.TSTabbedPanel;
 import edu.harvard.econcs.turkserver.util.RoundRobinAssigner;
 
 public abstract class ServerModule extends AbstractModule {	
@@ -46,8 +49,6 @@ public abstract class ServerModule extends AbstractModule {
 		bind(HITWorker.class).toProvider(ThreadLocalScope.<HITWorker>seededKeyProvider()).in(ExperimentScoped.class);
 		bind(HITWorkerGroup.class).toProvider(ThreadLocalScope.<HITWorkerGroup>seededKeyProvider()).in(ExperimentScoped.class);
 				
-		// GUI stuff
-		bind(TSTabbedPanel.class).toInstance(new TSTabbedPanel());
 	}
 	
 	protected void bindBoolean(String setting, boolean value) {

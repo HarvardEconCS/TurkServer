@@ -14,6 +14,8 @@ import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.swing.SwingUtilities;
+
 import org.apache.commons.configuration.Configuration;
 import org.cometd.bayeux.server.LocalSession;
 import org.cometd.bayeux.server.ServerSession;
@@ -47,7 +49,7 @@ public final class GroupServer extends SessionServer {
 			JettyCometD jetty,
 			Configuration config,
 			Lobby lobby,
-			TSTabbedPanel guiTabs
+			final TSTabbedPanel guiTabs
 			) throws ClassNotFoundException {		
 		super(tracker, hitCont, workerAuth, experiments, jetty, config);
 		
@@ -58,7 +60,11 @@ public final class GroupServer extends SessionServer {
 						
 		jetty.addServlet(GroupServlet.class, "/exp");						
 		
-		guiTabs.addPanel("Server", serverGUI = new ServerPanel(this, lobby));
+		serverGUI = new ServerPanel(this, lobby);
+		
+		SwingUtilities.invokeLater(new Runnable() {	public void run() {
+			guiTabs.addPanel("Server", serverGUI);				
+		} });		
 		
 		this.guiListener = new GUIListener();
 		experiments.registerListener(guiListener);
