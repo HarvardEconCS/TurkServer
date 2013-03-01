@@ -15,7 +15,13 @@ public interface Lobby {
 
 	void userJoined(HITWorkerImpl hitw);
 
-	void updateStatus(HITWorkerImpl hitw, Map<String, Object> data);	
+	/**
+	 * Updates the lobby status of a worker.
+	 * @param hitw
+	 * @param data
+	 * @return true if the lobby status changed
+	 */
+	boolean updateStatus(HITWorkerImpl hitw, Map<String, Object> data);	
 	
 	/**
 	 * Try and remove worker from lobby

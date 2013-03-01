@@ -34,7 +34,7 @@ public class LobbySyncTest {
 			groups.add(group);
 			
 			// Simulate taking some time to make an experiment, since this is in the synchronized block
-			try { Thread.sleep(Math.round(Math.random() * 100));
+			try { Thread.sleep(Math.round(Math.random() * 10));
 			} catch (InterruptedException e) { e.printStackTrace(); }
 		}
 
@@ -81,7 +81,7 @@ public class LobbySyncTest {
 				public void run() {
 					// Sleep a random amount of time
 					try {
-						Thread.sleep(Math.round(Math.random() * 100));
+						Thread.sleep(Math.round(Math.random() * 10));
 					} catch (InterruptedException e) {}
 					
 					HITWorkerImpl hitw = new HITWorkerImpl(new FakeServerSession(), record);
@@ -103,6 +103,9 @@ public class LobbySyncTest {
 		int totalGroups = 0;
 		Set<String> ids = new HashSet<String>();
 		
+		int numGroups = this.total / groupsize;
+		
+		// Check that each group size is correct
 		for( HITWorkerGroup group : listener.groups ) {			
 //			System.out.println(group);	
 			assertEquals(groupsize, group.groupSize());
@@ -114,8 +117,15 @@ public class LobbySyncTest {
 				ids.add(worker);
 		}
 		
-		assertEquals(this.total, ids.size());
-		assertEquals(this.total / groupsize, totalGroups);
+		// Check for sufficent # groups
+		System.out.println("Groups: " + listener.groups.size());
+		assertEquals(numGroups, listener.groups.size());
+		assertEquals(numGroups, totalGroups);
+		
+		// Check for all users covered
+		System.out.println("Unique users out: " + ids.size());
+		System.out.println("Total users out: " + totalUsers);
+		assertEquals(this.total, ids.size());		
 		assertEquals(this.total, totalUsers);
 	}
 

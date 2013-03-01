@@ -144,24 +144,22 @@ public final class GroupServer extends SessionServer {
 		// Check if we should reconnect this HITWorker to an existing experiment
 		boolean inExperiment;
 		
-		synchronized(lobby) {
-			inExperiment = experiments.workerIsInProgress(hitw);
-			
-			if( inExperiment ) {									
-				sessionReconnect(session, hitw);			
-			} 
-			else {
-				Map<String, String> data = ImmutableMap.of(
-						"status", Codec.status_connectlobby					
-						);
-				SessionUtils.sendServiceMsg(session, data);
-				
-				logger.info(hitw.toString() + " connected to lobby");
-				lobby.userJoined(hitw);				
-			}
+		synchronized(lobby) { // Make sure starting experiments are atomic
+			if( inExperiment = experiments.workerIsInProgress(hitw) )
+				sessionReconnect(session, hitw);						
+			else
+				lobby.userJoined(hitw);
 		}
 		
-		if( !inExperiment ) serverGUI.updateLobbyModel();		
+		if( !inExperiment ) {
+			Map<String, String> data = ImmutableMap.of(
+					"status", Codec.status_connectlobby					
+					);
+			SessionUtils.sendServiceMsg(session, data);
+			
+			logger.info(hitw.toString() + " connected to lobby");
+			serverGUI.updateLobbyModel();			
+		}
 		
 		return hitw;
 	}
@@ -210,8 +208,8 @@ public final class GroupServer extends SessionServer {
 			return false;
 		}
 		
-		lobby.updateStatus(hitw, data);
-		serverGUI.updateLobbyModel();
+		if( lobby.updateStatus(hitw, data) )
+			serverGUI.updateLobbyModel();
 		
 		return true;
 	}

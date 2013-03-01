@@ -442,7 +442,9 @@ public abstract class SessionServer extends Thread {
 			}			
 		}			
 		
-		// TODO send a message to people that took HITs after the deadline		
+		/* TODO send a message to people that took HITs after the deadline
+		 * or still-connected clients		
+		 */
 		
 		try {	
 			// Sleep for a bit before shutting down jetty server

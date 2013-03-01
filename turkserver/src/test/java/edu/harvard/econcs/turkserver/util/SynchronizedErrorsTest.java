@@ -1,7 +1,10 @@
-package edu.harvard.econcs.turkserver.server;
+package edu.harvard.econcs.turkserver.util;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+/*
+ * Thought there was an error on OS X JVM with synchronized, but no :)
+ */
 public class SynchronizedErrorsTest {
 
 	static final int iters = 100;

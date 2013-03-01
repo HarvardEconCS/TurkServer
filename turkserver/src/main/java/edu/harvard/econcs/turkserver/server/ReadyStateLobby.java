@@ -68,26 +68,29 @@ public class ReadyStateLobby implements Lobby {
 	}
 
 	@Override
-	public synchronized void userJoined(HITWorkerImpl hitw) {
+	public void userJoined(HITWorkerImpl hitw) {
+		/*
+		 * NOTE: Seems possible to remove synchronization from this method
+		 * Giving it a shot with lobby unit tests
+		 */
+		
+		// Auto-true if debug mode, otherwise false
+		lobbyStatus.put(hitw, debugMode);
+		
 		if( debugMode ) {
-			// Create debug experiments if we have enough players, default to ready
-			lobbyStatus.put(hitw, true);
-			logger.info("Debug mode: lobby has {} people, {} ready", lobbyStatus.size(), lobbyStatus.getTrueCount());
-			
+			// Create debug experiments if we have enough players, default to ready			
+			logger.info("Debug mode: lobby has {} people, {} ready", lobbyStatus.size(), lobbyStatus.getTrueCount());			
 			tryExperimentStart();			
-		}
-		else {
-			lobbyStatus.put(hitw, false);
-		}		
+		}				
 	}
 	
 	private synchronized void tryExperimentStart() {
-		// whether to start experiments
-		if( lobbyStatus.getTrueCount() < configurator.groupSize() ) return;
+		// Don't try anything if not enough people in lobby
+		int expSize = configurator.groupSize(); 
+		if( lobbyStatus.getTrueCount() < expSize ) return;
 		
-		// Generate the list of experiment clients
-					
-		int expSize = configurator.groupSize();
+		// Generate the list of experiment clients					
+		
 		HITWorkerGroupImpl expClients = new HITWorkerGroupImpl();
 
 		// Count up exactly expSize people for the new experiment
@@ -108,7 +111,9 @@ public class ReadyStateLobby implements Lobby {
 		lobbyListener.createNewExperiment(expClients);
 		
 		/*
-		 * Avoid race condition where workers removed from lobby but not yet in experiment
+		 * NOTE: They must be in experiment first before we can safely remove from lobby
+		 * 
+		 * Avoids race condition where workers removed from lobby but not yet in experiment
 		 * may get placed in the lobby a second time, causing big problems
 		 */
 		for( HITWorker id : expClients.getHITWorkers() )	
@@ -118,34 +123,34 @@ public class ReadyStateLobby implements Lobby {
 	}
 
 	@Override
-	public void updateStatus(HITWorkerImpl hitw, Map<String, Object> data) {
-		boolean isReady = Boolean.parseBoolean(data.get("ready").toString());
-						
-		// are there enough people ready to start?
-		synchronized(this) {
-			/*
-			 * Ignore lobby updates for people not in lobby
-			 * MONUMENT FOR MASSIVE MYSTERY BUG
-			 */
-			lobbyStatus.replace(hitw, debugMode || isReady);
-			
-			int neededPeople = configurator.groupSize();
-			
-			logger.info("Lobby has " + lobbyStatus.getTrueCount() + " ready people");				
-			if( lobbyStatus.getTrueCount() >= neededPeople ) {				
-				// Create a new experiment and assign the ready people to it
-				tryExperimentStart();				
-			}
-			else if( !debugMode && lobbyStatus.size() < neededPeople ) {				
-				// Make sure everyone's ready is disabled
-				for( HITWorkerImpl id : lobbyStatus.keySet() ) {
-					lobbyStatus.put(id, false);
-				}
+	public boolean updateStatus(HITWorkerImpl hitw, Map<String, Object> data) {
+		
+		boolean isReady = debugMode || Boolean.parseBoolean(data.get("ready").toString());
+		
+		/*
+		 * Ignore lobby updates for people not in lobby
+		 * MONUMENT FOR MASSIVE DOUBLE-JOIN MYSTERY BUG
+		 */
+		Boolean oldStatus = lobbyStatus.replace(hitw, isReady);
+		
+		/*
+		 * Do nothing if user was already removed from lobby
+		 * or there was no change to the status
+		 */
+		if( oldStatus == null || oldStatus == isReady ) return false;
+		
+		tryExperimentStart();
+		
+		if( !debugMode && lobbyStatus.size() < configurator.groupSize() ) {				
+			// Make sure everyone's ready is disabled
+			for( HITWorkerImpl id : lobbyStatus.keySet() ) {
+				lobbyStatus.replace(id, false);
 			}
 		}
 		
 		// Notify everyone who is remaining in the lobby
 		broadcastLobbyStatus();
+		return true;
 	}
 
 	@Override
