@@ -71,7 +71,7 @@ public class ReadyStateLobby implements Lobby {
 	public synchronized void userJoined(HITWorkerImpl hitw) {
 		if( debugMode ) {
 			// Create debug experiments if we have enough players, default to ready
-			lobbyStatus.put(hitw, true);			
+			lobbyStatus.put(hitw, true);
 			logger.info("Debug mode: lobby has {} people, {} ready", lobbyStatus.size(), lobbyStatus.getTrueCount());
 			
 			tryExperimentStart();			
@@ -102,6 +102,9 @@ public class ReadyStateLobby implements Lobby {
 			if(counter == expSize) break;
 		}				
 				
+//		System.out.println("Current lobby before sending: " + lobbyStatus);
+//		System.out.println("Lobby sending out a group: " + expClients);
+		
 		lobbyListener.createNewExperiment(expClients);
 		
 		/*
@@ -110,6 +113,8 @@ public class ReadyStateLobby implements Lobby {
 		 */
 		for( HITWorker id : expClients.getHITWorkers() )	
 			lobbyStatus.remove((HITWorkerImpl) id);
+		
+//		System.out.println("Current lobby after sending: " + lobbyStatus);
 	}
 
 	@Override
@@ -118,7 +123,12 @@ public class ReadyStateLobby implements Lobby {
 						
 		// are there enough people ready to start?
 		synchronized(this) {
-			lobbyStatus.put(hitw, debugMode || isReady);				
+			/*
+			 * Ignore lobby updates for people not in lobby
+			 * MONUMENT FOR MASSIVE MYSTERY BUG
+			 */
+			lobbyStatus.replace(hitw, debugMode || isReady);
+			
 			int neededPeople = configurator.groupSize();
 			
 			logger.info("Lobby has " + lobbyStatus.getTrueCount() + " ready people");				

@@ -141,29 +141,27 @@ public final class GroupServer extends SessionServer {
 			SessionUtils.sendServiceMsg(session, data);
 		}		
 		
-		/* Check if we should reconnect this HITWorker to an existing experiment
-		 * TODO: can workers double-join the lobby before they are actually in an experiment?
-		 */
-		boolean inExperiment;		
+		// Check if we should reconnect this HITWorker to an existing experiment
+		boolean inExperiment;
+		
 		synchronized(lobby) {
 			inExperiment = experiments.workerIsInProgress(hitw);
+			
+			if( inExperiment ) {									
+				sessionReconnect(session, hitw);			
+			} 
+			else {
+				Map<String, String> data = ImmutableMap.of(
+						"status", Codec.status_connectlobby					
+						);
+				SessionUtils.sendServiceMsg(session, data);
+				
+				logger.info(hitw.toString() + " connected to lobby");
+				lobby.userJoined(hitw);				
+			}
 		}
 		
-		if( inExperiment ) {									
-			sessionReconnect(session, hitw);			
-		} 
-		else {
-			Map<String, String> data = ImmutableMap.of(
-					"status", Codec.status_connectlobby					
-					);
-
-			SessionUtils.sendServiceMsg(session, data);
-
-			logger.info(hitw.toString() + "connected to lobby");
-
-			lobby.userJoined(hitw);
-			serverGUI.updateLobbyModel();
-		}		
+		if( !inExperiment ) serverGUI.updateLobbyModel();		
 		
 		return hitw;
 	}
@@ -206,6 +204,7 @@ public final class GroupServer extends SessionServer {
 			logger.error("Can't accept update status for unknown session {}", session.getId());
 			return false;
 		}
+		// NOTE: other way to fix lobby bug is to sync on the below, but not necessary since it just ignores message
 		else if (experiments.workerIsInProgress(hitw)) {
 			logger.info("Ignoring lobby update for {} in experiment", hitw);
 			return false;

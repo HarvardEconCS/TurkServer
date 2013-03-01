@@ -3,17 +3,17 @@ package edu.harvard.econcs.turkserver.server;
 import static org.junit.Assert.*;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import com.google.common.collect.ImmutableMap;
 
 import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
 import edu.harvard.econcs.turkserver.cometd.FakeServerSession;
@@ -34,7 +34,7 @@ public class LobbySyncTest {
 			groups.add(group);
 			
 			// Simulate taking some time to make an experiment, since this is in the synchronized block
-			try { Thread.sleep(Math.round(Math.random() * 10));
+			try { Thread.sleep(Math.round(Math.random() * 100));
 			} catch (InterruptedException e) { e.printStackTrace(); }
 		}
 
@@ -44,10 +44,8 @@ public class LobbySyncTest {
 		public int getNumUsersConnected() { return 0; }
 	}
 
-	int total = 3000;
+	int total = 300;
 	int groupsize = 3;
-	
-	int addingThreads = 10;
 	
 	ReadyStateLobby lobby;
 	TestLobbyListener listener;
@@ -68,7 +66,9 @@ public class LobbySyncTest {
 	@Test
 	public void test() throws InterruptedException {
 		
-		ExecutorService threadPool = Executors.newFixedThreadPool(4);
+		Set<Thread> threadz = new HashSet<>();
+		
+		final Map<String, Object> lobbyReady = ImmutableMap.<String, Object>of("ready", true);
 		
 		for( int i = 0; i < total; i++ ) {
 			final Session record = new Session();
@@ -76,29 +76,35 @@ public class LobbySyncTest {
 			record.setAssignmentId("Assignment " + i);
 			record.setWorkerId("Worker " + i);
 								
-			threadPool.submit(new Runnable() {
+			Thread t = new Thread(new Runnable() {
 				@Override
 				public void run() {
 					// Sleep a random amount of time
 					try {
-						Thread.sleep(Math.round(Math.random() * 10));
+						Thread.sleep(Math.round(Math.random() * 100));
 					} catch (InterruptedException e) {}
 					
 					HITWorkerImpl hitw = new HITWorkerImpl(new FakeServerSession(), record);
 					lobby.userJoined(hitw);
+					
+					// Send a possible random lobby status update for SNAFU checking
+					if( Math.random() < 0.5 )
+						lobby.updateStatus(hitw, lobbyReady);
 				}
 			});
+			
+			t.start();
+			threadz.add(t);
 		}
 		
-		threadPool.shutdown();
-		threadPool.awaitTermination(10000, TimeUnit.MILLISECONDS);
+		for( Thread t : threadz ) t.join();
 		
 		int totalUsers = 0;
 		int totalGroups = 0;
 		Set<String> ids = new HashSet<String>();
 		
 		for( HITWorkerGroup group : listener.groups ) {			
-			System.out.println(group);	
+//			System.out.println(group);	
 			assertEquals(groupsize, group.groupSize());
 			
 			totalUsers += group.groupSize();
