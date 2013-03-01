@@ -197,7 +197,7 @@ class TSClient
 
   @sendQuizResults: (correct, total) =>
     @channelSend "/service/user",
-      status: Codec.quizResults
+      status: Codec.status_quizresults
       correct: correct
       total: total
     
@@ -206,9 +206,9 @@ class TSClient
     status = data.status
     console.log "Status: " + status + " msg: " + data.msg
     switch status
-      when Codec.quizNeeded
+      when Codec.status_quizneeded
         @quizneeded_cb?()
-      when Codec.quizFail
+      when Codec.status_quizfailed
         @quizfail_cb?()
       when Codec.username  
         @requestUsername_cb?()
