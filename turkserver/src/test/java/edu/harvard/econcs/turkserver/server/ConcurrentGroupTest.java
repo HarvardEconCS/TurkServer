@@ -61,7 +61,7 @@ public class ConcurrentGroupTest {
 		}
 	}
 
-	@Test(timeout=12000)
+	@Test(timeout=20000)
 	public void test() throws Exception {
 		DataModule dataModule = new DataModule();
 		dataModule.setHITLimit(clients);
