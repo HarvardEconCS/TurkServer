@@ -14,7 +14,7 @@ class Codec
   @errorMsg = "status.error"
   
   @status_quizneeded = "status.quizrequired"
-  @status_quizresults = "quiz.results"
+  @quizResults = "quiz.results"
   
   @status_quizfailed = "status.quizfailed"
   @status_failsauce = "status.toomanyfails"

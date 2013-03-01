@@ -197,7 +197,7 @@ class TSClient
 
   @sendQuizResults: (correct, total) =>
     @channelSend "/service/user",
-      status: Codec.status_quizresults
+      status: Codec.quizResults
       correct: correct
       total: total
     
@@ -222,8 +222,10 @@ class TSClient
       when Codec.doneExpMsg
         @finishExperiment_cb?()     
       when Codec.errorMsg
-        @errorMessage_cb?(data.msg)
-        
+        @errorMessage_cb?(status)
+      when Codec.status_failsauce
+        @errorMessage_cb?(status)
+      
   @submitHIT: (data) =>
     @channelSend "/service/user",
       status: Codec.hitSubmit
