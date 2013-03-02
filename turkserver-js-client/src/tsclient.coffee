@@ -225,6 +225,12 @@ class TSClient
         @errorMessage_cb?(status)
       when Codec.status_failsauce
         @errorMessage_cb?(status)
+      when Codec.status_simultaneoussessions
+        @errorMessage_cb?(status)
+      when Codec.status_sessionoverlap
+        @errorMessage_cb?(status)
+      when Codec.status_toomanysessions
+        @errorMessage_cb?(status)
       
   @submitHIT: (data) =>
     @channelSend "/service/user",
