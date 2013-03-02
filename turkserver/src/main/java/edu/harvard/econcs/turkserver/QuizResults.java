@@ -1,6 +1,7 @@
 package edu.harvard.econcs.turkserver;
 
 import java.io.Serializable;
+import java.util.Map;
 
 public class QuizResults implements Serializable {
 	
@@ -8,6 +9,7 @@ public class QuizResults implements Serializable {
 
 	public int correct = 0;
 	public int total = 0;
+	public Map<String, String[]> checkedChoices;
 	
 	public void addCorrectResponse() {
 		correct++;

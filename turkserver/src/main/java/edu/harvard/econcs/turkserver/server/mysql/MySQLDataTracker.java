@@ -285,6 +285,8 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			
 			double score = 1.0*results.correct/results.total;
 			
+			// TODO: Change database schema
+			// TODO: Save quiz result checked choices in the database
 			new SQLInsertClause(conn, dialect, _quiz)
 			.columns(_quiz.sessionId, _quiz.workerId, _quiz.setId, _quiz.numCorrect, _quiz.numTotal, _quiz.score)
 			.values(hitId, workerId, setID, results.correct, results.total, score )

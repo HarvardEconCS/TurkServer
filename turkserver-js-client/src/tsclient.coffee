@@ -195,11 +195,12 @@ class TSClient
     # alert("It appears that we lost the connection to the server."
     # + "If this persists, please return the HIT.");
 
-  @sendQuizResults: (correct, total) =>
+  @sendQuizResults: (correct, total, checkedChoices) =>
     @channelSend "/service/user",
       status: Codec.quizResults
       correct: correct
       total: total
+      checkedChoices: checkedChoices
     
   @userData: (message) =>
     data = message.data

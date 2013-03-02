@@ -1,6 +1,7 @@
 package edu.harvard.econcs.turkserver.server;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 import javax.servlet.GenericServlet;
@@ -120,6 +121,18 @@ public class SessionServlet extends GenericServlet {
 				QuizResults qr = new QuizResults();
 				qr.correct = Integer.parseInt(data.get("correct").toString());
 				qr.total = Integer.parseInt(data.get("total").toString());
+				
+				// TODO: test this
+				// get checked choices and deserialize it into a map
+				Map<String, String[]> checkedChoices = new HashMap<String, String[]>();
+				Map<String, Object> mapStringToObject = (Map<String, Object>) data.get("checkedChoices");
+				for (String key : mapStringToObject.keySet()) {
+					Object[] objArray = (Object[]) mapStringToObject.get(key);
+					String[] value = new String[objArray.length];
+					for (int i = 0; i < objArray.length; i++) value[i] = objArray[i].toString();
+					checkedChoices.put(key, value);
+				}
+				qr.checkedChoices = checkedChoices;
 								
 				sessions.rcvQuizResults(session, qr);				
 			}
