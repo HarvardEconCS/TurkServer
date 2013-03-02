@@ -9,7 +9,6 @@ import edu.harvard.econcs.turkserver.LobbyUpdateResp;
 import edu.harvard.econcs.turkserver.Messages;
 import edu.harvard.econcs.turkserver.QuizFailException;
 import edu.harvard.econcs.turkserver.QuizMaterials;
-import edu.harvard.econcs.turkserver.QuizResults;
 import edu.harvard.econcs.turkserver.SessionCompletedException;
 import edu.harvard.econcs.turkserver.SessionExpiredException;
 import edu.harvard.econcs.turkserver.SessionOverlapException;

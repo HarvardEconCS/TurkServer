@@ -3,10 +3,10 @@ package edu.harvard.econcs.turkserver.server;
 import java.net.InetAddress;
 import java.util.Map;
 
-import edu.harvard.econcs.turkserver.QuizResults;
 import edu.harvard.econcs.turkserver.api.ClientController;
 import edu.harvard.econcs.turkserver.api.HITWorker;
 import edu.harvard.econcs.turkserver.client.ClientAnnotationManager;
+import edu.harvard.econcs.turkserver.client.QuizResults;
 import edu.harvard.econcs.turkserver.server.MessageException;
 
 /**

@@ -17,7 +17,6 @@ import org.cometd.client.ext.TimesyncClientExtension;
 import org.cometd.client.transport.LongPollingTransport;
 
 import edu.harvard.econcs.turkserver.Codec;
-import edu.harvard.econcs.turkserver.QuizResults;
 import edu.harvard.econcs.turkserver.api.ClientController;
 
 public class SessionClient<C> implements ClientController {

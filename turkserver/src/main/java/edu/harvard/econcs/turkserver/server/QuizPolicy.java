@@ -2,7 +2,6 @@ package edu.harvard.econcs.turkserver.server;
 
 import java.util.Collection;
 
-import edu.harvard.econcs.turkserver.QuizResults;
 import edu.harvard.econcs.turkserver.schema.Quiz;
 
 public interface QuizPolicy {
@@ -12,7 +11,7 @@ public interface QuizPolicy {
 	 * @param results
 	 * @return
 	 */
-	boolean quizPasses(QuizResults results);
+	boolean quizPasses(Quiz results);
 	
 	/**
 	 * Whether a user requires a quiz based on their past results in this set.
@@ -38,8 +37,8 @@ public interface QuizPolicy {
 		}
 		
 		@Override
-		public boolean quizPasses(QuizResults results) {			
-			return 1.0 * results.correct / results.total >= passRate;
+		public boolean quizPasses(Quiz results) {
+			return 1.0 * results.getNumCorrect() / results.getNumTotal() >= passRate;
 		}
 
 		@Override
@@ -67,9 +66,9 @@ public interface QuizPolicy {
 	public static class DefaultQuizPolicy implements QuizPolicy {		
 		
 		@Override
-		public boolean quizPasses(QuizResults results) {
+		public boolean quizPasses(Quiz results) {
 			// Get everything right, biatch!
-			return (results.correct == results.total);
+			return (results.getNumCorrect() == results.getNumTotal());
 		}
 
 		@Override

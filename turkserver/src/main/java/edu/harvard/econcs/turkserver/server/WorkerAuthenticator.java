@@ -14,7 +14,6 @@ import com.google.inject.name.Named;
 
 import edu.harvard.econcs.turkserver.ExpServerException;
 import edu.harvard.econcs.turkserver.QuizMaterials;
-import edu.harvard.econcs.turkserver.QuizResults;
 import edu.harvard.econcs.turkserver.SessionCompletedException;
 import edu.harvard.econcs.turkserver.SessionOverlapException;
 import edu.harvard.econcs.turkserver.SimultaneousSessionsException;
@@ -242,7 +241,7 @@ public class WorkerAuthenticator {
 		return sessionRec;		
 	}
 	
-	public boolean quizPasses(QuizResults qr) {
+	public boolean quizPasses(Quiz qr) {
 		return quizPolicy.quizPasses(qr);
 	}
 	

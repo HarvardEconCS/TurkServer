@@ -30,7 +30,6 @@ import edu.harvard.econcs.turkserver.Codec;
 import edu.harvard.econcs.turkserver.ExpServerException;
 import edu.harvard.econcs.turkserver.Messages;
 import edu.harvard.econcs.turkserver.QuizMaterials;
-import edu.harvard.econcs.turkserver.QuizResults;
 import edu.harvard.econcs.turkserver.SessionCompletedException;
 import edu.harvard.econcs.turkserver.SessionExpiredException;
 import edu.harvard.econcs.turkserver.SessionOverlapException;
@@ -40,6 +39,7 @@ import edu.harvard.econcs.turkserver.TooManySessionsException;
 import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
 import edu.harvard.econcs.turkserver.config.TSConfig;
 import edu.harvard.econcs.turkserver.mturk.HITController;
+import edu.harvard.econcs.turkserver.schema.Quiz;
 import edu.harvard.econcs.turkserver.schema.Session;
 import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
@@ -262,12 +262,19 @@ public abstract class SessionServer extends Thread {
 		return hitw;
 	}
 
-	void sessionSubmit(ServerSession session) {
+	void sessionSubmit(ServerSession session, String survey) {
+		HITWorkerImpl worker = clientToHITWorker.get(session);
 		
-		// TODO write any logs for session		
+		if( worker == null ) {
+			logger.warn("Unrecognized client {} tried to submit", session.getId());
+			return;
+		}
+		
+		// Write any exit comments / logs for session
+		tracker.saveExitSurveyResults(worker, survey);
 		
 		int completed = completedHITs.incrementAndGet();
-		System.out.println(completed + " HITs completed");
+		System.out.println(completed + " HITs completed");		
 		
 		// TODO check the total number of possible different tasks as well - getTotalPuzzles()
 		
@@ -275,7 +282,7 @@ public abstract class SessionServer extends Thread {
 		
 		if( workerId != null ) {
 			int additional = workerAuth.getSetLimit() - tracker.getSetSessionInfoForWorker(workerId).size();		
-			SessionUtils.sendStatus(session, "completed", 
+			SessionUtils.sendStatus(session, Codec.status_completed, 
 					"Thanks for your work! You may do " + additional + " more HITs in this session.");
 		}
 		else {
@@ -283,9 +290,11 @@ public abstract class SessionServer extends Thread {
 		}
 	}
 
-	void sessionReconnect(ServerSession session, HITWorkerImpl hitw) {
+	void sessionReconnect(ServerSession session, HITWorkerImpl hitw) {	
+		
 		// experiment should send state to user with this callback
 		experiments.workerReconnected(hitw);
+		
 		hitw.reconnected();
 	}
 	
@@ -322,7 +331,7 @@ public abstract class SessionServer extends Thread {
 		
 	}
 	
-	void rcvQuizResults(ServerSession session, QuizResults qr) {
+	void rcvQuizResults(ServerSession session, Quiz qr) {
 		String workerId = (String) session.getAttribute("workerId");
 		String hitId = (String) session.getAttribute("hitId");
 		String assignmentId = (String) session.getAttribute("assignmentId");
@@ -349,19 +358,6 @@ public abstract class SessionServer extends Thread {
 				SessionUtils.sendStatus(session, Codec.status_quizfail);
 			}
 		}		
-	}
-
-	void rcvExitSurveyResults(ServerSession session,
-			Map<String, String> exitSurveyAns) {
-		String workerId = (String) session.getAttribute("workerId");
-		String hitId = (String) session.getAttribute("hitId");
-//		String assignmentId = (String) session.getAttribute("assignmentId");
-		
-		if( workerId == null ) {
-			logger.error("Can't save exit survey answers: unknown worker for {}", session.getId());
-		}
-
-		tracker.saveExitSurveyResults(hitId, workerId, exitSurveyAns);
 	}
 
 	void rcvInactiveTime(ServerSession session, long inactiveTime) {

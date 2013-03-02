@@ -3,7 +3,6 @@
  */
 package edu.harvard.econcs.turkserver.server.mysql;
 
-import edu.harvard.econcs.turkserver.QuizResults;
 import edu.harvard.econcs.turkserver.api.HITWorker;
 import edu.harvard.econcs.turkserver.schema.Experiment;
 import edu.harvard.econcs.turkserver.schema.Quiz;
@@ -93,16 +92,7 @@ public abstract class ExperimentDataTracker {
 	 * @param workerId
 	 * @param qr 
 	 */
-	public abstract void saveQuizResults(String hitId, String workerId, QuizResults qr);
-
-	/**
-	 * Save the answers in the exit survey
-	 * @param hitId
-	 * @param workerId
-	 * @param exitSurveyAns
-	 */
-	public abstract void saveExitSurveyResults(String hitId, String workerId,
-			Map<String, String> exitSurveyAns);
+	public abstract void saveQuizResults(String hitId, String workerId, Quiz qr);
 
 	/**
 	 * Associate a user name to a session (only for the lobby anyway)
@@ -143,7 +133,7 @@ public abstract class ExperimentDataTracker {
 	 * @param hitWorker
 	 * @param amount
 	 */
-	public void saveBonusAmount(HITWorkerImpl hitWorker, double amount) {
+	public final void saveBonusAmount(HITWorkerImpl hitWorker, double amount) {
 		Session record = hitWorker.getSessionRecord();
 			
 		record.setBonus(BigDecimal.valueOf(amount));		
@@ -156,11 +146,21 @@ public abstract class ExperimentDataTracker {
 	 * @param session
 	 * @param experimentID
 	 */
-	protected void saveExperiment(HITWorkerImpl session, String experimentID) {
-		Session record = session.getSessionRecord();
-		
-		record.setExperimentId(experimentID);
-		
+	public void saveExperiment(HITWorkerImpl session, String experimentID) {
+		Session record = session.getSessionRecord();		
+		record.setExperimentId(experimentID);		
+		saveSession(record);
+	}
+
+	/**
+	 * Save the answers in the exit survey
+	 * @param hitId
+	 * @param workerId
+	 * @param comments
+	 */
+	public void saveExitSurveyResults(HITWorkerImpl session, String comments) {
+		Session record = session.getSessionRecord();		
+		record.setComment(comments);
 		saveSession(record);
 	}
 

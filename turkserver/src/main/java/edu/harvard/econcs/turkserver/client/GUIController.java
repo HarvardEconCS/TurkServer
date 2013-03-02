@@ -1,7 +1,6 @@
 package edu.harvard.econcs.turkserver.client;
 
 import edu.harvard.econcs.turkserver.QuizMaterials;
-import edu.harvard.econcs.turkserver.QuizResults;
 import edu.harvard.econcs.turkserver.api.ClientLobbyController;
 
 import java.awt.Container;

@@ -6,6 +6,8 @@ package edu.harvard.econcs.turkserver.schema;
  */
 public class Quiz {
 
+    private String answers;
+
     private Integer id;
 
     private Integer numCorrect;
@@ -19,6 +21,14 @@ public class Quiz {
     private String setId;
 
     private String workerId;
+
+    public String getAnswers() {
+        return answers;
+    }
+
+    public void setAnswers(String answers) {
+        this.answers = answers;
+    }
 
     public Integer getId() {
         return id;

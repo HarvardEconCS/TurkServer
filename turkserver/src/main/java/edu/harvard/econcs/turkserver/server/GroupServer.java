@@ -170,18 +170,6 @@ public final class GroupServer extends SessionServer {
 		return hitw;
 	}
 
-	@Override
-	void sessionReconnect(ServerSession session, HITWorkerImpl hitw) {
-		Map<String, String> data = ImmutableMap.of(
-				"status", Codec.status_connectexp,
-				"channel", hitw.expCont.expChannel
-				);
-
-		SessionUtils.sendServiceMsg(session, data);							
-
-		super.sessionReconnect(session, hitw);
-	}
-
 	/**
 	 * 
 	 * @param session

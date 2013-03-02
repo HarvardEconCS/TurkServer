@@ -188,19 +188,22 @@ public class Experiments {
 		else {
 			bayeux.createIfAbsent(Codec.expChanPrefix + expChannel, persistent);
 			bayeux.createIfAbsent(Codec.expSvcPrefix + expChannel, persistent);
+						
 			ls = bayeux.newLocalSession(expId);
 			ls.handshake();	
 		}
 		
 		/*
 		 * Send experiment channel to clients to notify connection
+		 * 
 		 * TODO this may be unnecessary, fix protocol
+		 * possible fix: server subscribes clients; clients just listen
 		 */
 		Map<String, Object> data = ImmutableMap.of(
 				"status", Codec.status_connectexp,
 				"channel", (Object) expChannel);
 
-		for( HITWorker hitw : group.getHITWorkers() ) {
+		for( HITWorker hitw : group.getHITWorkers() ) {			
 			try { ((HITWorkerImpl) hitw).deliverUserService(data);
 			} catch (MessageException e) { e.printStackTrace();	}			
 		}				
@@ -350,6 +353,13 @@ public class Experiments {
 			logger.info("{} not in experiment, ignoring reconnect callback", worker);
 			return;
 		}
+		
+		// Re-send channel information 
+		Map<String, String> data = ImmutableMap.of(
+				"status", Codec.status_connectexp,
+				"channel", worker.expCont.expChannel
+				);
+		SessionUtils.sendServiceMsg(worker.cometdSession.get(), data);	
 		
 		manager.triggerWorkerConnect(expId, worker);
 	}

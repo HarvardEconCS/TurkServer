@@ -20,7 +20,7 @@ import org.cometd.server.ext.TimesyncExtension;
 import org.eclipse.jetty.util.log.Log;
 
 import edu.harvard.econcs.turkserver.Codec;
-import edu.harvard.econcs.turkserver.QuizResults;
+import edu.harvard.econcs.turkserver.schema.Quiz;
 
 public class SessionServlet extends GenericServlet {
 
@@ -118,21 +118,27 @@ public class SessionServlet extends GenericServlet {
 				sessions.sessionAccept(session, hitId, assignmentId, workerId);									
 			}
 			else if( Codec.quizResults.equals(status) ) {
-				QuizResults qr = new QuizResults();
-				qr.correct = Integer.parseInt(data.get("correct").toString());
-				qr.total = Integer.parseInt(data.get("total").toString());
+				int correct = Integer.parseInt(data.get("correct").toString());
+				int total = Integer.parseInt(data.get("total").toString());
 				
+				Quiz qr = new Quiz();				
+				
+				qr.setNumCorrect(correct);
+				qr.setNumTotal(total);
+				qr.setScore(1.0 * correct / total);
+				qr.setAnswers(data.get("answers").toString());
+								
 				// TODO: test this
 				// get checked choices and deserialize it into a map
-				Map<String, String[]> checkedChoices = new HashMap<String, String[]>();
-				Map<String, Object> mapStringToObject = (Map<String, Object>) data.get("checkedChoices");
-				for (String key : mapStringToObject.keySet()) {
-					Object[] objArray = (Object[]) mapStringToObject.get(key);
-					String[] value = new String[objArray.length];
-					for (int i = 0; i < objArray.length; i++) value[i] = objArray[i].toString();
-					checkedChoices.put(key, value);
-				}
-				qr.checkedChoices = checkedChoices;
+//				Map<String, String[]> checkedChoices = new HashMap<String, String[]>();
+//				Map<String, Object> mapStringToObject = (Map<String, Object>) data.get("checkedChoices");
+//				for (String key : mapStringToObject.keySet()) {
+//					Object[] objArray = (Object[]) mapStringToObject.get(key);
+//					String[] value = new String[objArray.length];
+//					for (int i = 0; i < objArray.length; i++) value[i] = objArray[i].toString();
+//					checkedChoices.put(key, value);
+//				}
+//				qr.checkedChoices = checkedChoices;
 								
 				sessions.rcvQuizResults(session, qr);				
 			}
@@ -143,17 +149,17 @@ public class SessionServlet extends GenericServlet {
 			else if( Codec.hitSubmit.equals(status) ) {								
 				Log.getRootLogger().info("HIT " + hitId + " submitting");
 				
+				String survey = (String) data.get("comments");
+				
 				// TODO: store data from exit survey/any other final stuff
-				Map<String, String> exitSurveyAns = new HashMap<String, String>();
-				Map<String, Object> mapStringToObject = (Map<String, Object>) data.get("data");
-				for (String key : mapStringToObject.keySet()) {
-					String value = mapStringToObject.get(key).toString();
-					exitSurveyAns.put(key, value);
-				}
-				
-				sessions.rcvExitSurveyResults(session, exitSurveyAns);
-				
-				sessions.sessionSubmit(session);
+//				Map<String, String> exitSurveyAns = new HashMap<String, String>();
+//				Map<String, Object> mapStringToObject = (Map<String, Object>) data.get("data");
+//				for (String key : mapStringToObject.keySet()) {
+//					String value = mapStringToObject.get(key).toString();
+//					exitSurveyAns.put(key, value);
+//				}
+
+				sessions.sessionSubmit(session, survey);
 			}
 			else {
 				Log.getRootLogger().warn("Unrecognized message " + data);

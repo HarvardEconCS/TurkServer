@@ -36,6 +36,8 @@ public class Codec {
 	// Sent when the host server is done with experiments
 	public static final String status_expfinished = "status.alreadyfinished";
 	
+	public static final String status_completed = "status.hitcompleted";
+	
 	public static final String status_batchfinished = "status.batchfinished";
 	
 	

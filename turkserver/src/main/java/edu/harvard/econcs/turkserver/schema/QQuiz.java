@@ -19,6 +19,8 @@ public class QQuiz extends com.mysema.query.sql.RelationalPathBase<Quiz> {
 
     public static final QQuiz quiz = new QQuiz("quiz");
 
+    public final StringPath answers = createString("answers");
+
     public final NumberPath<Integer> id = createNumber("id", Integer.class);
 
     public final NumberPath<Integer> numCorrect = createNumber("numCorrect", Integer.class);

@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.1.67, for pc-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.6.10, for osx10.7 (x86_64)
 --
 -- Host: localhost    Database: turkserver
 -- ------------------------------------------------------
--- Server version	5.1.67-log
+-- Server version	5.6.10
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -88,6 +88,7 @@ CREATE TABLE `quiz` (
   `numCorrect` int(11) DEFAULT '0',
   `numTotal` int(11) DEFAULT '0',
   `score` double DEFAULT NULL,
+  `answers` text,
   PRIMARY KEY (`id`),
   KEY `workerId` (`workerId`),
   KEY `quiz_ibfk_1` (`sessionId`),
@@ -192,7 +193,7 @@ CREATE TABLE `sets` (
   `descript` text,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -236,4 +237,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2013-02-26  0:39:00
+-- Dump completed on 2013-03-02 14:56:52

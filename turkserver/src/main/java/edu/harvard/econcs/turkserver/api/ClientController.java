@@ -2,7 +2,7 @@ package edu.harvard.econcs.turkserver.api;
 
 import java.util.Map;
 
-import edu.harvard.econcs.turkserver.QuizResults;
+import edu.harvard.econcs.turkserver.client.QuizResults;
 
 public interface ClientController {
 

@@ -29,7 +29,9 @@ class Codec
   @doneExpMsg = "finishexp"
 
   @status_expfinished = "status.alreadyfinished"
-  @status_batchfinished = "status.batchfinished"    
+  @status_completed = "status.hitcompleted"
+  
+  @status_batchfinished = "status.batchfinished"      
   
   # channels
   @expChanPrefix = "/experiment/"

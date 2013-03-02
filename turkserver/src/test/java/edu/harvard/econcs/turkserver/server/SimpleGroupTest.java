@@ -118,7 +118,7 @@ public class SimpleGroupTest {
 		Thread.sleep(1000);		
 		// Verify experiment started and everyone got the start message
 		for( LobbyClient<TestClient> lc : clients1 )
-			assertEquals("startExp", lc.getClientBean().lastCall );
+			assertTrue(lc.getClientBean().started );
 		ExperimentControllerImpl ec1 = tl.lastStart;
 		
 		assertNotNull(ec1);
@@ -131,7 +131,7 @@ public class SimpleGroupTest {
 		
 		Thread.sleep(1000);		
 		for( LobbyClient<TestClient> lc : clients2 )
-			assertEquals("startExp", lc.getClientBean().lastCall );
+			assertTrue(lc.getClientBean().started );
 		ExperimentControllerImpl ec2 = tl.lastStart;
 		
 		assertNotNull(ec2);
@@ -140,6 +140,9 @@ public class SimpleGroupTest {
 		TestExperiment exp2 = (TestExperiment) ss.experiments.manager.beans.get(ec2.getExpId());
 		assertNotNull(exp2);
 		assertNotSame(exp1, exp2);				
+		
+		// Ensure that `startRound` messages already happened (doesn't trample on broadcast)
+		Thread.sleep(1000);
 		
 		// Try some broadcast messages		
 		exp2.cont.sendExperimentBroadcast(

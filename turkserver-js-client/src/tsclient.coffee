@@ -195,12 +195,12 @@ class TSClient
     # alert("It appears that we lost the connection to the server."
     # + "If this persists, please return the HIT.");
 
-  @sendQuizResults: (correct, total, checkedChoices) =>
+  @sendQuizResults: (correct, total, answers) =>
     @channelSend "/service/user",
       status: Codec.quizResults
       correct: correct
       total: total
-      checkedChoices: checkedChoices
+      answers: answers
     
   @userData: (message) =>
     data = message.data
@@ -214,7 +214,8 @@ class TSClient
       when Codec.username  
         @requestUsername_cb?()
       when Codec.connectLobbyAck
-        @enterLobby_cb?()
+        # don't send enter lobby message if we got a service subscription already
+        @enterLobby_cb?() if not @expServiceSubscription
       when Codec.connectExpAck
         @subscribeExp data.channel
         @startExperiment_cb?()
@@ -236,7 +237,7 @@ class TSClient
   @submitHIT: (data) =>
     @channelSend "/service/user",
       status: Codec.hitSubmit
-      data: data
+      comments: data
     
   @subscribeExp: (channel) ->
     @expServiceSubscription = $.cometd.subscribe Codec.expSvcPrefix + channel, (message) => @serviceMessage_cb? message.data

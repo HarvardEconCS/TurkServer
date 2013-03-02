@@ -1,6 +1,5 @@
 package edu.harvard.econcs.turkserver.server.mysql;
 
-import edu.harvard.econcs.turkserver.QuizResults;
 import edu.harvard.econcs.turkserver.schema.Experiment;
 import edu.harvard.econcs.turkserver.schema.Quiz;
 import edu.harvard.econcs.turkserver.schema.Session;
@@ -29,6 +28,7 @@ import com.google.inject.Singleton;
  * @author mao
  *
  */
+@SuppressWarnings("unused")
 @Singleton
 public class ExperimentDummyTracker extends ExperimentDataTracker {		
 	
@@ -44,14 +44,9 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 				
 		hitIdToSessions = new ConcurrentHashMap<String, Session>();		
 		
-		// TODO double-check the concurrency of this if it becomes important		
-		@SuppressWarnings("unused")
-		SetMultimap<String, Session> temp;
-		@SuppressWarnings("unused")
-		SetMultimap<String, Quiz> temp2;
-		
-		workerIdToSessions = Multimaps.synchronizedSetMultimap(temp = HashMultimap.create());
-		workerIdToQuizzes = Multimaps.synchronizedSetMultimap(temp2 = HashMultimap.create());
+		// TODO double-check the concurrency of this if it becomes important										
+		workerIdToSessions = Multimaps.synchronizedSetMultimap(HashMultimap.<String, Session>create());
+		workerIdToQuizzes = Multimaps.synchronizedSetMultimap(HashMultimap.<String, Quiz>create());
 		
 		// Experiment trackers
 		experiments = new ConcurrentHashMap<String, Experiment>();
@@ -116,28 +111,23 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	public void saveQuizResults(String hitId, String workerId, QuizResults qr) {		
+	public void saveQuizResults(String hitId, String workerId, Quiz qr) {		
 		logger.info(String.format("Session %s got %d out of %d correct", 
-				hitId, qr.correct, qr.total));
+				hitId, qr.getNumCorrect(), qr.getNumTotal()));
 		
-		Quiz q = new Quiz();
+		// Correct, total, score, answers already set when parsed; we just add worker/sessionId		
+		qr.setSessionId(hitId);
+		qr.setWorkerId(workerId);
+		qr.setSetId("");
 		
-		q.setNumCorrect(qr.correct);
-		q.setNumTotal(qr.total);
-		q.setScore(1.0*qr.correct/qr.total);
-		q.setSessionId(hitId);
-		q.setWorkerId(workerId);
-		q.setSetId("");
-		
-		workerIdToQuizzes.put(workerId, q);
+		workerIdToQuizzes.put(workerId, qr);
 	}
 
 	@Override
-	public void saveExitSurveyResults(String hitId, String workerId,
-			Map<String, String> exitSurveyAns) {
-		logger.info(String.format("Session %s provided exit survey answers %s" , hitId, exitSurveyAns));
+	public void saveExitSurveyResults(HITWorkerImpl session, String comments) {
+		super.saveExitSurveyResults(session, comments);
 		
-		// TODO: anything else to do here?
+		logger.info(String.format("Session %s provided exit survey answers %s" , session, comments));				
 	}
 
 	@Override
@@ -157,7 +147,7 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	protected void saveExperiment(HITWorkerImpl session, String experimentID) {
+	public void saveExperiment(HITWorkerImpl session, String experimentID) {
 		super.saveExperiment(session, experimentID);				
 		
 		logger.info("{} joined experiment {}", session, experimentID);	

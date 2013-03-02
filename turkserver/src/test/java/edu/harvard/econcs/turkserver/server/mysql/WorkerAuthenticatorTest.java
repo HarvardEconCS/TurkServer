@@ -118,15 +118,16 @@ public class WorkerAuthenticatorTest {
 		String assignmentId = "testAssignmentId";
 		String assignmentId2 = "testAssignmentId2";
 		
-		Session s = new Session();
-		s.setHitId(hitId);
-		s.setWorkerId(workerId);
-		s.setAssignmentId(assignmentId);		
+		Session takenSession = new Session();
+		takenSession.setHitId(hitId);
+		takenSession.setWorkerId(workerId);
+		takenSession.setAssignmentId(assignmentId);		
 		
-		assertEquals(SessionStatus.ASSIGNED, SessionRecord.status(s));
+		assertEquals(SessionStatus.ASSIGNED, SessionRecord.status(takenSession));
 		
-		tracker.saveSession(s);
+		tracker.saveSession(takenSession);
 		
+		// Attempt to take new session
 		workerAuth.checkWorkerLimits(hitId2, assignmentId2, workerId);
 	}
 	

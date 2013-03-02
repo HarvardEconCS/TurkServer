@@ -116,6 +116,7 @@ public class HITWorkerImpl implements HITWorker, HITWorkerGroup {
 			return;
 		}
 		
+		// TODO should not add inactive time before experiment starts
 		addInactiveTime( System.currentTimeMillis() - lastDisc );
 	}
 	

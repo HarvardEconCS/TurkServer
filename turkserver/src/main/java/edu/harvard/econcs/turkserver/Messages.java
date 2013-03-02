@@ -13,8 +13,9 @@ public class Messages {
 		"Please return the HIT, and accept a different HIT in this group.\n";
 
 	public static final String SIMULTANEOUS_SESSIONS =			
-			"There is another HIT registered to you right now. Look for it in your dashboard.\n" +
-			"If you returned that HIT, please try participating later.";
+			"There is another HIT registered to you right now. Please return this HIT\n" +
+			"and continue working on the existing one in your dashboard.\n" +
+			"(If you returned that HIT, please try participating later.)";
 					
 //		"It appears that you have already accepted another HIT for this game.\n" +
 //		"Please return this HIT and finish your other games before accepting\n" +
