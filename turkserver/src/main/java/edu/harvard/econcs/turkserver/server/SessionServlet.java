@@ -144,6 +144,15 @@ public class SessionServlet extends GenericServlet {
 				Log.getRootLogger().info("HIT " + hitId + " submitting");
 				
 				// TODO: store data from exit survey/any other final stuff
+				Map<String, String> exitSurveyAns = new HashMap<String, String>();
+				Map<String, Object> mapStringToObject = (Map<String, Object>) data.get("data");
+				for (String key : mapStringToObject.keySet()) {
+					String value = mapStringToObject.get(key).toString();
+					exitSurveyAns.put(key, value);
+				}
+				
+				sessions.rcvExitSurveyResults(session, exitSurveyAns);
+				
 				sessions.sessionSubmit(session);
 			}
 			else {

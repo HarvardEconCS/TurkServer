@@ -12,6 +12,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -129,6 +130,14 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 		q.setSetId("");
 		
 		workerIdToQuizzes.put(workerId, q);
+	}
+
+	@Override
+	public void saveExitSurveyResults(String hitId, String workerId,
+			Map<String, String> exitSurveyAns) {
+		logger.info(String.format("Session %s provided exit survey answers %s" , hitId, exitSurveyAns));
+		
+		// TODO: anything else to do here?
 	}
 
 	@Override

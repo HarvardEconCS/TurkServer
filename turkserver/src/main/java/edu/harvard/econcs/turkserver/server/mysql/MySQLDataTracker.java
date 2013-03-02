@@ -16,6 +16,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.configuration.Configuration;
 
@@ -292,6 +293,24 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			.values(hitId, workerId, setID, results.correct, results.total, score )
 			.execute();		
 			
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		} 				
+	}
+
+	@Override
+	public void saveExitSurveyResults(String hitId, String workerId,
+			Map<String, String> exitSurveyAns) {
+		try( Connection conn = pbds.getConnection() ) {	
+			
+			ensureWorkerExists(conn, workerId);
+			
+			// TODO: Change database schema
+			// TODO: Save exit survey answers in the database
+//			new SQLInsertClause(conn, dialect, _quiz)
+//			.columns(_quiz.sessionId, _quiz.workerId, _quiz.setId, _quiz.numCorrect, _quiz.numTotal, _quiz.score)
+//			.values(hitId, workerId, setID, results.correct, results.total, score )
+//			.execute();		
 		} catch (SQLException e) {			
 			e.printStackTrace();
 		} 				

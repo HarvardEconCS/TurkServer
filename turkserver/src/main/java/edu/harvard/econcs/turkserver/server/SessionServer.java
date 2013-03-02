@@ -351,6 +351,19 @@ public abstract class SessionServer extends Thread {
 		}		
 	}
 
+	void rcvExitSurveyResults(ServerSession session,
+			Map<String, String> exitSurveyAns) {
+		String workerId = (String) session.getAttribute("workerId");
+		String hitId = (String) session.getAttribute("hitId");
+//		String assignmentId = (String) session.getAttribute("assignmentId");
+		
+		if( workerId == null ) {
+			logger.error("Can't save exit survey answers: unknown worker for {}", session.getId());
+		}
+
+		tracker.saveExitSurveyResults(hitId, workerId, exitSurveyAns);
+	}
+
 	void rcvInactiveTime(ServerSession session, long inactiveTime) {
 		HITWorkerImpl worker = clientToHITWorker.get(session);
 		

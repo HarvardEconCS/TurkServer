@@ -17,6 +17,7 @@ import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,6 +94,15 @@ public abstract class ExperimentDataTracker {
 	 * @param qr 
 	 */
 	public abstract void saveQuizResults(String hitId, String workerId, QuizResults qr);
+
+	/**
+	 * Save the answers in the exit survey
+	 * @param hitId
+	 * @param workerId
+	 * @param exitSurveyAns
+	 */
+	public abstract void saveExitSurveyResults(String hitId, String workerId,
+			Map<String, String> exitSurveyAns);
 
 	/**
 	 * Associate a user name to a session (only for the lobby anyway)
