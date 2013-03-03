@@ -128,18 +128,6 @@ public class SessionServlet extends GenericServlet {
 				qr.setScore(1.0 * correct / total);
 				qr.setAnswers(data.get("answers").toString());
 								
-				// TODO: test this
-				// get checked choices and deserialize it into a map
-//				Map<String, String[]> checkedChoices = new HashMap<String, String[]>();
-//				Map<String, Object> mapStringToObject = (Map<String, Object>) data.get("checkedChoices");
-//				for (String key : mapStringToObject.keySet()) {
-//					Object[] objArray = (Object[]) mapStringToObject.get(key);
-//					String[] value = new String[objArray.length];
-//					for (int i = 0; i < objArray.length; i++) value[i] = objArray[i].toString();
-//					checkedChoices.put(key, value);
-//				}
-//				qr.checkedChoices = checkedChoices;
-								
 				sessions.rcvQuizResults(session, qr);				
 			}
 			else if( "inactive".equals(status) ) {
@@ -151,14 +139,6 @@ public class SessionServlet extends GenericServlet {
 				
 				String survey = (String) data.get("comments");
 				
-				// TODO: store data from exit survey/any other final stuff
-//				Map<String, String> exitSurveyAns = new HashMap<String, String>();
-//				Map<String, Object> mapStringToObject = (Map<String, Object>) data.get("data");
-//				for (String key : mapStringToObject.keySet()) {
-//					String value = mapStringToObject.get(key).toString();
-//					exitSurveyAns.put(key, value);
-//				}
-
 				sessions.sessionSubmit(session, survey);
 			}
 			else {
