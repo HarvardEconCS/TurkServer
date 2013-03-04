@@ -233,6 +233,8 @@ class TSClient
         @errorMessage_cb?(status)
       when Codec.status_toomanysessions
         @errorMessage_cb?(status)
+      when Codec.status_completed
+        @errorMessage_cb?(status)
       
   @submitHIT: (data) =>
     @channelSend "/service/user",
