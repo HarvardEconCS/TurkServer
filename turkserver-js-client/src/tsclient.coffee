@@ -205,7 +205,7 @@ class TSClient
   @userData: (message) =>
     data = message.data
     status = data.status
-    console.log "Status: " + status + " msg: " + data.msg
+    # console.log "Status: " + status + " msg: " + data.msg
     switch status
       when Codec.status_quizneeded
         @quizneeded_cb?()
