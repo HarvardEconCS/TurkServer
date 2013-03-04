@@ -94,20 +94,18 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	public void saveAssignmentForSession(String hitId,
+	public void saveWorkerAssignment(HITWorkerImpl worker,
 			String assignmentId, String workerId) {
-		Session s = hitIdToSessions.get(hitId);
-		if( s == null ) s = new Session();
-		
-		s.setHitId(hitId);
+		Session s = worker.getSessionRecord();		
+				
 		s.setAssignmentId(assignmentId);
 		s.setWorkerId(workerId);
 		
-		hitIdToSessions.put(hitId, s);		
+		hitIdToSessions.put(s.getHitId(), s);		
 		workerIdToSessions.put(workerId, s);
 		
 		logger.info(String.format("session %s has assignment %s by worker %s",
-				hitId, assignmentId, workerId));
+				s.getHitId(), assignmentId, workerId));
 	}
 
 	@Override

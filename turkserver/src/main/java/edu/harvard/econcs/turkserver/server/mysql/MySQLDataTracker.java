@@ -2,6 +2,7 @@ package edu.harvard.econcs.turkserver.server.mysql;
 
 import edu.harvard.econcs.turkserver.config.TSConfig;
 import edu.harvard.econcs.turkserver.schema.*;
+import edu.harvard.econcs.turkserver.server.HITWorkerImpl;
 
 import java.beans.PropertyVetoException;
 import java.io.File;
@@ -252,25 +253,16 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	public void saveAssignmentForSession(String hitId,
+	public void saveWorkerAssignment(HITWorkerImpl session,
 			String assignmentId, String workerId) {
-		try( Connection conn = pbds.getConnection() ) {	
-			
+		try( Connection conn = pbds.getConnection() ) {				
 			// Make sure the worker table contains this workerId first, but ignore if already exists
 			/*
 			 * INSERT IGNORE INTO worker(id) VALUES (?)
 			 */
 			ensureWorkerExists(conn, workerId);
 			
-			/*
-			 * UPDATE session SET assignmentId=?, workerId=? WHERE hitId=?
-			 */
-			new SQLUpdateClause(conn, dialect, _session)
-			.set(_session.assignmentId, assignmentId)
-			.set(_session.workerId, workerId)
-			.where(_session.hitId.eq(hitId))
-			.execute();
-			
+			super.saveWorkerAssignment(session, assignmentId, workerId);			
 		} catch (SQLException e) {			
 			e.printStackTrace();
 		} 		

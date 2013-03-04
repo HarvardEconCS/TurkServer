@@ -189,13 +189,13 @@ public class SessionServlet extends GenericServlet {
         @Listener("/meta/subscribe")
         public void monitorSubscribe(ServerSession session, ServerMessage message)
         {
-            Log.getRootLogger().info("Monitored Subscribe from "+session+" for "+message.get(Message.SUBSCRIPTION_FIELD));
+            Log.getRootLogger().debug("Monitored Subscribe from "+session+" for "+message.get(Message.SUBSCRIPTION_FIELD));
         }
 
         @Listener("/meta/unsubscribe")
         public void monitorUnsubscribe(ServerSession session, ServerMessage message)
         {
-            Log.getRootLogger().info("Monitored Unsubscribe from "+session+" for "+message.get(Message.SUBSCRIPTION_FIELD));
+            Log.getRootLogger().debug("Monitored Unsubscribe from "+session+" for "+message.get(Message.SUBSCRIPTION_FIELD));
         }
 
         @Listener("/meta/*")

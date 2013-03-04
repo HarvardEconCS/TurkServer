@@ -27,11 +27,9 @@ import com.google.common.collect.Tables;
 import com.google.inject.Inject;
 
 import edu.harvard.econcs.turkserver.Codec;
-import edu.harvard.econcs.turkserver.ExpServerException;
 import edu.harvard.econcs.turkserver.Messages;
 import edu.harvard.econcs.turkserver.QuizMaterials;
 import edu.harvard.econcs.turkserver.SessionCompletedException;
-import edu.harvard.econcs.turkserver.SessionExpiredException;
 import edu.harvard.econcs.turkserver.SessionOverlapException;
 import edu.harvard.econcs.turkserver.SimultaneousSessionsException;
 import edu.harvard.econcs.turkserver.TooManyFailsException;
@@ -176,11 +174,19 @@ public abstract class SessionServer extends Thread {
 			return null;
 		}
 		
+		Session hitIdRecord = tracker.getStoredSessionInfo(hitId);
+		
 		try {
-			workerAuth.checkHITValid(hitId, workerId);				
+			workerAuth.checkHITValid(hitId, workerId, hitIdRecord);
+			
+			// Create hitId record that would have been saved above
+			if( hitIdRecord == null ) {				
+				hitIdRecord = new Session();
+				hitIdRecord.setHitId(hitId);
+			}
 		}
 		catch (SessionCompletedException e) {
-			SessionUtils.sendStatus(session, "completed", Messages.SESSION_COMPLETED);
+			SessionUtils.sendStatus(session, Codec.status_completed, Messages.SESSION_COMPLETED);
 			logger.info("Client connected to experiment after completion: "	+ hitId.toString());
 			return null;
 		} catch (SessionOverlapException e) {
@@ -189,7 +195,7 @@ public abstract class SessionServer extends Thread {
 		}
 		
 		try {
-			workerAuth.checkWorkerLimits(hitId, assignmentId, workerId);
+			workerAuth.checkWorkerLimits(hitId, workerId, hitIdRecord);
 		} catch (SimultaneousSessionsException e) {			
 			SessionUtils.sendStatus(session, Codec.status_simultaneoussessions, Messages.SIMULTANEOUS_SESSIONS);
 			return null;
@@ -222,43 +228,35 @@ public abstract class SessionServer extends Thread {
 		
 		HITWorkerImpl hitw = null;
 		
-		try {
-			Session record = workerAuth.checkAssignment(hitId, assignmentId, workerId);
-
-			// Find this HITWorker in table
-			if( (hitw = hitWorkerTable.get(hitId, workerId)) == null ) {
-				// create instance of HITWorker			
-				hitw = new HITWorkerImpl(session, record);
-				hitWorkerTable.put(hitId, workerId, hitw);
-			}
-			
-			// Match session to HITWorker and vice versa
-			ServerSession oldSession = hitw.cometdSession.get();
-			if( oldSession == null || !session.equals(oldSession) ) {
-				hitw.setServerSession(session);				
-			}			
-			clientToHITWorker.put(session, hitw);
-
-			// Successful registration, save info
-			tracker.saveIP(hitw, bayeux.getContext().getRemoteAddress().getAddress(), new Date());			
-
-		} catch (ExpServerException e) {		
-
-			if (e instanceof SessionExpiredException ) {					
-				SessionUtils.sendStatus(session, null, Messages.EXPIRED_SESSION);
-
-				logger.warn("Unexpected connection on expired session: " + hitId.toString());
-			}
-			else if (e instanceof SessionOverlapException ) {
-				SessionUtils.sendStatus(session, Codec.status_sessionoverlap, Messages.SESSION_OVERLAP);
-			}
-			else {
-				SessionUtils.sendStatus(session, null, "Unknown Error: " + e.toString());
-			}				
+		/* 
+		 * Not reconnection from the same person
+		 * Connection was from someone else 
+		 */
+		if( hitIdRecord.getWorkerId() != null && workerId != hitIdRecord.getWorkerId() ) {										
+			logger.info(String.format("session %s being replaced by worker %s with assignment %s",
+					hitId, workerId, assignmentId));
+		}
+				
+		// Find this HITWorker in table
+		if( (hitw = hitWorkerTable.get(hitId, workerId)) == null ) {
+			// create instance of HITWorker			
+			hitw = new HITWorkerImpl(session, hitIdRecord);
+			hitWorkerTable.put(hitId, workerId, hitw);
 		}
 		
-		// subclasses continue with additional logic if necessary 
+		tracker.saveWorkerAssignment(hitw, assignmentId, workerId);
+
+		// Match session to HITWorker and vice versa
+		ServerSession oldSession = hitw.cometdSession.get();
+		if( oldSession == null || !session.equals(oldSession) ) {
+			hitw.setServerSession(session);				
+		}			
+		clientToHITWorker.put(session, hitw);
+
+		// Successful registration, save info
+		tracker.saveIP(hitw, bayeux.getContext().getRemoteAddress().getAddress(), new Date());			
 		
+		// subclasses continue with additional logic if necessary 		
 		return hitw;
 	}
 

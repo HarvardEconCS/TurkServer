@@ -68,7 +68,7 @@ public abstract class ExperimentDataTracker {
 	 * @param sessionID
 	 * @return
 	 */	
-	public abstract Session getStoredSessionInfo(String hitID);
+	public abstract Session getStoredSessionInfo(String hitId);
 	
 	abstract void saveSession(Session record);
 
@@ -79,20 +79,27 @@ public abstract class ExperimentDataTracker {
 	public abstract void saveHITId(String hitId);
 
 	/**
-	 * Associate an assignment and worker Id to a session
-	 * @param hitId
-	 * @param assignmentId
-	 * @param workerId
-	 */	
-	public abstract void saveAssignmentForSession(String hitId, String assignmentId, String workerId);
-
-	/**
 	 * Save the results of a quiz
 	 * @param hitId
 	 * @param workerId
 	 * @param qr 
 	 */
 	public abstract void saveQuizResults(String hitId, String workerId, Quiz qr);
+
+	/**
+	 * Associate an assignment and worker Id to a session
+	 * @param hitId
+	 * @param assignmentId
+	 * @param workerId
+	 */	
+	public void saveWorkerAssignment(HITWorkerImpl session, String assignmentId, String workerId) {		
+		Session record = session.getSessionRecord();
+		
+		record.setAssignmentId(assignmentId);
+		record.setWorkerId(workerId);
+		
+		saveSession(record);
+	}
 
 	/**
 	 * Associate a user name to a session (only for the lobby anyway)

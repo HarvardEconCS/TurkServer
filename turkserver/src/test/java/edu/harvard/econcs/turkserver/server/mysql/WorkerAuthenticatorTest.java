@@ -58,30 +58,48 @@ public class WorkerAuthenticatorTest {
 	@Test
 	public void testHITValidEmpty() throws Exception {
 		String hitId = "testHITId";
-		workerAuth.checkHITValid(hitId, "testWorkerId");		
+		workerAuth.checkHITValid(hitId, "testWorkerId", tracker.getStoredSessionInfo(hitId));		
 	}
 	
 	@Test
 	public void testHITValidExisting() throws Exception {
 		String hitId = "testHITId";
 		tracker.saveHITId(hitId);
-		workerAuth.checkHITValid(hitId, "testWorkerId");		
+		workerAuth.checkHITValid(hitId, "testWorkerId", tracker.getStoredSessionInfo(hitId));		
 	}
 	
 	@Test(expected=SessionOverlapException.class)
-	public void testHITValidOverlap() throws Exception {
+	public void testHITValidExperimentOverlap() throws Exception {
 		String hitId = "testHITId";
 		
 		Session s = new Session();		
 		s.setHitId(hitId);
 		s.setWorkerId("someOtherWorker");
+		// Signals started experiment
+		s.setExperimentId("random experiment");
+		
+		assertEquals(SessionStatus.EXPERIMENT, SessionRecord.status(s));
+		
+		tracker.saveSession(s);
+		
+		workerAuth.checkHITValid(hitId, "thisWorker", tracker.getStoredSessionInfo(hitId));				
+	}
+	
+	@Test(expected=SessionOverlapException.class)
+	public void testHITValidCompletedOverlap() throws Exception {
+		String hitId = "testHITId";
+		
+		Session s = new Session();		
+		s.setHitId(hitId);
+		s.setWorkerId("someOtherWorker");
+		// Signals completed experiment
 		s.setInactivePercent(0.00);
 		
 		assertEquals(SessionStatus.COMPLETED, SessionRecord.status(s));
 		
 		tracker.saveSession(s);
 		
-		workerAuth.checkHITValid(hitId, "thisWorker");				
+		workerAuth.checkHITValid(hitId, "thisWorker", tracker.getStoredSessionInfo(hitId));				
 	}
 	
 	@Test(expected=SessionCompletedException.class)
@@ -96,16 +114,15 @@ public class WorkerAuthenticatorTest {
 		
 		tracker.saveSession(s);
 		
-		workerAuth.checkHITValid(hitId, workerId);				
+		workerAuth.checkHITValid(hitId, workerId, tracker.getStoredSessionInfo(hitId));				
 	}
 	
 	@Test
 	public void testLimitNone() throws Exception {
 		String hitId = "testHITId";
-		String workerId = "testWorkerId";
-		String assignmentId = "testAssignmentId";		
+		String workerId = "testWorkerId";		
 		
-		workerAuth.checkWorkerLimits(hitId, assignmentId, workerId);		
+		workerAuth.checkWorkerLimits(hitId, workerId, tracker.getStoredSessionInfo(hitId));		
 	}
 	
 	@Test(expected=SimultaneousSessionsException.class)
@@ -115,8 +132,7 @@ public class WorkerAuthenticatorTest {
 		
 		String workerId = "testWorkerId";
 		
-		String assignmentId = "testAssignmentId";
-		String assignmentId2 = "testAssignmentId2";
+		String assignmentId = "testAssignmentId";		
 		
 		Session takenSession = new Session();
 		takenSession.setHitId(hitId);
@@ -128,7 +144,7 @@ public class WorkerAuthenticatorTest {
 		tracker.saveSession(takenSession);
 		
 		// Attempt to take new session
-		workerAuth.checkWorkerLimits(hitId2, assignmentId2, workerId);
+		workerAuth.checkWorkerLimits(hitId2, workerId, tracker.getStoredSessionInfo(hitId2));
 	}
 	
 	@Test(expected=TooManySessionsException.class)
@@ -139,7 +155,6 @@ public class WorkerAuthenticatorTest {
 		String workerId = "testWorkerId";
 		
 		String assignmentId = "testAssignmentId";
-		String assignmentId2 = "testAssignmentId2";
 		
 		Session s = new Session();
 		s.setHitId(hitId);
@@ -152,102 +167,7 @@ public class WorkerAuthenticatorTest {
 		
 		tracker.saveSession(s);
 		
-		workerAuth.checkWorkerLimits(hitId2, assignmentId2, workerId);
+		workerAuth.checkWorkerLimits(hitId2, workerId, tracker.getStoredSessionInfo(hitId2));
 	}
 
-	@Test
-	public void testAssignAccept() throws Exception {
-		String hitId = "testHITId";
-		String workerId = "testWorkerId";
-		String assignmentId = "testAssignmentId";		
-		
-		workerAuth.checkAssignment(hitId, assignmentId, workerId);		
-	}
-	
-	@Test
-	public void testAssignReconnect() throws Exception {
-		String hitId = "testHITId";
-		String workerId = "testWorkerId";
-		String assignmentId = "testAssignmentId";		
-		
-		Session s = new Session();
-		s.setHitId(hitId);
-		s.setWorkerId(workerId);
-		s.setAssignmentId(assignmentId);
-		
-		assertEquals(SessionStatus.ASSIGNED, SessionRecord.status(s));
-		
-		tracker.saveSession(s);
-		
-		workerAuth.checkAssignment(hitId, assignmentId, workerId);		
-	}
-	
-	@Test(expected=SessionCompletedException.class)
-	public void testAssignCompleted() throws Exception {
-		// TODO don't think we need two checks for this...first should be sufficient
-		
-		String hitId = "testHITId";
-		String workerId = "testWorkerId";
-		String assignmentId = "testAssignmentId";		
-		
-		Session s = new Session();
-		s.setHitId(hitId);
-		s.setWorkerId(workerId);
-		s.setAssignmentId(assignmentId);
-		// Current hack to signify completed session
-		s.setInactivePercent(0.0);
-		
-		assertEquals(SessionStatus.COMPLETED, SessionRecord.status(s));
-		
-		tracker.saveSession(s);
-		
-		workerAuth.checkAssignment(hitId, assignmentId, workerId);					
-	}
-	
-	@Test(expected=SessionOverlapException.class)
-	public void testAssignOverlapExperiment() throws Exception {
-		String hitId = "testHITId";
-		String workerId = "testWorkerId";
-		String assignmentId = "testAssignmentId";		
-						
-		String workerId2 = "testWorkerId2";
-		String assignmentId2 = "testAssignmentId2";
-		
-		Session s = new Session();
-		s.setHitId(hitId);
-		s.setWorkerId(workerId);
-		s.setAssignmentId(assignmentId);
-		// Signals completed experiment
-		s.setExperimentId("something");
-		
-		assertEquals(SessionStatus.EXPERIMENT, SessionRecord.status(s));
-		
-		tracker.saveSession(s);
-		
-		workerAuth.checkAssignment(hitId, assignmentId2, workerId2);	
-	}
-	
-	@Test(expected=SessionOverlapException.class)
-	public void testAssignOverlapCompleted() throws Exception {
-		String hitId = "testHITId";
-		String workerId = "testWorkerId";
-		String assignmentId = "testAssignmentId";		
-				
-		String workerId2 = "testWorkerId2";
-		String assignmentId2 = "testAssignmentId2";
-		
-		Session s = new Session();
-		s.setHitId(hitId);
-		s.setWorkerId(workerId);
-		s.setAssignmentId(assignmentId);
-		// Signals completed experiment
-		s.setInactivePercent(0d);
-		
-		assertEquals(SessionStatus.COMPLETED, SessionRecord.status(s));
-		
-		tracker.saveSession(s);
-		
-		workerAuth.checkAssignment(hitId, assignmentId2, workerId2);	
-	}
-	
 }

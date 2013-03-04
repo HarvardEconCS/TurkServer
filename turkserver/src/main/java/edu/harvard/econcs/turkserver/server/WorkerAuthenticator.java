@@ -12,7 +12,6 @@ import org.slf4j.LoggerFactory;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
-import edu.harvard.econcs.turkserver.ExpServerException;
 import edu.harvard.econcs.turkserver.QuizMaterials;
 import edu.harvard.econcs.turkserver.SessionCompletedException;
 import edu.harvard.econcs.turkserver.SessionOverlapException;
@@ -64,23 +63,48 @@ public class WorkerAuthenticator {
 	 * @param hitId
 	 * @throws SessionCompletedException
 	 */
-	public void checkHITValid(String hitId, String workerId) 
+	public void checkHITValid(String hitId, String workerId, Session existingRecord) 
 			throws SessionCompletedException, SessionOverlapException  {
-		Session session = null;
 		
-		if( !tracker.hitExistsInDB(hitId) ) {
-			tracker.saveHITId(hitId);
-			
-			/* This has been temporarily replaced to re-use old HITs */			
+		if( existingRecord == null ) {
+			existingRecord = tracker.getStoredSessionInfo(hitId);
 		}
-		else if( (session = tracker.getStoredSessionInfo(hitId)) != null &&
-				SessionRecord.status(session) == SessionStatus.COMPLETED ) {
+		
+		if( existingRecord == null ) {
+			tracker.saveHITId(hitId);								
+		}
+		else {
+			// Check for pathologies with previously used HITs
 			
-			if( workerId.equals(session.getWorkerId()) ) {
-				throw new SessionCompletedException();	
-			} else {
+			if( workerId.equals(existingRecord.getWorkerId()) ) { 							
+				if( SessionRecord.status(existingRecord) == SessionStatus.COMPLETED ) { 
+					/* This session already had a previous assignment and 
+					 * it was assigned to this worker, must be a reconnect
+					 */					
+					throw new SessionCompletedException();
+				}
+				else {
+					logger.info("Session {} by worker {} is reconnecting", hitId, workerId);
+				}
+			} 			
+			else if( !workerId.equals(existingRecord.getWorkerId()) && 
+					( SessionRecord.status(existingRecord) == SessionStatus.COMPLETED || 
+					SessionRecord.status(existingRecord) == SessionStatus.EXPERIMENT ) ) {
 				// Prevent bugs from old, completed (but not submitted properly) 
-				// still-circulating HITs from being reused			
+				// still-circulating HITs from being reused
+								
+				/* TODO until we get a notification receptor, this is the place to queue up
+				 * an abandoned HIT in the database 
+				 * 
+				 * TODO someone returned a HIT after starting the experiment but didn't get to 
+				 * the submit stage.  We need to disable these HITs 
+				 * 
+				 * TODO check this by worker and possibly let someone re-take the HIT? (probably not)
+				 */
+				logger.info(String.format("Session %s was in experiment or completed with worker %s," +
+						"but new worker %s tried to accept",
+						hitId, existingRecord.getWorkerId(), workerId));
+				
 				throw new SessionOverlapException();
 			}						
 		}
@@ -89,19 +113,20 @@ public class WorkerAuthenticator {
 	/**
 	 * Check if a worker attempting to take a HIT is exceeding any session or total limits
 	 * 
+	 * TODO fix this to accept workers that return and accept a different HIT for the same game
+	 *  
 	 * @param hitId
 	 * @param assignmentId
 	 * @param workerId
 	 */
-	public void checkWorkerLimits(String hitId, String assignmentId, String workerId)
-	throws SimultaneousSessionsException, TooManySessionsException {
-		// TODO fix this to accept workers that return and accept a different HIT for the same game		 			
+	public void checkWorkerLimits(String hitId, String workerId, Session existingRecord)
+	throws SimultaneousSessionsException, TooManySessionsException {		
+		if (existingRecord == null)	existingRecord = tracker.getStoredSessionInfo(hitId);
 		
-		Session sessionRec = tracker.getStoredSessionInfo(hitId);		
 		/* This could be null if no other worker has taken the HIT yet 
 		 * will not be null if this session was disconnected after an experiment		
 		 */
-		String prevWorkerId = sessionRec == null ? null : sessionRec.getWorkerId();
+		String prevWorkerId = existingRecord == null ? null : existingRecord.getWorkerId();
 
 		Collection<Session> allSessions = tracker.getSetSessionInfoForWorker(workerId);
 
@@ -134,8 +159,7 @@ public class WorkerAuthenticator {
 
 			if( allSessions.size() >= totalSetLimit )
 				throw new TooManySessionsException();	
-		}
-		
+		}		
 	}
 	
 	/**
@@ -166,79 +190,6 @@ public class WorkerAuthenticator {
 		Collection<Quiz> results = tracker.getSetQuizRecords(workerId);
 		
 		return quizPolicy.overallFail(results);
-	}
-	
-	/**
-	 * Checks the login information for this user. 
-	 * 
-	 * TODO fix this to check if a quiz is required for someone connecting
-	 * 
-	 * @param hitId
-	 * @param assignmentId
-	 * @param workerId 
-	 * @throws ExpServerException
-	 */	
-	public Session checkAssignment(String hitId, String assignmentId, String workerId)
-	throws SessionCompletedException, SessionOverlapException {
-
-		Session sessionRec = tracker.getStoredSessionInfo(hitId);		
-		// previous worker could be null
-		String prevWorkerId = sessionRec == null ? null : sessionRec.getWorkerId();		
-				
-		if( workerId.equals(prevWorkerId) ) {
-			/* This session already had a previous assignment and 
-			 * it was assigned to this worker, must be a reconnect
-			 */				
-			if( SessionRecord.status(sessionRec) == SessionStatus.COMPLETED ) 
-				throw new SessionCompletedException();
-
-			logger.info(String.format("Session %s (with assignment %s) by worker %s is reconnecting",
-					hitId, assignmentId, workerId));
-						
-			return sessionRec;
-		}			
-		
-		/* 
-		 * Not reconnection from the same person
-		 */
-		if( prevWorkerId != null ) {
-			// Connection was from someone else 
-
-			if( SessionRecord.status(sessionRec) == SessionStatus.EXPERIMENT || 
-					SessionRecord.status(sessionRec) == SessionStatus.COMPLETED ) {
-				/* TODO until we get a notification receptor, this is the place to queue up
-				 * an abandoned HIT in the database 
-				 * 
-				 * TODO someone returned a HIT after starting 
-				 * the experiment but didn't get to the submit stage
-				 * We need to disable these HITs 
-				 * 
-				 * TODO check this by worker and possibly let someone re-take the HIT? (probably not)
-				 */
-				logger.info(String.format("Session %s was in experiment or completed with worker %s," +
-						"but new worker %s tried to accept",
-						hitId, prevWorkerId, workerId));
-
-				throw new SessionOverlapException();
-			}								
-
-			// Taking over the person in lobby
-			logger.info(String.format("session %s replaced by worker %s with assignment %s",
-					hitId, workerId, assignmentId));
-		}
-
-		// First connection	for this assignment (but multiple from worker should be caught above)		
-		tracker.saveAssignmentForSession(hitId, assignmentId, workerId);
-
-		if( sessionRec == null ) {
-			sessionRec = new Session();
-			sessionRec.setHitId(hitId);
-		}
-		
-		sessionRec.setAssignmentId(assignmentId);
-		sessionRec.setWorkerId(workerId);
-		
-		return sessionRec;		
 	}
 	
 	public boolean quizPasses(Quiz qr) {
