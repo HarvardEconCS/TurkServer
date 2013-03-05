@@ -69,7 +69,7 @@ public abstract class ExperimentDataTracker {
 	 */	
 	public abstract Session getStoredSessionInfo(String hitId);
 	
-	abstract void saveSession(Session record);
+	public abstract void saveSession(Session record);
 
 	/**
 	 * Adds a hitId to the current set in the database
