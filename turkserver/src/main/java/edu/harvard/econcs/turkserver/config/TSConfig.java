@@ -49,8 +49,7 @@ public class TSConfig {
 	
 	public static final String EXP_CONFIGURATOR = "experiment.configurator";
 	public static final String EXP_CLASS = "experiment.class";	
-	public static final String EXP_SETID = "experiment.setid";
-	public static final String EXP_SPECIAL_WORKERS = "experiment.special.workers";
+	public static final String EXP_SETID = "experiment.setid";	
 	public static final String EXP_INPUT_LIST = "experiment.inputdata";	
 	public static final String EXP_REPEAT_LIMIT = "experiment.set.limit";		
 	
@@ -67,8 +66,13 @@ public class TSConfig {
 	
 	public static final String HITS_INITIAL = "server.hitinitial";
 	public static final String HITS_DELAY = "server.hitdelay";
-	public static final String HITS_TOTAL = "server.hittotal";	
-					
+	public static final String HITS_TOTAL = "server.hittotal";		
+	
+	// Optional parameters
+	public static final String EXP_SPECIAL_WORKERS = "experiment.special.workers";
+	
+	public static final String SERVER_EXTRA_SERVLETS = "server.extra.servlets";
+	public static final String SERVER_CUSTOM_HANDLERS = "server.custom.handlers";
 	
 	public static Configuration getDefault() {
 		Configuration conf = null;

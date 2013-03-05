@@ -119,11 +119,10 @@ public class Experiments {
 			// Create an experiment instance with specific binding to this HITWorker		
 			scope.seed(HITWorker.class, hitw);
 			scope.seed(HITWorkerGroup.class, hitw);
-
 							
-			injector.getInstance(ExperimentControllerImpl.class);
+			cont = injector.getInstance(ExperimentControllerImpl.class);
 			hitw.setExperiment(cont);
-			injector.getInstance(expClass);
+			experimentBean = injector.getInstance(expClass);
 		}
 		finally {
 			scope.exit();

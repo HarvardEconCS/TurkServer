@@ -1,7 +1,6 @@
 package edu.harvard.econcs.turkserver.config;
 
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
@@ -25,9 +24,6 @@ public class TestServerModule extends ServerModule {
 		bind(QuizPolicy.class).toProvider(Providers.of((QuizPolicy) null));			
 		
 		bindResources(new Resource[] {});
-		
-		bind(new TypeLiteral<List<String>>() {})
-		.annotatedWith(Names.named(TSConfig.EXP_SPECIAL_WORKERS)).toInstance(new LinkedList<String>());
 		
 		bind(new TypeLiteral<Set<String>>() {})
 		.annotatedWith(Names.named(TSConfig.EXP_INPUT_LIST)).toInstance(Collections.singleton("test-treatment"));

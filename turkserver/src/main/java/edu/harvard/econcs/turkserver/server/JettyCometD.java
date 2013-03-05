@@ -1,5 +1,7 @@
 package edu.harvard.econcs.turkserver.server;
 
+import java.util.Map;
+
 import javax.servlet.GenericServlet;
 
 import org.apache.commons.configuration.Configuration;
@@ -106,35 +108,39 @@ public class JettyCometD {
 	}
 	
 	/**
-	 * Start Jetty server and configure bayeux server
-	 * @throws Exception 
+	 * Add optional additional servlets before starting server
+	 * @param servletPaths
 	 */
-	Server start(SessionServer sessions) throws Exception {
-		context.setAttribute(SessionServer.ATTRIBUTE, sessions);
-	    
-		server.start();		
-	    
-	    BayeuxServerImpl bayeux = cometdServlet.getBayeux();	    
-		bayeux.setSecurityPolicy(new DefaultSecurityPolicy());
-
-		bayeux.addListener(new BayeuxServerListener() {
-			
-		});	
-		
-		return server;
+	@Inject(optional=true)
+	void addCustomServlets(
+			@Named(TSConfig.SERVER_EXTRA_SERVLETS) 
+			Map<Class<? extends GenericServlet>, String> servletPaths) {
+		for( Map.Entry<Class<? extends GenericServlet>, String> e : servletPaths.entrySet() ) {
+			addServlet(e.getKey(), e.getValue());
+		}
 	}
 	
-	BayeuxServer getBayeux() {
-		return cometdServlet.getBayeux();
+	/**
+	 * Injects custom handlers for the server.
+	 * @param handlerPaths
+	 */
+	@Inject(optional=true)
+	void addCustomHandlers(
+			@Named(TSConfig.SERVER_CUSTOM_HANDLERS)
+			Map<Handler, String> handlerPaths
+			) {
+		for( Map.Entry<Handler, String> e : handlerPaths.entrySet() ) {
+			addCustomHandler(e.getKey(), e.getValue());
+		}
 	}
 	
 	public ServletHolder addServlet(Class<? extends GenericServlet> servletClass, String pathSpec) {
 		ServletHolder holder = context.addServlet(servletClass, pathSpec);  
-        holder.setInitOrder(3);
+        holder.setInitOrder(initOrder++);
         
         return holder;		
 	}
-
+	
 	/**
 	 * Add custom handlers to the server.
 	 * For advanced users that have custom dynamic content.
@@ -147,8 +153,31 @@ public class JettyCometD {
 		ch.setHandler(handler);
 		
 		// Add this to the beginning of the collection of handlers
-		Handler[] handlers = contexts.getHandlers();
+		Handler[] handlers = contexts.getHandlers();		
 		contexts.setHandlers((Handler[]) ArrayUtils.addAll(new Handler[] {ch}, handlers));		
+	}
+
+	BayeuxServer getBayeux() {
+		return cometdServlet.getBayeux();
+	}
+
+	/**
+	 * Start Jetty server and configure bayeux server
+	 * @throws Exception 
+	 */
+	Server start(SessionServer sessions) throws Exception {
+		context.setAttribute(SessionServer.ATTRIBUTE, sessions);
+	    
+		server.start();		
+	    
+	    BayeuxServerImpl bayeux = cometdServlet.getBayeux();	    
+		bayeux.setSecurityPolicy(new DefaultSecurityPolicy());
+	
+		bayeux.addListener(new BayeuxServerListener() {
+			
+		});	
+		
+		return server;
 	}
 	
 }

@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Nullable;
@@ -44,10 +43,9 @@ public class RoundRobinAssigner implements Assigner {
 			
 	@Inject
 	public RoundRobinAssigner(
-			@Named(TSConfig.EXP_INPUT_LIST)
-			Set<String> assts,
-			@Nullable
-			List<Experiment> existing) {
+			@Named(TSConfig.EXP_INPUT_LIST)	Set<String> assts,
+			@Nullable List<Experiment> existing
+			) {
 		
 		Map<String, CountingEntry<String>> stuff = Maps.newHashMap();
 		for( String asst : assts )
@@ -63,7 +61,7 @@ public class RoundRobinAssigner implements Assigner {
 			}
 		}
 		
-		assignments = Sets.synchronizedNavigableSet(new TreeSet<CountingEntry<String>>());
+		assignments = Sets.synchronizedNavigableSet(Sets.<CountingEntry<String>>newTreeSet());
 		assignments.addAll(stuff.values());
 	}
 	

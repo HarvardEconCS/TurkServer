@@ -46,8 +46,9 @@ public class WorkerAuthenticatorTest {
 				tracker,
 				null,
 				null,
-				conf,
-				specialWorkers);
+				conf);
+		
+		workerAuth.setSpecialWorkers(specialWorkers);
 	}
 
 	@After

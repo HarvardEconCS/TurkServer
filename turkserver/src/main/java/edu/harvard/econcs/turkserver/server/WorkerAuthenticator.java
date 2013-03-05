@@ -1,6 +1,7 @@
 package edu.harvard.econcs.turkserver.server;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -32,7 +33,7 @@ public class WorkerAuthenticator {
 	private final QuizFactory quizFactory;
 	private final QuizPolicy quizPolicy;
 	
-	private final List<String> specialWorkers;
+	private List<String> specialWorkers = Collections.emptyList();
 	
 	private final int simultaneousSessionLimit;
 	private final int totalSetLimit;
@@ -40,21 +41,23 @@ public class WorkerAuthenticator {
 	@Inject
 	public WorkerAuthenticator(
 			ExperimentDataTracker tracker,
-			@Nullable 
-			QuizFactory quizFactory,
-			@Nullable 
-			QuizPolicy quizPolicy,
-			Configuration conf,
-			@Named(TSConfig.EXP_SPECIAL_WORKERS)
-			List<String> specialWorkers) {
+			@Nullable QuizFactory quizFactory,
+			@Nullable QuizPolicy quizPolicy,
+			Configuration conf
+			) {
 		this.tracker = tracker;
 		
 		this.quizFactory = quizFactory;
 		this.quizPolicy = quizPolicy;
 		
 		this.simultaneousSessionLimit = conf.getInt(TSConfig.CONCURRENCY_LIMIT);
-		this.totalSetLimit = conf.getInt(TSConfig.EXP_REPEAT_LIMIT);
-		
+		this.totalSetLimit = conf.getInt(TSConfig.EXP_REPEAT_LIMIT);				
+	}
+	
+	@Inject(optional=true)
+	public void setSpecialWorkers(
+			@Named(TSConfig.EXP_SPECIAL_WORKERS)
+			List<String> specialWorkers ) {
 		this.specialWorkers = specialWorkers;
 	}
 

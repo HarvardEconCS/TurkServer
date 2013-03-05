@@ -34,11 +34,11 @@ public final class SimpleExperimentServer extends SessionServer {
 			Configuration config
 			) throws Exception {
 		
-		super(tracker, hitCont, workerAuth, experiments, jetty, config);		
+		super(tracker, hitCont, workerAuth, experiments, jetty, config);
 		
 		jetty.addServlet(SessionServlet.class, "/exp");
 		
-        // TODO init server extensions
+        // TODO init server extensions, gui 
 	}	
 
 	@Override

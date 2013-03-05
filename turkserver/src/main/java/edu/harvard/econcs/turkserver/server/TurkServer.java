@@ -20,6 +20,7 @@ import com.google.inject.Binding;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 
@@ -88,7 +89,7 @@ public class TurkServer {
 		HITController thm = childInjector.getInstance(HITController.class);			
 		
 		// GUI is automatically created from parent injector now
-		sessionServer = getSessionServerInstance(childInjector);
+		sessionServer = getSessionServerInstance(childInjector);				
 		
 		// TODO this may not be in conf, but in injector (graph coloring stuff?)
 		thm.setHITType(
@@ -144,7 +145,7 @@ public class TurkServer {
 		
 		// TODO check AWS config if using. Also could be a good chance to check for cash
 		
-		// Check bindings
+		// Check bindings		 				
 		checkNotNull(injector.getBinding(Key.get(String.class, Names.named(TSConfig.EXP_SETID))),
 				"set not specified");
 		checkNotNull(injector.getBinding(Key.get(Configurator.class, Names.named(TSConfig.EXP_CONFIGURATOR))),
@@ -185,6 +186,11 @@ public class TurkServer {
 					"total HITs not specified");
 		}
 		
+		// Check that experiment class is proper
+		Class<?> expClass = injector.getInstance(Key.get(new TypeLiteral<Class<?>>() {}, Names.named(TSConfig.EXP_CLASS)));
+		checkNotNull(expClass, "experiment class not specified");
+				
+		EventAnnotationManager.testCallbacks(expClass);	
 	}
 	
 	/**

@@ -1,7 +1,14 @@
 package edu.harvard.econcs.turkserver.config;
 
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.GenericServlet;
+
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.util.resource.Resource;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
@@ -82,10 +89,26 @@ public abstract class ServerModule extends AbstractModule {
 	protected void bindConfigurator(Configurator conf) {
 		bind(Configurator.class).annotatedWith(Names.named(TSConfig.EXP_CONFIGURATOR)).toInstance(conf);
 	}
-
 	
 	protected void bindResources(Resource[] rscs) {
 		bind(Resource[].class).annotatedWith(Names.named(TSConfig.SERVER_RESOURCES)).toInstance(rscs);
 	}
+	
+	protected void bindSpecialWorkers(List<String> specialWorkers) {
+		bind(new TypeLiteral<List<String>>() {})
+		.annotatedWith(Names.named(TSConfig.EXP_SPECIAL_WORKERS))
+		.toInstance(specialWorkers);
+	}
 
+	protected void bindCustomHandlers(ImmutableMap<Handler, String> handlerMap) {
+		bind(new TypeLiteral<Map<Handler, String>>() {}).
+		annotatedWith(Names.named(TSConfig.SERVER_CUSTOM_HANDLERS)).
+		toInstance(handlerMap);		
+	}
+
+	protected void bindExtraServlets(ImmutableMap<Class<? extends GenericServlet>, String> servletMap) {
+		bind(new TypeLiteral<Map<Class<? extends GenericServlet>, String>>() {}).
+		annotatedWith(Names.named(TSConfig.SERVER_EXTRA_SERVLETS)).
+		toInstance(servletMap);		
+	}
 }

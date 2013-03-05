@@ -9,6 +9,8 @@ class TSClient
 
   # Setup values
   @params = Util.getURLParams()
+  @params.port = 9876 if not @params.port # TODO: put this at a more permanent value
+  
   @localMode = false
   
   @connected = false
@@ -137,7 +139,7 @@ class TSClient
       @connected = false if message.successful
     
     # Initialize CometD - TODO un-fix the specific port
-    cometURL = location.protocol + "//" + location.hostname + ":9876" + contextPath + "/cometd"
+    cometURL = location.protocol + "//" + location.hostname + ":" + @params.port + contextPath + "/cometd"
     $.cometd.websocketEnabled = true
     $.cometd.init
       url: cometURL
@@ -157,6 +159,7 @@ class TSClient
             expires: expires
 
       else
+        # TODO Do we need to always disconnect even on reload?
         $.cometd.disconnect()
 
   # CometD callbacks
@@ -258,10 +261,16 @@ class TSClient
     @expServiceSubscription = null
       
   @sendExperimentBroadcast: (msg) =>
-    @channelSend @expBroadcastSubscription[0], msg
+    unless @localMode
+      @channelSend @expBroadcastSubscription[0], msg
+    else
+      console.log "Experiment broadcast: " + msg
     
   @sendExperimentService: (msg) =>
-    @channelSend @expServiceSubscription[0], msg
+    unless @localMode
+      @channelSend @expServiceSubscription[0], msg
+    else
+      console.log "Experiment service: " + msg
   
   @channelSend: (channel, msg) ->
     unless @localMode

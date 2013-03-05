@@ -98,6 +98,9 @@ public class EventAnnotationManager {
 			beans.put(expId, exp);
 			beanClasses.put(exp.getClass(), exp);			
 		}
+		else {
+			throw new IllegalArgumentException("Passed in a class with no callbacks");
+		}
 		
 		return result;
 	}
@@ -134,8 +137,47 @@ public class EventAnnotationManager {
 				
 		return result;
 	}		
+	
+	/**
+	 * Test all the callbacks of a class. This should process the same way as a real experiment.
+	 * @param klass
+	 * @return
+	 */
+	public static boolean testCallbacks(Class<?> klass) {
+		Multimap<Class<?>, Method> testMap = ArrayListMultimap.<Class<?>, Method>create();
+		boolean result = false;
 			
-	private boolean processVoid(Class<?> klass, Method method, 
+		for (Class<?> c = klass; c != Object.class; c = c.getSuperclass())
+        {
+			Method[] methods = c.getDeclaredMethods();
+            for (Method method : methods)
+            {
+            	result |= processVoid(c, method, 
+            			testMap, StartExperiment.class);
+            	result |= processVoid(c, method, 
+            			testMap, TimeLimit.class);
+            	result |= processVoid(c, method,
+            			testMap, IntervalEvent.class);
+            	
+            	result |= processInt(c, method,
+            			testMap, StartRound.class);
+            	
+            	result |= processWorkerActivity(c, method, 
+            			testMap, WorkerConnect.class);
+            	result |= processWorkerActivity(c, method, 
+            			testMap, WorkerDisconnect.class);
+            	
+            	result |= processBroadcastMessage(c, method,
+            			testMap, BroadcastMessage.class);
+            	result |= processServiceMessage(c, method,
+            			testMap, ServiceMessage.class);
+            }
+        }
+				
+		return result;
+	}
+			
+	private static boolean processVoid(Class<?> klass, Method method, 
 			Multimap<Class<?>, Method> map, Class<? extends Annotation> annot) {				
 		if( method.getAnnotation(annot) == null ) return false;
 		
@@ -151,7 +193,7 @@ public class EventAnnotationManager {
 		return true;
 	}
 
-	private boolean processInt(Class<?> klass, Method method,
+	private static boolean processInt(Class<?> klass, Method method,
 			Multimap<Class<?>, Method> map, Class<? extends Annotation> annot) {
 		if( method.getAnnotation(annot) == null ) return false;
 		
@@ -168,7 +210,7 @@ public class EventAnnotationManager {
 		return true;
 	}
 
-	private boolean processWorkerActivity(Class<?> klass, Method method,
+	private static boolean processWorkerActivity(Class<?> klass, Method method,
 			Multimap<Class<?>, Method> map, Class<? extends Annotation> annot) {
 		if( method.getAnnotation(annot) == null ) return false;
 		
@@ -185,7 +227,7 @@ public class EventAnnotationManager {
 		return true;
 	}
 
-	private boolean processBroadcastMessage(Class<?> klass, Method method,
+	private static boolean processBroadcastMessage(Class<?> klass, Method method,
 			Multimap<Class<?>, Method> map, Class<? extends Annotation> annot) {
 		if( method.getAnnotation(annot) == null ) return false;
 		
@@ -204,7 +246,7 @@ public class EventAnnotationManager {
 		return true;
 	}
 	
-	private boolean processServiceMessage(Class<?> klass, Method method,
+	private static boolean processServiceMessage(Class<?> klass, Method method,
 			Multimap<Class<?>, Method> map, Class<? extends Annotation> annot) {
 		if( method.getAnnotation(annot) == null ) return false;
 		
