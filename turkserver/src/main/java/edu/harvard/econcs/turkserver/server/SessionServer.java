@@ -143,6 +143,10 @@ public abstract class SessionServer extends Thread {
 		jsonContext.getJSON().addConvertor(cl, conv);
 	}
 	
+	public abstract int getExpsInProgress();
+
+	public abstract int getExpsCompleted();
+	
 	public int getNumCompleted() {		
 		return completedHITs.get();
 	}

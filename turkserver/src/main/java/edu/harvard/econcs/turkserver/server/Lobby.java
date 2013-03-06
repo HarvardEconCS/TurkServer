@@ -1,5 +1,6 @@
 package edu.harvard.econcs.turkserver.server;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
@@ -33,4 +34,39 @@ public interface Lobby {
 	Object getStatus(HITWorkerImpl hitw);
 
 	Set<HITWorkerImpl> getLobbyUsers();
+
+	public class NullLobby implements Lobby {
+	
+		@Override
+		public void setListener(LobbyListener listener) {}
+	
+		@Override
+		public void setMessage(String text) {}
+	
+		@Override
+		public void userJoined(HITWorkerImpl hitw) {
+			System.out.printf("Warning: %s shouldn't have joined null lobby\n", hitw);	
+		}
+	
+		@Override
+		public boolean updateStatus(HITWorkerImpl hitw, Map<String, Object> data) {
+			System.out.printf("Warning: %s shouldn't have sent status to null lobby\n", hitw);
+			return false;
+		}
+	
+		@Override
+		public boolean userQuit(HITWorkerImpl hitw) {
+			return false;
+		}
+	
+		@Override
+		public Object getStatus(HITWorkerImpl hitw) { 
+			return null;
+		}
+	
+		@Override
+		public Set<HITWorkerImpl> getLobbyUsers() {
+			return Collections.emptySet();
+		}	
+	}
 }

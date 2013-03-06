@@ -4,9 +4,9 @@ import edu.harvard.econcs.turkserver.client.JTextFieldLimit;
 import edu.harvard.econcs.turkserver.client.LobbyPanel;
 import edu.harvard.econcs.turkserver.client.SortedListModel;
 import edu.harvard.econcs.turkserver.server.ExperimentControllerImpl;
-import edu.harvard.econcs.turkserver.server.GroupServer;
 import edu.harvard.econcs.turkserver.server.HITWorkerImpl;
 import edu.harvard.econcs.turkserver.server.Lobby;
+import edu.harvard.econcs.turkserver.server.SessionServer;
 
 import java.awt.Component;
 import java.awt.Dimension;
@@ -40,7 +40,7 @@ public class ServerPanel extends JPanel implements ActionListener {
 	private static final String runningExpsText = "Running Experiments: ";
 	private static final String doneExpsText = "Completed Experiments: ";
 	
-	private final GroupServer server;
+	private final SessionServer server;
 	private final Lobby lobby;
 	
 	private JTextField statusMsg;
@@ -59,7 +59,7 @@ public class ServerPanel extends JPanel implements ActionListener {
 	
 	private Timer timeTicker;
 	
-	public ServerPanel(GroupServer host, Lobby lobby) {
+	public ServerPanel(SessionServer host, Lobby lobby) {
 		// Put lobby on left and experiments on right
 		super(new GridLayout(1, 2));
 		this.server = host;
@@ -195,9 +195,9 @@ public class ServerPanel extends JPanel implements ActionListener {
 		public Component getListCellRendererComponent(JList<? extends ExperimentControllerImpl> list,
 				ExperimentControllerImpl exp,	int index, boolean isSelected, boolean cellHasFocus) {			
 			
-			setText( String.format("%s %s (%d)",
+			setText( String.format("%s %s R:%d (%d)",
 					Utils.paddedClockString(System.currentTimeMillis() - exp.getStartTime()), 
-					exp.toString(), exp.getGroup().groupSize()
+					exp.toString(), exp.getCurrentRound(), exp.getGroup().groupSize()
 					));			
 			
 			setEnabled(true); // not list.isEnabled()); otherwise the icon won't draw

@@ -3,6 +3,8 @@
  */
 package edu.harvard.econcs.turkserver.server;
 
+import javax.swing.SwingUtilities;
+
 import org.apache.commons.configuration.Configuration;
 import org.cometd.bayeux.server.ServerSession;
 
@@ -10,6 +12,8 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
 import edu.harvard.econcs.turkserver.mturk.HITController;
+import edu.harvard.econcs.turkserver.server.gui.ServerPanel;
+import edu.harvard.econcs.turkserver.server.gui.TSTabbedPanel;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 
 /**
@@ -24,6 +28,8 @@ import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 @Singleton
 public final class SimpleExperimentServer extends SessionServer {	
 				
+	final GUIListener guiListener;	
+	
 	@Inject
 	public SimpleExperimentServer(			
 			ExperimentDataTracker tracker, 
@@ -31,15 +37,34 @@ public final class SimpleExperimentServer extends SessionServer {
 			WorkerAuthenticator workerAuth,
 			Experiments experiments,
 			JettyCometD jetty,
-			Configuration config
+			Configuration config,
+			final TSTabbedPanel guiTabs
 			) throws Exception {
 		
 		super(tracker, hitCont, workerAuth, experiments, jetty, config);
 		
 		jetty.addServlet(SessionServlet.class, "/exp");
 		
-        // TODO init server extensions, gui 
+		final ServerPanel serverGUI = new ServerPanel(this, new Lobby.NullLobby());
+		
+		SwingUtilities.invokeLater(new Runnable() {	public void run() {
+			guiTabs.addPanel("Server", serverGUI);				
+		} });		
+		
+		this.guiListener = new GUIListener(this, serverGUI);
+		experiments.registerListener(guiListener); 
 	}	
+
+	// TODO: refactor these somewhere better
+	@Override
+	public int getExpsInProgress() {
+		return guiListener.inProgress.get();
+	}
+
+	@Override
+	public int getExpsCompleted() {
+		return guiListener.completed.get();
+	}
 
 	@Override
 	protected HITWorkerImpl sessionAccept(ServerSession session, 

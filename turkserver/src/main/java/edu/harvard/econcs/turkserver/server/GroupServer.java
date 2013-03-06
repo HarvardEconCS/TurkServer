@@ -12,7 +12,6 @@ import edu.harvard.econcs.turkserver.server.gui.TSTabbedPanel;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.swing.SwingUtilities;
 
@@ -66,41 +65,19 @@ public final class GroupServer extends SessionServer {
 			guiTabs.addPanel("Server", serverGUI);				
 		} });		
 		
-		this.guiListener = new GUIListener();
+		this.guiListener = new GUIListener(this, serverGUI);
 		experiments.registerListener(guiListener);
 		
 		lobby.setListener(new ServerLobbyListener());				
 	}
-	
-	class GUIListener implements ExperimentListener {
-		AtomicInteger inProgress = new AtomicInteger(0);
-		AtomicInteger completed = new AtomicInteger(0);
-		
-		@Override
-		public void experimentStarted(ExperimentControllerImpl exp) {			
-			serverGUI.newExperiment(exp);	
-			inProgress.incrementAndGet();
-		}
-	
-		@Override
-		public void roundStarted(ExperimentControllerImpl exp) {
-			// TODO Auto-generated method stub
-		}
-	
-		@Override
-		public void experimentFinished(ExperimentControllerImpl exp) {			
-			inProgress.decrementAndGet();
-			groupCompleted(exp.group);
-			serverGUI.finishedExperiment(exp);
-			completed.incrementAndGet();
-		}		
-	}
 
 	// TODO: refactor these somewhere better
+	@Override
 	public int getExpsInProgress() {
 		return guiListener.inProgress.get();
 	}
 
+	@Override
 	public int getExpsCompleted() {
 		return guiListener.completed.get();
 	}
