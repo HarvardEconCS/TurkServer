@@ -205,7 +205,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	public void saveSession(Session record) {
+	protected void saveSession(Session record) {
 		try( Connection conn = pbds.getConnection() ) {	
 			
 			// Make sure worker exists

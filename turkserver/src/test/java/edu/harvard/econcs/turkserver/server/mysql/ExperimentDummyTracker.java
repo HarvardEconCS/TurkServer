@@ -78,7 +78,7 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	public void saveSession(Session record) {
+	protected void saveSession(Session record) {
 		hitIdToSessions.put(record.getHitId(), record);
 				
 		if( record.getWorkerId() != null )

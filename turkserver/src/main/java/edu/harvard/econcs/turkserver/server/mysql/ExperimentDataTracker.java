@@ -69,7 +69,11 @@ public abstract class ExperimentDataTracker {
 	 */	
 	public abstract Session getStoredSessionInfo(String hitId);
 	
-	public abstract void saveSession(Session record);
+	/**
+	 * To be implemented method to save the session for a tracker
+	 * @param record
+	 */
+	protected abstract void saveSession(Session record);
 
 	/**
 	 * Adds a hitId to the current set in the database

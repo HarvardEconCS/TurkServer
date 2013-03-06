@@ -1,4 +1,4 @@
-package edu.harvard.econcs.turkserver.server;
+package edu.harvard.econcs.turkserver.server.mysql;
 
 import static org.junit.Assert.*;
 
@@ -21,7 +21,6 @@ import edu.harvard.econcs.turkserver.server.SessionRecord;
 import edu.harvard.econcs.turkserver.server.WorkerAuthenticator;
 import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
-import edu.harvard.econcs.turkserver.server.mysql.ExperimentDummyTracker;
 
 public class WorkerAuthenticatorTest {
 
