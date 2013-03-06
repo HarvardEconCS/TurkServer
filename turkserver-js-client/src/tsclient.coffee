@@ -208,7 +208,7 @@ class TSClient
   @userData: (message) =>
     data = message.data
     status = data.status
-    # console.log "Status: " + status + " msg: " + data.msg
+    console.log "Server status: " + status
     switch status
       when Codec.status_quizneeded
         @quizneeded_cb?()
@@ -227,17 +227,17 @@ class TSClient
       when Codec.doneExpMsg
         @finishExperiment_cb?()     
       when Codec.errorMsg
-        @errorMessage_cb?(status)
+        @errorMessage_cb?(status, data.msg)
       when Codec.status_failsauce
-        @errorMessage_cb?(status)
+        @errorMessage_cb?(status, data.msg)
       when Codec.status_simultaneoussessions
-        @errorMessage_cb?(status)
+        @errorMessage_cb?(status, data.msg)
       when Codec.status_sessionoverlap
-        @errorMessage_cb?(status)
+        @errorMessage_cb?(status, data.msg)
       when Codec.status_toomanysessions
-        @errorMessage_cb?(status)
+        @errorMessage_cb?(status, data.msg)
       when Codec.status_completed
-        @errorMessage_cb?(status)
+        @errorMessage_cb?(status, data.msg)
       
   @submitHIT: (data) =>
     @channelSend "/service/user",

@@ -232,7 +232,7 @@ public abstract class SessionServer extends Thread {
 		 * Not reconnection from the same person
 		 * Connection was from someone else 
 		 */
-		if( hitIdRecord.getWorkerId() != null && workerId != hitIdRecord.getWorkerId() ) {										
+		if( hitIdRecord.getWorkerId() != null && !workerId.equals(hitIdRecord.getWorkerId()) ) {										
 			logger.info(String.format("session %s being replaced by worker %s with assignment %s",
 					hitId, workerId, assignmentId));
 		}
