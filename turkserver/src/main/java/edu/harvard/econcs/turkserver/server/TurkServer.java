@@ -105,6 +105,7 @@ public class TurkServer {
 		
 		sessionServer.start();		
 		
+		// TODO do not post a fixed number of HITs here
 		thm.postBatchHITs(1, 5000, 10);				
 	}
 	

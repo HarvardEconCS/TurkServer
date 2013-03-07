@@ -43,7 +43,7 @@ public class DataModule extends AbstractModule {
 	 */
 	public void setHITLimit(int some_goal) {
 		conf.addProperty(TSConfig.SERVER_HITGOAL, some_goal);						
-		conf.addProperty(TSConfig.EXP_REPEAT_LIMIT, some_goal);
+		conf.addProperty(TSConfig.EXP_REPEAT_LIMIT, 1);
 	}
 	
 	@Override

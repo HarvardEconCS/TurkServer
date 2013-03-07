@@ -16,22 +16,28 @@ public class Messages {
 	public static final String TOO_MANY_SESSIONS =
 			"You've already done enough HITs for now.\n" +
 			"Please return this HIT and come back later.";
-	
 //		"It appears that you have already hit the limit for how many times\n" +
 //		"you can play in this set of games. If you have asked us to notify you,\n" +
 //		"we will contact you about future sets of games to participate in.\n" +
 //		"Please return the HIT.";
 
+	/**
+	 * The worker has already passed the quiz and has been playing the game for one HIT,
+	 * then he tries to accept another HIT.
+	 */
 	public static final String SIMULTANEOUS_SESSIONS =			
-			"There is another HIT registered to you right now. Please return this HIT\n" +
-			"and continue working on the existing one in your dashboard.\n" +
+			"It appears that you have already accepted another HIT." +
+			"Please return this HIT and continue working on your other HIT in your dashboard.\n" +
 			"(If you returned that HIT, please try participating later.)";
-					
 //		"It appears that you have already accepted another HIT for this game.\n" +
 //		"Please return this HIT and finish your other games before accepting\n" +
 //		"more HITs. Look for your current game in your dashboard." +
 //		"Please e-mail us if you believe this message is in error.";
 
+	/**
+	 * A worker has passed the quiz, started playing the game, and returned
+	 * the HIT.  Then another worker tries to acccept this HIT.
+	 */
 	public static final String SESSION_OVERLAP = 
 			"This session belongs to someone that has already started a game,\n" +
 			"but returned the HIT afterwards, so it can't be reused.\n" +

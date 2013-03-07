@@ -123,7 +123,7 @@ public class TurkHITController implements HITController {
 	
 	@Override
 	public void run() {
-		Thread.currentThread().setName(this.getClass().getSimpleName());
+		Thread.currentThread().setName(this.getClass().getSimpleName());			
 		
 		while( !expireFlag ) {
 			int[] nextJob = null;
@@ -136,9 +136,11 @@ public class TurkHITController implements HITController {
 			final int additionalDelay = nextJob[1];
 			final int hitAmount = nextJob[2];
 			
+			logger.info("Starting HIT creation: up to {} HITs", hitAmount);			
+			
 			// Create HITs until our limit is reached, or expire			
 			for( int i = 0; i < hitAmount; i++ ) {			
-				long sleepMillis = i > initialAmount ? additionalDelay * 1000 : HIT_SLEEP_MILLIS; 
+				long sleepMillis = i > initialAmount ? additionalDelay : HIT_SLEEP_MILLIS; 
 				logger.info("Sleeping for " + sleepMillis);
 				
 				try { Thread.sleep(sleepMillis); } 

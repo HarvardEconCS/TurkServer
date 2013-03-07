@@ -61,7 +61,7 @@ public class TSConfig {
 	public static final String MTURK_HIT_EXTERNAL_URL = "mturk.hit.external.url";
 	
 	public static final String SERVER_RESOURCES = "server.resources";
-	public static final String SERVER_HITGOAL = "server.hitgoal";
+	public static final String SERVER_HITGOAL = "server.hitgoal";  // Total number of HITs to finish
 	public static final String SERVER_USERNAME = "server.usernames";	
 	
 	public static final String HITS_INITIAL = "server.hitinitial";

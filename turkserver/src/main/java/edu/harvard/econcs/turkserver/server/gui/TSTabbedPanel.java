@@ -5,13 +5,18 @@ import java.awt.GridLayout;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 
+import com.google.inject.Inject;
+
+import edu.harvard.econcs.turkserver.mturk.RequesterServiceExt;
+
 public class TSTabbedPanel extends JPanel {
 
 	private static final long serialVersionUID = -3363135146104711554L;
 
 	private JTabbedPane tabbedPane;	
 	
-	public TSTabbedPanel() {
+	@Inject
+	public TSTabbedPanel(RequesterServiceExt req) {
 		super(new GridLayout(1, 1));
 				
 		tabbedPane = new JTabbedPane();
@@ -29,7 +34,7 @@ public class TSTabbedPanel extends JPanel {
 		ExperimentsPanel experimentsPanel = new ExperimentsPanel();
 		tabbedPane.addTab("Experiments", null, experimentsPanel, null);		
 		
-		MaintenancePanel maintenancePanel = new MaintenancePanel();
+		MaintenancePanel maintenancePanel = new MaintenancePanel(req);
 		tabbedPane.addTab("Maintenance", null, maintenancePanel, null);				
 	}
 	

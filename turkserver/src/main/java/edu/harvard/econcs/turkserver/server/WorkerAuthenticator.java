@@ -35,8 +35,15 @@ public class WorkerAuthenticator {
 	
 	private List<String> specialWorkers = Collections.emptyList();
 	
-	private final int simultaneousSessionLimit;
-	private final int totalSetLimit;
+	/**
+	 * Maximum number of HITs that the worker can accept concurrently
+	 */
+	private final int simultaneousSessionLimit;  
+	
+	/**
+	 * Maximum number of HITs in a set that a worker is allowed to do
+	 */
+	private final int totalSetLimit; 
 	
 	@Inject
 	public WorkerAuthenticator(
