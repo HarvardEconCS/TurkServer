@@ -41,7 +41,7 @@ public class DataModule extends AbstractModule {
 	/*
 	 * TODO: this is a temporary method that should be removed after config is restructured
 	 */
-	public void setHITLimit(int some_goal) {
+	private void setHITLimit(int some_goal) {
 		conf.addProperty(TSConfig.SERVER_HITGOAL, some_goal);						
 		conf.addProperty(TSConfig.EXP_REPEAT_LIMIT, 1);
 	}
@@ -68,8 +68,8 @@ public class DataModule extends AbstractModule {
 
 	public class ClientConfigProvider implements Provider<ClientConfig> {
 		@Override
-		public ClientConfig get() {			
-			return TSConfig.getClientConfig(conf);
+		public ClientConfig get() {		
+			return TSConfig.getClientConfig(conf);				
 		}	
 	}
 

@@ -4,6 +4,7 @@ import static org.junit.Assert.*;
 
 import java.util.LinkedList;
 
+import org.apache.commons.configuration.Configuration;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -64,7 +65,10 @@ public class ConcurrentGroupTest {
 	@Test(timeout=20000)
 	public void test() throws Exception {
 		DataModule dataModule = new DataModule();
-		dataModule.setHITLimit(clients);
+		
+		Configuration conf = dataModule.getConfiguration();
+		conf.addProperty(TSConfig.SERVER_HITGOAL, clients);						
+		conf.addProperty(TSConfig.EXP_REPEAT_LIMIT, clients);
 		
 		TurkServer ts = new TurkServer(dataModule);
 		

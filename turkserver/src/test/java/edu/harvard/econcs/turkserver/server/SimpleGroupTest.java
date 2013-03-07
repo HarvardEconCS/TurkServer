@@ -5,6 +5,7 @@ import static org.junit.Assert.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.configuration.Configuration;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -88,7 +89,10 @@ public class SimpleGroupTest {
 		 */
 		
 		DataModule dm = new DataModule();
-		dm.setHITLimit(clients);
+		
+		Configuration conf = dm.getConfiguration();
+		conf.addProperty(TSConfig.SERVER_HITGOAL, clients);						
+		conf.addProperty(TSConfig.EXP_REPEAT_LIMIT, 1);
 		
 		ts = new TurkServer(dm);
 		

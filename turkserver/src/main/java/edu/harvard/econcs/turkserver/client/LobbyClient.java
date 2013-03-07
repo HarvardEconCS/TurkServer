@@ -91,7 +91,7 @@ public class LobbyClient<C> extends SessionClient<C> implements ClientLobbyContr
 					isReady = false;
 					
 					// TODO update lobby state as necessary
-				}				
+				}	
 			}
 			else {
 				System.out.println("Service message unexpected:");

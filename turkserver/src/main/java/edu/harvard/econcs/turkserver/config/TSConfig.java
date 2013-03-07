@@ -24,6 +24,9 @@ public class TSConfig {
 	public static final String SERVER_HTTPPORT = "server.httpport";
 	public static final String SERVER_DEBUGMODE = "server.debugmode";
 	
+	/**
+	 * Maximum number of assigned, non-completed HITs that a worker can have (usually 1).
+	 */
 	public static final String CONCURRENCY_LIMIT = "session.concurrent.limit";	
 	
 	public static final String MTURK_ASSIGNMENT_DURATION = "mturk.assignmentDurationInSeconds";
@@ -51,6 +54,10 @@ public class TSConfig {
 	public static final String EXP_CLASS = "experiment.class";	
 	public static final String EXP_SETID = "experiment.setid";	
 	public static final String EXP_INPUT_LIST = "experiment.inputdata";	
+	
+	/**
+	 * Maximum number of HITs a single worker can complete in this set
+	 */
 	public static final String EXP_REPEAT_LIMIT = "experiment.set.limit";		
 	
 	public static final String MTURK_HIT_TITLE = "mturk.hit.title";
@@ -61,7 +68,11 @@ public class TSConfig {
 	public static final String MTURK_HIT_EXTERNAL_URL = "mturk.hit.external.url";
 	
 	public static final String SERVER_RESOURCES = "server.resources";
-	public static final String SERVER_HITGOAL = "server.hitgoal";  // Total number of HITs to finish
+	
+	/**
+	 * Number of HITs to be completed before server initiates shutdown
+	 */
+	public static final String SERVER_HITGOAL = "server.hitgoal";
 	public static final String SERVER_USERNAME = "server.usernames";	
 	
 	public static final String HITS_INITIAL = "server.hitinitial";
@@ -83,13 +94,16 @@ public class TSConfig {
 			System.out.printf("Unable to load %s. Proceeding with default settings...\n", TURKSERVER_CONFIG);
 			conf = new PropertiesConfiguration();
 		}		
-				
+		
+		// Sensible default values to fall back on	
 		conf.addProperty(SERVER_HTTPPORT, 9876);
 		conf.addProperty(CONCURRENCY_LIMIT, 1);
 		
 		conf.addProperty(MTURK_ASSIGNMENT_DURATION, 86400);
 		conf.addProperty(MTURK_AUTO_APPROVAL_DELAY, 604800);
+		conf.addProperty(MTURK_HIT_LIFETIME, 604800);
 		
+		// TODO: remove these
 		conf.addProperty(SERVER_DEBUGMODE, true);
 		conf.addProperty(SERVER_USERNAME, false);
 		

@@ -2,6 +2,7 @@ package edu.harvard.econcs.turkserver.server;
 
 import static org.junit.Assert.*;
 
+import org.apache.commons.configuration.Configuration;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -50,7 +51,10 @@ public class ServerLifeCycleTest {
 	@Test
 	public void testShutdown() throws InterruptedException {
 		DataModule dm = new DataModule();
-		dm.setHITLimit(clients);
+
+		Configuration conf = dm.getConfiguration();
+		conf.addProperty(TSConfig.SERVER_HITGOAL, clients);						
+		conf.addProperty(TSConfig.EXP_REPEAT_LIMIT, clients);
 		
 		ts = new TurkServer(dm);
 		

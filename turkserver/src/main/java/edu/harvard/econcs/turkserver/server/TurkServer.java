@@ -4,11 +4,14 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.FileNotFoundException;
+import java.net.InetAddress;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 import javax.swing.UIManager;
+
+import net.andrewmao.misc.Utils;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
@@ -86,26 +89,39 @@ public class TurkServer {
 		Configuration conf = dataModule.getConfiguration();				
 		checkExperimentConfiguration(childInjector, conf);
 		
-		HITController thm = childInjector.getInstance(HITController.class);			
+		String url = conf.getString(TSConfig.MTURK_HIT_EXTERNAL_URL, null);
 		
-		// GUI is automatically created from parent injector now
-		sessionServer = getSessionServerInstance(childInjector);				
+		if( url == null ) {
+			System.out.println("URL not provided, finding public IP and port...");
+			InetAddress publicAddr = Utils.getNetworkAddr();
+			checkNotNull(publicAddr, "Couldn't find public a IP on this server");
+			int port = conf.getInt(TSConfig.SERVER_HTTPPORT);			
+			url = String.format("http://%s:%d/", publicAddr, port);
+		}
+		
+		HITController thm = childInjector.getInstance(HITController.class);			
 		
 		// TODO this may not be in conf, but in injector (graph coloring stuff?)
 		thm.setHITType(
 				conf.getString(TSConfig.MTURK_HIT_TITLE),
 				conf.getString(TSConfig.MTURK_HIT_DESCRIPTION),
 				conf.getString(TSConfig.MTURK_HIT_KEYWORDS),
-				1.00, 
+				conf.getDouble(TSConfig.MTURK_HIT_BASE_REWARD), 
 				conf.getInt(TSConfig.MTURK_ASSIGNMENT_DURATION),
 				conf.getInt(TSConfig.MTURK_AUTO_APPROVAL_DELAY),
+				// TODO read in qualifications from config file
 				null);
 		
-		thm.setExternalParams("http://localhost:9294/", 1500, 604800);
+		thm.setExternalParams(url, 
+				conf.getInt(TSConfig.MTURK_HIT_FRAME_HEIGHT), 
+				conf.getInt(TSConfig.MTURK_HIT_LIFETIME));
+		
+		// GUI is automatically created from parent injector now
+		sessionServer = getSessionServerInstance(childInjector);
 		
 		sessionServer.start();		
 		
-		// TODO do not post a fixed number of HITs here
+		// TODO do not post a fixed number of HITs here, use server hit goal
 		thm.postBatchHITs(1, 5000, 10);				
 	}
 	
