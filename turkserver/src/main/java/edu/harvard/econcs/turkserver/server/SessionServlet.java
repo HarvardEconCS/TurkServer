@@ -133,8 +133,6 @@ public class SessionServlet extends GenericServlet {
 				sessions.rcvInactiveTime(session, inactiveTime);
 			}
 			else if( Codec.hitSubmit.equals(status) ) {								
-				sessions.logger.info("HIT " + hitId + " submitting");
-				
 				String survey = (String) data.get("comments");
 				
 				sessions.sessionSubmit(session, survey);

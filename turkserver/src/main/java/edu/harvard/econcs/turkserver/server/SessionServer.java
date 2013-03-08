@@ -190,8 +190,20 @@ public abstract class SessionServer extends Thread {
 			}
 		}
 		catch (SessionCompletedException e) {
-			SessionUtils.sendStatus(session, Codec.status_completed, Messages.SESSION_COMPLETED);
+			SessionUtils.sendStatus(session, Codec.status_expfinished, Messages.SESSION_COMPLETED);
 			logger.info("Worker {} connected to experiment after completion (HIT {})", workerId, hitId);
+			
+			// Re-match HITWorker to this person
+			HITWorkerImpl hitw;
+			if( (hitw = hitWorkerTable.get(hitId, workerId)) != null ) {
+				// Match session to HITWorker and vice versa
+				ServerSession oldSession = hitw.cometdSession.get();
+				if( oldSession == null || !session.equals(oldSession) ) {
+					hitw.setServerSession(session);				
+				}
+				clientToHITWorker.put(session, hitw);
+			}					
+			
 			return null;
 		} catch (SessionOverlapException e) {
 			SessionUtils.sendStatus(session, Codec.status_sessionoverlap, Messages.SESSION_OVERLAP);
@@ -283,12 +295,13 @@ public abstract class SessionServer extends Thread {
 		// Write any exit comments / logs for session
 		tracker.saveExitSurveyResults(worker, survey);
 		
+		// TODO: don't increment if the same HIT submits twice.
 		int completed = completedHITs.incrementAndGet();
 		System.out.println(completed + " HITs completed");		
 		
 		// TODO check the total number of possible different tasks as well - getTotalPuzzles()
 		
-		String workerId = (String) session.getAttribute("workerId");
+		String workerId = worker.getWorkerId();
 		
 		if( workerId != null ) {
 			int additional = workerAuth.getSetLimit() - tracker.getSetSessionInfoForWorker(workerId).size();		

@@ -225,7 +225,7 @@ class TSClient
       when Codec.roundStartMsg
         @startRound_cb? data.round
       when Codec.doneExpMsg
-        @finishExperiment_cb?()     
+        @finishExperiment_cb?()
       when Codec.errorMsg
         @errorMessage_cb?(status, data.msg)
       when Codec.status_failsauce
@@ -236,13 +236,42 @@ class TSClient
         @errorMessage_cb?(status, data.msg)
       when Codec.status_toomanysessions
         @errorMessage_cb?(status, data.msg)
-      when Codec.status_completed
+      when Codec.status_expfinished
         @errorMessage_cb?(status, data.msg)
+      when Codec.status_completed
+        alert data.msg
+        @triggerTurkSubmit()
       
   @submitHIT: (data) =>
     @channelSend "/service/user",
       status: Codec.hitSubmit
       comments: data
+  
+  @triggerTurkSubmit: =>
+    @unsubscribe()
+    $.cometd.disconnect()
+    
+    # Automated turk submit
+    form = $ '<form>',
+      action: @params.turkSubmitTo + "/mturk/externalSubmit"
+      method: 'POST'
+    $('body').append(form)
+    form.append($ '<input>',
+      type: "hidden"
+      name: "assignmentId"
+      value: @params.assignmentId
+      )
+    form.append($ '<input>',
+      type: "hidden"
+      name: "hitId"
+      value: @params.hitId
+      )              
+    form.append($ '<input>',
+      type: "hidden"
+      name: "workerId"
+      value: @params.workerId
+      )
+    form.submit()
     
   @subscribeExp: (channel) ->
     @expServiceSubscription = $.cometd.subscribe Codec.expSvcPrefix + channel, (message) => @serviceMessage_cb? message.data

@@ -7,6 +7,8 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.border.BevelBorder;
 import javax.swing.JButton;
 import javax.swing.JLabel;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
 
 public class ExperimentsPanel extends JSplitPane {
 
@@ -15,7 +17,7 @@ public class ExperimentsPanel extends JSplitPane {
 	private JPanel panel;
 	private JButton btnPayWorkers;
 	private JButton btnDisableUnusedHits;
-	private JButton btnCheckAndFix;
+	private JButton btnCheckAndDispose;
 	private JLabel lblAssignedHits;
 	private JLabel lblCompletedHits;
 	private JLabel lblTotalHitsOutstanding;
@@ -41,10 +43,8 @@ public class ExperimentsPanel extends JSplitPane {
 			}
 		));				
 		
-		setLeftComponent(table);
-		
-		
-		
+		setLeftComponent(table);		
+				
 		panel = new JPanel();
 		setRightComponent(panel);
 		panel.setLayout(null);
@@ -66,12 +66,23 @@ public class ExperimentsPanel extends JSplitPane {
 		panel.add(btnDisableUnusedHits);
 		
 		btnPayWorkers = new JButton("Review and Pay Workers");
+		btnPayWorkers.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				
+			}
+		});
+		
 		btnPayWorkers.setBounds(0, 200, 219, 45);
 		panel.add(btnPayWorkers);
 		
-		btnCheckAndFix = new JButton("Check and Fix Errors");
-		btnCheckAndFix.setBounds(0, 250, 219, 50);
-		panel.add(btnCheckAndFix);
+		btnCheckAndDispose = new JButton("Check and Dispose HITs");
+		btnCheckAndDispose.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				
+			}
+		});
+		btnCheckAndDispose.setBounds(0, 250, 219, 50);
+		panel.add(btnCheckAndDispose);
 	}
 
 
