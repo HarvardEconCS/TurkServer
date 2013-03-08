@@ -127,11 +127,11 @@ public abstract class SessionServer extends Thread {
 			String clientId = session.getId();			
 			
 			if( timedout ) {
-				Log.getRootLogger().info("Session " + clientId + " timed out");
+				logger.info("Session " + clientId + " timed out");
 				sessionDisconnect(session);
 			}
 			else {
-				Log.getRootLogger().info("Session " + clientId + " disconnected");
+				logger.info("Session " + clientId + " disconnected");
 				sessionDisconnect(session);
 			}
 		}	
@@ -183,7 +183,7 @@ public abstract class SessionServer extends Thread {
 		try {
 			workerAuth.checkHITValid(hitId, workerId, hitIdRecord);
 			
-			// Create hitId record that would have been saved above
+			// Create hitId record that would have been saved above if session was null
 			if( hitIdRecord == null ) {				
 				hitIdRecord = new Session();
 				hitIdRecord.setHitId(hitId);
@@ -191,10 +191,11 @@ public abstract class SessionServer extends Thread {
 		}
 		catch (SessionCompletedException e) {
 			SessionUtils.sendStatus(session, Codec.status_completed, Messages.SESSION_COMPLETED);
-			logger.info("Client connected to experiment after completion: "	+ hitId.toString());
+			logger.info("Worker {} connected to experiment after completion (HIT {})", workerId, hitId);
 			return null;
 		} catch (SessionOverlapException e) {
 			SessionUtils.sendStatus(session, Codec.status_sessionoverlap, Messages.SESSION_OVERLAP);
+			logger.info("Worker {} connected to overlapping session (HIT {})", workerId, hitId);
 			return null;
 		}
 		
@@ -202,19 +203,22 @@ public abstract class SessionServer extends Thread {
 			workerAuth.checkWorkerLimits(hitId, workerId, hitIdRecord);
 		} catch (SimultaneousSessionsException e) {			
 			SessionUtils.sendStatus(session, Codec.status_simultaneoussessions, Messages.SIMULTANEOUS_SESSIONS);
+			logger.info("Worker {} has accepted too many HITs (HIT {})", workerId, hitId);
 			return null;
 		} catch (TooManySessionsException e) {			
 			SessionUtils.sendStatus(session, Codec.status_toomanysessions, Messages.TOO_MANY_SESSIONS);
+			logger.info("Worker {} has completed too many HITs (HIT {})", workerId, hitId);
 			return null;
 		}		
 		
 		// Save some extra information that we can access later, for comparison 					
 		session.setAttribute("hitId", hitId);
 		session.setAttribute("assignmentId", assignmentId);
-		session.setAttribute("workerId", workerId);
+		session.setAttribute("workerId", workerId);				
 		
 		try {
-			if( workerAuth.workerRequiresQuiz(workerId) ) {				
+			if( workerAuth.workerRequiresQuiz(workerId) ) {		
+				logger.info("Worker {} needs to take quiz (HIT {})", workerId, hitId);
 				QuizMaterials qm = workerAuth.getQuiz();
 								
 				// TODO: null quiz is passed for static client-side 											
@@ -225,8 +229,11 @@ public abstract class SessionServer extends Thread {
 								
 				return null;
 			}
+			
+			logger.info("No quiz required for {}", workerId);			
 		} catch (TooManyFailsException e) {
-			SessionUtils.sendStatus(session, Codec.status_failsauce, Messages.TOO_MANY_FAILS); 					
+			SessionUtils.sendStatus(session, Codec.status_failsauce, Messages.TOO_MANY_FAILS); 		
+			logger.info("Worker {} has failed quiz too many times (HIT {})", workerId, hitId);
 			return null;
 		}
 		
@@ -237,8 +244,9 @@ public abstract class SessionServer extends Thread {
 		 * Connection was from someone else 
 		 */
 		if( hitIdRecord.getWorkerId() != null && !workerId.equals(hitIdRecord.getWorkerId()) ) {										
-			logger.info(String.format("session %s being replaced by worker %s with assignment %s",
-					hitId, workerId, assignmentId));
+			logger.info(String.format("HIT %s being replaced by worker %s with assignment %s", hitId, workerId, assignmentId));
+		}		else {
+			logger.info(String.format("HIT %s newly assigned to worker %s with assignment %s", hitId, workerId, assignmentId));
 		}
 				
 		// Find this HITWorker in table

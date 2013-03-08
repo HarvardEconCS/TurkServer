@@ -128,10 +128,12 @@ public final class GroupServer extends SessionServer {
 		boolean inExperiment;
 		
 		synchronized(lobby) { // Make sure starting experiments are atomic
-			if( inExperiment = experiments.workerIsInProgress(hitw) )
-				sessionReconnect(session, hitw);						
-			else
+			if( inExperiment = experiments.workerIsInProgress(hitw) ) {
+				sessionReconnect(session, hitw);
+			}
+			else {
 				lobby.userJoined(hitw);
+			}
 		}
 		
 		if( !inExperiment ) {

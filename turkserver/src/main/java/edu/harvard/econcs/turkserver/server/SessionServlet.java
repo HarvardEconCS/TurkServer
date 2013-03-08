@@ -16,7 +16,6 @@ import org.cometd.server.BayeuxServerImpl;
 import org.cometd.server.authorizer.GrantAuthorizer;
 import org.cometd.server.ext.AcknowledgedMessagesExtension;
 import org.cometd.server.ext.TimesyncExtension;
-import org.eclipse.jetty.util.log.Log;
 
 import edu.harvard.econcs.turkserver.Codec;
 import edu.harvard.econcs.turkserver.schema.Quiz;
@@ -99,7 +98,7 @@ public class SessionServlet extends GenericServlet {
 			try { hitId = data.get("hitId").toString(); } catch (NullPointerException e) {}
 			
 			if( Codec.hitView.equals(status) ) {				
-				Log.getRootLogger().info("HIT " + hitId + " is being viewed by " + clientId);
+				sessions.logger.info("HIT " + hitId + " is being viewed by " + clientId);
 				
 				sessions.sessionView(session, hitId);
 			}
@@ -107,12 +106,12 @@ public class SessionServlet extends GenericServlet {
 				String assignmentId = null, workerId = null;
 				
 				try { assignmentId = data.get("assignmentId").toString(); }	
-				catch (NullPointerException e) { Log.getRootLogger().warn("Null assignmentId for " + clientId); }
+				catch (NullPointerException e) { sessions.logger.warn("Null assignmentId for " + clientId); }
 				
 				try { workerId = data.get("workerId").toString(); }	
-				catch (NullPointerException e) { Log.getRootLogger().warn("Null workerId for " + clientId);}
+				catch (NullPointerException e) { sessions.logger.warn("Null workerId for " + clientId);}
 				
-				Log.getRootLogger().info("HIT " + hitId + " assignment " + assignmentId + " accepted by " + workerId);
+				sessions.logger.info("HIT " + hitId + " assignment " + assignmentId + " accepted by " + workerId);
 												
 				sessions.sessionAccept(session, hitId, assignmentId, workerId);									
 			}
@@ -134,14 +133,14 @@ public class SessionServlet extends GenericServlet {
 				sessions.rcvInactiveTime(session, inactiveTime);
 			}
 			else if( Codec.hitSubmit.equals(status) ) {								
-				Log.getRootLogger().info("HIT " + hitId + " submitting");
+				sessions.logger.info("HIT " + hitId + " submitting");
 				
 				String survey = (String) data.get("comments");
 				
 				sessions.sessionSubmit(session, survey);
 			}
 			else {
-				Log.getRootLogger().warn("Unrecognized message " + data);
+				sessions.logger.warn("Unrecognized message " + data);
 			}
 		}				
 	}
@@ -183,32 +182,32 @@ public class SessionServlet extends GenericServlet {
 	}
 
 	@Service("monitor")
-    public static class Monitor
+    public class Monitor
     {
         @Listener("/meta/subscribe")
         public void monitorSubscribe(ServerSession session, ServerMessage message)
         {
-            Log.getRootLogger().debug("Monitored Subscribe from "+session+" for "+message.get(Message.SUBSCRIPTION_FIELD));
+        	sessions.logger.debug("Monitored Subscribe from "+session+" for "+message.get(Message.SUBSCRIPTION_FIELD));
         }
 
         @Listener("/meta/unsubscribe")
         public void monitorUnsubscribe(ServerSession session, ServerMessage message)
         {
-            Log.getRootLogger().debug("Monitored Unsubscribe from "+session+" for "+message.get(Message.SUBSCRIPTION_FIELD));
+        	sessions.logger.debug("Monitored Unsubscribe from "+session+" for "+message.get(Message.SUBSCRIPTION_FIELD));
         }
 
         @Listener("/meta/*")
         public void monitorMeta(ServerSession session, ServerMessage message)
         {
-//            if (Log.isDebugEnabled())
-                Log.getRootLogger().debug(message.toString());
+//            if (sessions.logger.isDebugEnabled())
+        	sessions.logger.debug(message.toString());
         }
         
         @Listener("/service/*")
         public void monitorSvc(ServerSession session, ServerMessage message)
         {
-//            if (Log.isDebugEnabled())
-                Log.getRootLogger().info(message.toString());
+//            if (sessions.logger.isDebugEnabled())
+        	sessions.logger.debug(message.toString());
         }
     }
 	
