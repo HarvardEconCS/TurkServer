@@ -16,7 +16,7 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableMap;
 
 import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
-import edu.harvard.econcs.turkserver.cometd.FakeServerSession;
+import edu.harvard.econcs.turkserver.cometd.MockServerSession;
 import edu.harvard.econcs.turkserver.config.TSConfig;
 import edu.harvard.econcs.turkserver.schema.Session;
 
@@ -84,7 +84,7 @@ public class LobbySyncTest {
 						Thread.sleep(Math.round(Math.random() * 10));
 					} catch (InterruptedException e) {}
 					
-					HITWorkerImpl hitw = new HITWorkerImpl(new FakeServerSession(), record);
+					HITWorkerImpl hitw = new HITWorkerImpl(new MockServerSession(), record);
 					lobby.userJoined(hitw);
 					
 					// Send a possible random lobby status update for SNAFU checking

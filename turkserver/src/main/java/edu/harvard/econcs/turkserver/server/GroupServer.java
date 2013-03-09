@@ -36,29 +36,36 @@ public final class GroupServer extends SessionServer {
 	private volatile LocalSession lobbyBroadcaster;
 
 	// GUI
-	final GUIListener guiListener;
-	private final ServerPanel serverGUI;
+	GUIListener guiListener;
+	private ServerPanel serverGUI;
 	
 	@Inject
 	public GroupServer(			
 			ExperimentDataTracker tracker,
 			HITController hitCont,
 			WorkerAuthenticator workerAuth,
-			Experiments experiments,
-			JettyCometD jetty,
+			Experiments experiments,			
 			Configuration config,
-			Lobby lobby,
-			final TSTabbedPanel guiTabs
+			Lobby lobby			
 			) throws ClassNotFoundException {		
-		super(tracker, hitCont, workerAuth, experiments, jetty, config);
+		super(tracker, hitCont, workerAuth, experiments, config);
 		
 		logger.info("Debug mode set to {}", debugMode);
 		
 		this.requireUsernames = config.getBoolean(TSConfig.SERVER_USERNAME);
 		this.lobby = lobby;
-						
-		jetty.addServlet(GroupServlet.class, "/exp");						
-		
+																		
+		lobby.setListener(new ServerLobbyListener());				
+	}
+	
+	@Inject(optional=true)
+	public void injectWebServer(JettyCometD jetty) {
+		super.injectWebServer(jetty);
+		jetty.addServlet(GroupServlet.class, "/exp");
+	}
+	
+	@Inject(optional=true) 
+	public void injectGUI(final TSTabbedPanel guiTabs) {
 		serverGUI = new ServerPanel(this, lobby);
 		
 		SwingUtilities.invokeLater(new Runnable() {	public void run() {
@@ -67,8 +74,6 @@ public final class GroupServer extends SessionServer {
 		
 		this.guiListener = new GUIListener(this, serverGUI);
 		experiments.registerListener(guiListener);
-		
-		lobby.setListener(new ServerLobbyListener());				
 	}
 
 	// TODO: refactor these somewhere better
@@ -109,10 +114,10 @@ public final class GroupServer extends SessionServer {
 	}
 
 	@Override
-	HITWorkerImpl sessionAccept(ServerSession session,
+	HITWorkerImpl sessionAccept(ServerSession conn,
 			String hitId, String assignmentId, String workerId) {
 		
-		HITWorkerImpl hitw = super.sessionAccept(session, hitId, assignmentId, workerId);
+		HITWorkerImpl hitw = super.sessionAccept(conn, hitId, assignmentId, workerId);
 		if( hitw == null ) return null;				
 		
 		// Ask for username if we require it or somehow didn't get it last time		
@@ -121,7 +126,7 @@ public final class GroupServer extends SessionServer {
 					"status", Codec.status_usernameneeded
 					);			
 			
-			SessionUtils.sendServiceMsg(session, data);
+			SessionUtils.sendServiceMsg(conn, data);
 		}		
 		
 		// Check if we should reconnect this HITWorker to an existing experiment
@@ -129,7 +134,7 @@ public final class GroupServer extends SessionServer {
 		
 		synchronized(lobby) { // Make sure starting experiments are atomic
 			if( inExperiment = experiments.workerIsInProgress(hitw) ) {
-				sessionReconnect(session, hitw);
+				sessionReconnect(conn, hitw);
 			}
 			else {
 				lobby.userJoined(hitw);
@@ -140,10 +145,11 @@ public final class GroupServer extends SessionServer {
 			Map<String, String> data = ImmutableMap.of(
 					"status", Codec.status_connectlobby					
 					);
-			SessionUtils.sendServiceMsg(session, data);
+			SessionUtils.sendServiceMsg(conn, data);
 			
 			logger.info(hitw.toString() + " connected to lobby");
-			serverGUI.updateLobbyModel();			
+			
+			if( serverGUI != null ) serverGUI.updateLobbyModel();			
 		}
 		
 		return hitw;
@@ -151,17 +157,17 @@ public final class GroupServer extends SessionServer {
 
 	/**
 	 * 
-	 * @param session
+	 * @param conn
 	 * @param username
 	 * @return true if this should be sent to the whole lobby
 	 */
-	public boolean lobbyLogin(ServerSession session, String username) {
+	public boolean lobbyLogin(ServerSession conn, String username) {
 		// TODO: this is in the wrong place
 		
-		HITWorkerImpl hitw = clientToHITWorker.get(session);
+		HITWorkerImpl hitw = clientToHITWorker.get(conn);
 		
 		if( hitw == null ) {
-			logger.error("Can't accept username for unknown session {}", session.getId());
+			logger.error("Can't accept username for unknown session {}", conn.getId());
 			return false;
 		}
 		
@@ -169,10 +175,10 @@ public final class GroupServer extends SessionServer {
 		return true;
 	}
 
-	public boolean lobbyUpdate(ServerSession session, Map<String, Object> data) {
-		HITWorkerImpl hitw = clientToHITWorker.get(session);
+	public boolean lobbyUpdate(ServerSession conn, Map<String, Object> data) {
+		HITWorkerImpl hitw = clientToHITWorker.get(conn);
 		if( hitw == null ) {
-			logger.error("Can't accept update status for unknown session {}", session.getId());
+			logger.error("Can't accept update status for unknown session {}", conn.getId());
 			return false;
 		}
 		// NOTE: other way to fix lobby bug is to sync on the below, but not necessary since it just ignores message
@@ -210,15 +216,15 @@ public final class GroupServer extends SessionServer {
 	}
 	
 	@Override
-	public void sessionDisconnect(ServerSession clientId) {
-		HITWorkerImpl worker = clientToHITWorker.get(clientId);
+	public void sessionDisconnect(ServerSession conn) {
+		HITWorkerImpl worker = clientToHITWorker.get(conn);
 		
 		if( worker != null ) {
 			if (lobby.userQuit(worker))	serverGUI.updateLobbyModel();
 		}		
 		
 		// This takes care of disconnecting in the tracker
-		super.sessionDisconnect(clientId);
+		super.sessionDisconnect(conn);
 	}
 
 }

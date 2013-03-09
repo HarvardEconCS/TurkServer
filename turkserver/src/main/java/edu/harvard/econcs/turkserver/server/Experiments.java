@@ -36,7 +36,7 @@ import edu.harvard.econcs.turkserver.api.Configurator;
 import edu.harvard.econcs.turkserver.api.HITWorker;
 import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
 import edu.harvard.econcs.turkserver.api.IntervalEvent;
-import edu.harvard.econcs.turkserver.cometd.FakeLocalSession;
+import edu.harvard.econcs.turkserver.cometd.MockLocalSession;
 import edu.harvard.econcs.turkserver.config.TSConfig;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 
@@ -182,7 +182,7 @@ public class Experiments {
 		LocalSession ls = null;
 		if( bayeux == null ) {
 			logger.warn("Skipping bayeux channel creation...we'd better be in test mode!");
-			ls = new FakeLocalSession();
+			ls = new MockLocalSession();
 		}
 		else {
 			bayeux.createIfAbsent(Codec.expChanPrefix + expChannel, persistent);

@@ -8,7 +8,7 @@ import org.cometd.bayeux.client.ClientSessionChannel;
 import org.cometd.bayeux.server.LocalSession;
 import org.cometd.bayeux.server.ServerSession;
 
-public class FakeLocalSession implements LocalSession {
+public class MockLocalSession implements LocalSession {
 
 	@Override
 	public void addExtension(Extension extension) {

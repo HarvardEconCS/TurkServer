@@ -8,10 +8,10 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import edu.harvard.econcs.turkserver.cometd.FakeServerSession;
+import edu.harvard.econcs.turkserver.cometd.MockServerSession;
 import edu.harvard.econcs.turkserver.logging.FakeExperimentLog;
 import edu.harvard.econcs.turkserver.schema.Session;
-import edu.harvard.econcs.turkserver.server.mysql.ExperimentDummyTracker;
+import edu.harvard.econcs.turkserver.server.mysql.MockDataTracker;
 import edu.harvard.econcs.turkserver.util.RoundRobinAssigner;
 
 public class ExperimentsTest {
@@ -25,7 +25,7 @@ public class ExperimentsTest {
 				TestExperiment.class,
 				new DummyConfigurator(1),
 				new RoundRobinAssigner(Collections.singleton("test"), null),
-				new ExperimentDummyTracker(),
+				new MockDataTracker(),
 				new EventAnnotationManager()
 				);
 		
@@ -40,7 +40,7 @@ public class ExperimentsTest {
 	@Test
 	public void testIntervals() throws InterruptedException {
 		
-		HITWorkerImpl worker = new HITWorkerImpl(new FakeServerSession(), record);
+		HITWorkerImpl worker = new HITWorkerImpl(new MockServerSession(), record);
 		FakeExperimentLog log = new FakeExperimentLog();
 		ExperimentControllerImpl cont = new ExperimentControllerImpl(log, worker, exps);
 		

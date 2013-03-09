@@ -1,4 +1,4 @@
-package edu.harvard.econcs.turkserver.server.mysql;
+package edu.harvard.econcs.turkserver.server;
 
 import static org.junit.Assert.*;
 
@@ -17,10 +17,8 @@ import edu.harvard.econcs.turkserver.SimultaneousSessionsException;
 import edu.harvard.econcs.turkserver.TooManySessionsException;
 import edu.harvard.econcs.turkserver.config.TSConfig;
 import edu.harvard.econcs.turkserver.schema.Session;
-import edu.harvard.econcs.turkserver.server.SessionRecord;
-import edu.harvard.econcs.turkserver.server.WorkerAuthenticator;
 import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
-import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
+import edu.harvard.econcs.turkserver.server.mysql.MockDataTracker;
 
 public class WorkerAuthenticatorTest {
 
@@ -28,14 +26,14 @@ public class WorkerAuthenticatorTest {
 	int totalSetLimit = 1;
 	String special_worker = "specialWorkerId";
 	
-	ExperimentDataTracker tracker;
+	MockDataTracker tracker;
 	WorkerAuthenticator workerAuth;
 	
 	@Before
 	public void setUp() throws Exception {
 		List<String> specialWorkers = Collections.singletonList(special_worker);
 		
-		tracker = new ExperimentDummyTracker();
+		tracker = new MockDataTracker();
 		
 		Configuration conf = new PropertiesConfiguration();
 		

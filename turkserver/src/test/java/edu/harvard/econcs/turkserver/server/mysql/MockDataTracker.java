@@ -30,7 +30,7 @@ import com.google.inject.Singleton;
  */
 @SuppressWarnings("unused")
 @Singleton
-public class ExperimentDummyTracker extends ExperimentDataTracker {		
+public class MockDataTracker extends ExperimentDataTracker {		
 	
 	private final ConcurrentMap<String, Session> hitIdToSessions;
 	
@@ -40,7 +40,7 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 	// Experiment tracking - FALSE if in progress and TRUE if finished
 	protected final ConcurrentMap<String, Experiment> experiments; 
 	
-	public ExperimentDummyTracker() {						
+	public MockDataTracker() {						
 				
 		hitIdToSessions = new ConcurrentHashMap<String, Session>();		
 		
@@ -78,7 +78,7 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	protected void saveSession(Session record) {
+	public void saveSession(Session record) {
 		hitIdToSessions.put(record.getHitId(), record);
 				
 		if( record.getWorkerId() != null )
@@ -208,6 +208,8 @@ public class ExperimentDummyTracker extends ExperimentDataTracker {
 		String workerId = s.getWorkerId();
 		s.setWorkerId(null);
 		s.setUsername(null);
+		
+		workerIdToSessions.get(workerId).remove(s);
 		
 		logger.info(String.format("Worker %s disassociated with session %s", workerId, hitId));				
 	}

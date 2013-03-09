@@ -9,8 +9,11 @@ import org.cometd.bayeux.server.ServerChannel;
 import org.cometd.bayeux.server.ServerMessage.Mutable;
 import org.cometd.bayeux.server.ServerSession;
 
-public class FakeServerSession implements ServerSession {
+public class MockServerSession implements ServerSession {
 
+	public String lastChannel;
+	public Object lastData;
+	
 	@Override
 	public String getId() {
 		// TODO Auto-generated method stub
@@ -125,6 +128,9 @@ public class FakeServerSession implements ServerSession {
 
 	@Override
 	public void deliver(Session from, String channel, Object data, String id) {		
+		lastChannel = channel;
+		lastData = data;
+		
 		System.out.println(channel + ": got message" + data.toString());
 	}
 

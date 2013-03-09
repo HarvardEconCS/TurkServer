@@ -28,23 +28,27 @@ import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
 @Singleton
 public final class SimpleExperimentServer extends SessionServer {	
 				
-	final GUIListener guiListener;	
+	GUIListener guiListener;	
 	
 	@Inject
 	public SimpleExperimentServer(			
 			ExperimentDataTracker tracker, 
 			HITController hitCont,
 			WorkerAuthenticator workerAuth,
-			Experiments experiments,
-			JettyCometD jetty,
-			Configuration config,
-			final TSTabbedPanel guiTabs
-			) throws Exception {
-		
-		super(tracker, hitCont, workerAuth, experiments, jetty, config);
-		
+			Experiments experiments,			
+			Configuration config			
+			) throws Exception {		
+		super(tracker, hitCont, workerAuth, experiments, config);								
+	}
+	
+	@Inject(optional=true)
+	public void injectWebServer(JettyCometD jetty) {
+		super.injectWebServer(jetty);
 		jetty.addServlet(SessionServlet.class, "/exp");
-		
+	}
+	
+	@Inject(optional=true) 
+	public void injectGUI(final TSTabbedPanel guiTabs) {
 		final ServerPanel serverGUI = new ServerPanel(this, new Lobby.NullLobby());
 		
 		SwingUtilities.invokeLater(new Runnable() {	public void run() {
@@ -53,7 +57,7 @@ public final class SimpleExperimentServer extends SessionServer {
 		
 		this.guiListener = new GUIListener(this, serverGUI);
 		experiments.registerListener(guiListener); 
-	}	
+	}
 
 	// TODO: refactor these somewhere better
 	@Override
@@ -67,17 +71,17 @@ public final class SimpleExperimentServer extends SessionServer {
 	}
 
 	@Override
-	protected HITWorkerImpl sessionAccept(ServerSession session, 
+	protected HITWorkerImpl sessionAccept(ServerSession conn, 
 			String hitId, String assignmentId, String workerId) {
 		
 		/*
 		 * At this point, the session is successfully authenticated, so we create an experiment  
 		 */
-		HITWorkerImpl hitw = super.sessionAccept(session, hitId, assignmentId, workerId);
+		HITWorkerImpl hitw = super.sessionAccept(conn, hitId, assignmentId, workerId);
 		if( hitw == null ) return null;
 		
 		if( experiments.workerIsInProgress(hitw) ) {
-			super.sessionReconnect(session, hitw);			
+			super.sessionReconnect(conn, hitw);			
 		}
 		else {
 			ExperimentControllerImpl exp = experiments.startSingle(hitw);	

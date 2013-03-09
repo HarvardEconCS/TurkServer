@@ -1,5 +1,7 @@
 package edu.harvard.econcs.turkserver.server;
 
+import java.net.InetAddress;
+import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
@@ -15,7 +17,6 @@ import org.cometd.server.JettyJSONContextServer;
 
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.ajax.JSON.Convertor;
-import org.eclipse.jetty.util.log.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,7 +57,7 @@ public abstract class SessionServer extends Thread {
 	protected final boolean debugMode;
 	protected final int hitGoal;		
 	
-	protected final JettyCometD jettyCometD;
+	protected JettyCometD jettyCometD;
 	
 	protected BayeuxServer bayeux;	
 	
@@ -71,8 +72,7 @@ public abstract class SessionServer extends Thread {
 			ExperimentDataTracker tracker,			
 			HITController hitCont,
 			WorkerAuthenticator workerAuth,
-			Experiments experiments,
-			JettyCometD server,
+			Experiments experiments,			
 			Configuration config
 			) throws ClassNotFoundException {		
 		
@@ -80,8 +80,6 @@ public abstract class SessionServer extends Thread {
 		this.hitCont = hitCont;
 		this.workerAuth = workerAuth;
 		this.experiments = experiments;
-		
-		this.jettyCometD = server;
 		
 		this.completedHITs = new AtomicInteger();
 		
@@ -105,34 +103,38 @@ public abstract class SessionServer extends Thread {
 					@Override public Map<String, HITWorkerImpl> get() { return mm.makeMap(); }					
 				});										  
 	}
+	
+	public void injectWebServer(JettyCometD server) {		
+		this.jettyCometD = server;
+	}
 
 	public class UserSessionListener implements SessionListener {
 		@Override
-		public void sessionAdded(ServerSession session) {
-			HITWorkerImpl previous = clientToHITWorker.get(session);			
+		public void sessionAdded(ServerSession conn) {
+			HITWorkerImpl previous = clientToHITWorker.get(conn);			
 			
 			if( previous != null ) {
 				// This session was previously connected. Associate it with the HITWorker. 
-				previous.setServerSession(session);
-				logger.info(session.getId() + " reconnected, used to have HIT " + previous.getHitId());
+				previous.setServerSession(conn);
+				logger.info(conn.getId() + " reconnected, used to have HIT " + previous.getHitId());
 			}
 			else {
-				logger.info(session.toString());
+				logger.info(conn.toString());
 //				clientToHITWorker.putIfAbsent(session, null);
 			}
 		}
 
 		@Override
-		public void sessionRemoved(ServerSession session, boolean timedout) {			
-			String clientId = session.getId();			
+		public void sessionRemoved(ServerSession conn, boolean timedout) {			
+			String clientId = conn.getId();			
 			
 			if( timedout ) {
 				logger.info("Session " + clientId + " timed out");
-				sessionDisconnect(session);
+				sessionDisconnect(conn);
 			}
 			else {
 				logger.info("Session " + clientId + " disconnected");
-				sessionDisconnect(session);
+				sessionDisconnect(conn);
 			}
 		}	
 	}
@@ -151,30 +153,29 @@ public abstract class SessionServer extends Thread {
 		return completedHITs.get();
 	}
 
-	void sessionView(ServerSession session, String hitId) {
+	void sessionView(ServerSession conn, String hitId) {
 		if( hitId != null ) {					
 			
 			// This session currently hasn't accepted this HIT 
-			HITWorkerImpl prev = clientToHITWorker.replace(session, null);
+			HITWorkerImpl prev = clientToHITWorker.remove(conn);
 						
 			logger.info("New user is viewing HIT {}, previous user was {}", hitId, prev);
 			
-			session.setAttribute("hitId", hitId);
+			conn.setAttribute("hitId", hitId);
 			
 			// Try to add hitIds that we have no record of (clean reuse)
 			if( !tracker.hitExistsInDB(hitId) )
-				tracker.saveHITId(hitId);
-			
+				tracker.saveHITId(hitId);			
 		}
 		else {
-			System.out.println("Client " + session.getId() + " sent null hitId");
+			System.out.println("Client " + conn.getId() + " sent null hitId");
 		}
 	}
 
-	HITWorkerImpl sessionAccept(ServerSession session, 
+	HITWorkerImpl sessionAccept(ServerSession conn, 
 			String hitId, String assignmentId, String workerId) {				
 		if( hitId == null ) {
-			logger.warn("Received null hitId for session {}", session.getId());
+			logger.warn("Received null hitId for session {}", conn.getId());
 			return null;
 		}
 		
@@ -190,7 +191,7 @@ public abstract class SessionServer extends Thread {
 			}
 		}
 		catch (SessionCompletedException e) {
-			SessionUtils.sendStatus(session, Codec.status_expfinished, Messages.SESSION_COMPLETED);
+			SessionUtils.sendStatus(conn, Codec.status_expfinished, Messages.SESSION_COMPLETED);
 			logger.info("Worker {} connected to experiment after completion (HIT {})", workerId, hitId);
 			
 			// Re-match HITWorker to this person
@@ -198,15 +199,15 @@ public abstract class SessionServer extends Thread {
 			if( (hitw = hitWorkerTable.get(hitId, workerId)) != null ) {
 				// Match session to HITWorker and vice versa
 				ServerSession oldSession = hitw.cometdSession.get();
-				if( oldSession == null || !session.equals(oldSession) ) {
-					hitw.setServerSession(session);				
+				if( oldSession == null || !conn.equals(oldSession) ) {
+					hitw.setServerSession(conn);				
 				}
-				clientToHITWorker.put(session, hitw);
+				clientToHITWorker.put(conn, hitw);
 			}					
 			
 			return null;
 		} catch (SessionOverlapException e) {
-			SessionUtils.sendStatus(session, Codec.status_sessionoverlap, Messages.SESSION_OVERLAP);
+			SessionUtils.sendStatus(conn, Codec.status_sessionoverlap, Messages.SESSION_OVERLAP);
 			logger.info("Worker {} connected to overlapping session (HIT {})", workerId, hitId);
 			return null;
 		}
@@ -214,19 +215,19 @@ public abstract class SessionServer extends Thread {
 		try {
 			workerAuth.checkWorkerLimits(hitId, workerId, hitIdRecord);
 		} catch (SimultaneousSessionsException e) {			
-			SessionUtils.sendStatus(session, Codec.status_simultaneoussessions, Messages.SIMULTANEOUS_SESSIONS);
+			SessionUtils.sendStatus(conn, Codec.status_simultaneoussessions, Messages.SIMULTANEOUS_SESSIONS);
 			logger.info("Worker {} has accepted too many HITs (HIT {})", workerId, hitId);
 			return null;
 		} catch (TooManySessionsException e) {			
-			SessionUtils.sendStatus(session, Codec.status_toomanysessions, Messages.TOO_MANY_SESSIONS);
+			SessionUtils.sendStatus(conn, Codec.status_toomanysessions, Messages.TOO_MANY_SESSIONS);
 			logger.info("Worker {} has completed too many HITs (HIT {})", workerId, hitId);
 			return null;
 		}		
 		
 		// Save some extra information that we can access later, for comparison 					
-		session.setAttribute("hitId", hitId);
-		session.setAttribute("assignmentId", assignmentId);
-		session.setAttribute("workerId", workerId);				
+		conn.setAttribute("hitId", hitId);
+		conn.setAttribute("assignmentId", assignmentId);
+		conn.setAttribute("workerId", workerId);				
 		
 		try {
 			if( workerAuth.workerRequiresQuiz(workerId) ) {		
@@ -237,14 +238,14 @@ public abstract class SessionServer extends Thread {
 				Map<String, Object> data = qm == null ?
 						ImmutableMap.of("status", (Object) Codec.status_quizneeded) :
 							ImmutableMap.of("status", Codec.status_quizneeded,	"quiz", qm.toData() );
-				SessionUtils.sendServiceMsg(session, data);									
+				SessionUtils.sendServiceMsg(conn, data);									
 								
 				return null;
 			}
 			
 			logger.info("No quiz required for {}", workerId);			
 		} catch (TooManyFailsException e) {
-			SessionUtils.sendStatus(session, Codec.status_failsauce, Messages.TOO_MANY_FAILS); 		
+			SessionUtils.sendStatus(conn, Codec.status_failsauce, Messages.TOO_MANY_FAILS); 		
 			logger.info("Worker {} has failed quiz too many times (HIT {})", workerId, hitId);
 			return null;
 		}
@@ -264,65 +265,74 @@ public abstract class SessionServer extends Thread {
 		// Find this HITWorker in table
 		if( (hitw = hitWorkerTable.get(hitId, workerId)) == null ) {
 			// create instance of HITWorker			
-			hitw = new HITWorkerImpl(session, hitIdRecord);
+			hitw = new HITWorkerImpl(conn, hitIdRecord);
 			hitWorkerTable.put(hitId, workerId, hitw);
 		}
-		
-		tracker.saveWorkerAssignment(hitw, assignmentId, workerId);
-
+			
 		// Match session to HITWorker and vice versa
 		ServerSession oldSession = hitw.cometdSession.get();
-		if( oldSession == null || !session.equals(oldSession) ) {
-			hitw.setServerSession(session);				
+		if( oldSession == null || !conn.equals(oldSession) ) {
+			hitw.setServerSession(conn);				
 		}			
-		clientToHITWorker.put(session, hitw);
+		clientToHITWorker.put(conn, hitw);
 
+		tracker.saveWorkerAssignment(hitw, assignmentId, workerId);
+		
 		// Successful registration, save info
-		tracker.saveIP(hitw, bayeux.getContext().getRemoteAddress().getAddress(), new Date());			
+		tracker.saveIP(hitw, bayeux == null ? // TODO mock this part for unit tests
+				InetAddress.getLoopbackAddress() : 
+					bayeux.getContext().getRemoteAddress().getAddress(), new Date());			
 		
 		// subclasses continue with additional logic if necessary 		
 		return hitw;
 	}
 
-	void sessionSubmit(ServerSession session, String survey) {
-		HITWorkerImpl worker = clientToHITWorker.get(session);
+	void sessionSubmit(ServerSession conn, String survey) {
+		HITWorkerImpl worker = clientToHITWorker.get(conn);
 		
 		if( worker == null ) {
-			logger.warn("Unrecognized client {} tried to submit", session.getId());
+			logger.warn("Unrecognized client {} tried to submit", conn.getId());
 			return;
 		}
 		
-		// Write any exit comments / logs for session
-		tracker.saveExitSurveyResults(worker, survey);
-		
-		// TODO: don't increment if the same HIT submits twice.
-		int completed = completedHITs.incrementAndGet();
-		System.out.println(completed + " HITs completed");		
-		
-		// TODO check the total number of possible different tasks as well - getTotalPuzzles()
-		
+		/* Write any exit comments / logs for session
+		 * don't increment if the same HIT submits twice.
+		 */
 		String workerId = worker.getWorkerId();
+		Collection<Session> existing = tracker.getSetSessionInfoForWorker(workerId);
 		
-		if( workerId != null ) {
-			int additional = workerAuth.getSetLimit() - tracker.getSetSessionInfoForWorker(workerId).size();		
-			SessionUtils.sendStatus(session, Codec.status_completed, 
-					"Thanks for your work! You may do " + additional + " more HITs in this session.");
-		}
-		else {
-			logger.warn("No workerId metadata recorded for completed session {}", session.getId());
-		}
+		boolean alreadySubmitted = false;
+		for( Session s : existing ) {
+			if( s.getHitId().equals(worker.getHitId()) && s.getComment() != null )
+			alreadySubmitted = true;
+			break;			
+		}					
+		
+		if( !alreadySubmitted ) {
+			tracker.saveExitSurveyResults(worker, survey);
+			int completed = completedHITs.incrementAndGet();
+			System.out.println(completed + " HITs completed");			
+		}		
+		
+		// TODO check the total number of possible different tasks as well, from assigner									
+		int additional = workerAuth.getSetLimit() - existing.size();		
+		SessionUtils.sendStatus(conn, Codec.status_completed, 
+				"Thanks for your work! You may do " + additional + " more HITs in this session.");		
 	}
 
-	void sessionReconnect(ServerSession session, HITWorkerImpl hitw) {	
-		
+	/**
+	 * Reconnect a user to an experiment, counting their disconnection time
+	 * @param conn
+	 * @param hitw
+	 */
+	void sessionReconnect(ServerSession conn, HITWorkerImpl hitw) {			
 		// experiment should send state to user with this callback
-		experiments.workerReconnected(hitw);
-		
+		experiments.workerReconnected(hitw);		
 		hitw.reconnected();
 	}
 	
-	void sessionDisconnect(ServerSession session) {
-		HITWorkerImpl worker = clientToHITWorker.get(session);				
+	void sessionDisconnect(ServerSession conn) {
+		HITWorkerImpl worker = clientToHITWorker.get(conn);				
 		if( worker != null ) {
 			experiments.workerDisconnected(worker);
 			worker.disconnected();
@@ -336,6 +346,7 @@ public abstract class SessionServer extends Thread {
 			 * Fix with a notification receptor later.  
 			 */
 			if( !(experiments.workerIsInProgress(worker) || 
+					SessionRecord.status(worker.record) == SessionStatus.EXPERIMENT ||
 					SessionRecord.status(worker.record) == SessionStatus.COMPLETED) ) {
 				/* If disconnected from lobby or earlier, clear session from worker Id list
 				 * also clear the username that was stored from worker
@@ -346,21 +357,21 @@ public abstract class SessionServer extends Thread {
 			}
 		}
 		
-		String sessionHitId = (String) session.getAttribute("hitId");		
+		String sessionHitId = (String) conn.getAttribute("hitId");		
 		if( workerHitId != null && !workerHitId.equals(sessionHitId) || 
 				sessionHitId != null && !sessionHitId.equals(workerHitId) ) {
-			logger.error("Session and worker HIT IDs don't match for {}", session.getId());
+			logger.error("Session and worker HIT IDs don't match for {}", conn.getId());
 		}
 		
 	}
 	
-	void rcvQuizResults(ServerSession session, Quiz qr) {
-		String workerId = (String) session.getAttribute("workerId");
-		String hitId = (String) session.getAttribute("hitId");
-		String assignmentId = (String) session.getAttribute("assignmentId");
+	void rcvQuizResults(ServerSession conn, Quiz qr) {
+		String workerId = (String) conn.getAttribute("workerId");
+		String hitId = (String) conn.getAttribute("hitId");
+		String assignmentId = (String) conn.getAttribute("assignmentId");
 		
 		if( workerId == null ) {
-			logger.error("Can't save quiz: unknown worker for {}", session.getId());
+			logger.error("Can't save quiz: unknown worker for {}", conn.getId());
 		}
 		
 		tracker.saveQuizResults(hitId, workerId, qr);
@@ -369,44 +380,44 @@ public abstract class SessionServer extends Thread {
 		if( workerAuth.quizPasses(qr) ) {
 			logger.info("{} passed quiz", workerId);
 			// Run the accept HIT checks again		
-			sessionAccept(session, hitId, assignmentId, workerId);
+			sessionAccept(conn, hitId, assignmentId, workerId);
 		}
 		else {
 			if( workerAuth.tooManyFails(workerId) ) {
 				logger.info("{} failed quiz too many times", workerId);
-				SessionUtils.sendStatus(session, Codec.status_failsauce);
+				SessionUtils.sendStatus(conn, Codec.status_failsauce);
 			}
 			else {
 				logger.info("{} failed quiz", workerId);
-				SessionUtils.sendStatus(session, Codec.status_quizfail);
+				SessionUtils.sendStatus(conn, Codec.status_quizfail);
 			}
 		}		
 	}
 
-	void rcvInactiveTime(ServerSession session, long inactiveTime) {
-		HITWorkerImpl worker = clientToHITWorker.get(session);
+	void rcvInactiveTime(ServerSession conn, long inactiveTime) {
+		HITWorkerImpl worker = clientToHITWorker.get(conn);
 		
 		if( worker == null ) {
-			logger.error("Can't save inactivity: unknown worker for {}", session.getId());
+			logger.error("Can't save inactivity: unknown worker for {}", conn.getId());
 		}
 		
 		worker.addInactiveTime(inactiveTime);
 	}
 
-	void rcvExperimentServiceMsg(ServerSession session,
+	void rcvExperimentServiceMsg(ServerSession conn,
 			Map<String, Object> dataAsMap) {
-		HITWorkerImpl worker = clientToHITWorker.get(session);
+		HITWorkerImpl worker = clientToHITWorker.get(conn);
 		
 		if( worker != null ) experiments.rcvServiceMsg(worker, dataAsMap);
-		else logger.warn("Message from unrecognized client: {}", session.getId());
+		else logger.warn("Message from unrecognized client: {}", conn.getId());
 	}
 
-	boolean rcvExperimentBroadcastMsg(ServerSession session,
+	boolean rcvExperimentBroadcastMsg(ServerSession conn,
 			Map<String, Object> dataAsMap) {
-		HITWorkerImpl worker = clientToHITWorker.get(session);
+		HITWorkerImpl worker = clientToHITWorker.get(conn);
 		
 		if( worker != null ) return experiments.rcvBroadcastMsg(worker, dataAsMap);
-		else logger.warn("Message from unrecognized client: {}", session.getId());
+		else logger.warn("Message from unrecognized client: {}", conn.getId());
 		
 		return false;
 	}
