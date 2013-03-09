@@ -149,6 +149,35 @@
     </dependency>
 
 	<!-- MTURK API/THIRD PARTY -->
+	<dependency>
+    	<groupId>java-aws-mturk</groupId>
+    	<artifactId>java-aws-mturk</artifactId>
+    	<version>1.6.2</version>
+    	<scope>system</scope>
+    	<systemPath>${project.basedir}/lib/java-aws-mturk/java-aws-mturk.jar</systemPath>
+    </dependency>
+	<dependency>
+    	<groupId>java-aws-mturk</groupId>
+    	<artifactId>aws-mturk-wsdl</artifactId>
+    	<version>1.6.2</version>
+    	<scope>system</scope>
+    	<systemPath>${project.basedir}/lib/java-aws-mturk/aws-mturk-wsdl.jar</systemPath>
+    </dependency>
+	<dependency>
+    	<groupId>java-aws-mturk</groupId>
+    	<artifactId>aws-mturk-dataschema</artifactId>
+    	<version>1.6.2</version>
+    	<scope>system</scope>
+    	<systemPath>${project.basedir}/lib/java-aws-mturk/aws-mturk-dataschema.jar</systemPath>
+    </dependency>        
+	<dependency>
+    	<groupId>commons-httpclient</groupId>
+    	<artifactId>commons-httpclient-contrib</artifactId>
+    	<version>3.1</version>
+    	<scope>system</scope>
+    	<systemPath>${project.basedir}/lib/not-in-maven/commons-httpclient-contrib-3.1.jar</systemPath>
+    </dependency>
+	
     <dependency>
     	<groupId>commons-httpclient</groupId>
     	<artifactId>commons-httpclient</artifactId>
@@ -202,28 +231,6 @@
   
   <build>  	
   	<plugins>
-  		<plugin>
-  			<groupId>com.googlecode.addjars-maven-plugin</groupId>
-  			<artifactId>addjars-maven-plugin</artifactId>
-  			<version>1.0.5</version>
-  			<executions>
-        		<execution>
-            		<goals>
-                		<goal>add-jars</goal>
-            		</goals>
-            		<configuration>
-                		<resources>
-                    		<resource>
-                        		<directory>${project.basedir}/lib/java-aws-mturk</directory>
-                    		</resource>
-                    		<resource>
-                        		<directory>${project.basedir}/lib/not-in-maven</directory>
-                    		</resource>
-                		</resources>
-            		</configuration>
-        		</execution>
-    		</executions>
-  		</plugin>
   		
   		<plugin>
   			<groupId>org.apache.maven.plugins</groupId>
@@ -291,40 +298,5 @@
 		
   	</plugins>
   	
-  	<pluginManagement>
-  		<plugins>
-  			<!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
-  			<plugin>
-  				<groupId>org.eclipse.m2e</groupId>
-  				<artifactId>lifecycle-mapping</artifactId>
-  				<version>1.0.0</version>
-  				<configuration>
-  					<lifecycleMappingMetadata>
-  						<pluginExecutions>
-  							<pluginExecution>
-  								<pluginExecutionFilter>
-  									<groupId>
-  										com.googlecode.addjars-maven-plugin
-  									</groupId>
-  									<artifactId>
-  										addjars-maven-plugin
-  									</artifactId>
-  									<versionRange>
-  										[1.0.5,)
-  									</versionRange>
-  									<goals>
-  										<goal>add-jars</goal>
-  									</goals>
-  								</pluginExecutionFilter>
-  								<action>
-  							    	<ignore />
-  								</action>
-  							</pluginExecution>
-  						</pluginExecutions>
-  					</lifecycleMappingMetadata>
-  				</configuration>
-  			</plugin>
-  		</plugins>
-  	</pluginManagement>
   </build>
 </project>

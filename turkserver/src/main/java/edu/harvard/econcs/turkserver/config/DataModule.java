@@ -37,14 +37,6 @@ public class DataModule extends AbstractModule {
 	public Configuration getConfiguration() {		
 		return conf;
 	}
-
-	/*
-	 * TODO: this is a temporary method that should be removed after config is restructured
-	 */
-	private void setHITLimit(int some_goal) {
-		conf.addProperty(TSConfig.SERVER_HITGOAL, some_goal);						
-		conf.addProperty(TSConfig.EXP_REPEAT_LIMIT, 1);
-	}
 	
 	@Override
 	protected void configure() {		
