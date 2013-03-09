@@ -20,6 +20,9 @@ public class TestServerModule extends ServerModule {
 	protected void configure() {
 		super.configure();
 		
+		// Provide some default mturk settings for testing
+		
+		
 		bind(QuizFactory.class).toProvider(Providers.of((QuizFactory) null));
 		bind(QuizPolicy.class).toProvider(Providers.of((QuizPolicy) null));			
 		

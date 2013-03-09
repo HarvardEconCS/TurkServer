@@ -8,10 +8,8 @@ import javax.swing.SwingWorker;
 
 import edu.harvard.econcs.turkserver.mturk.RequesterServiceExt;
 
-import java.awt.HeadlessException;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
-import java.util.concurrent.ExecutionException;
 
 public class MaintenancePanel extends JPanel {
 	

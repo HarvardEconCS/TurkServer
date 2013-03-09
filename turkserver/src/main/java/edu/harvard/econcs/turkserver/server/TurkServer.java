@@ -32,6 +32,7 @@ import edu.harvard.econcs.turkserver.config.DataModule;
 import edu.harvard.econcs.turkserver.config.ServerModule;
 import edu.harvard.econcs.turkserver.config.TSConfig;
 import edu.harvard.econcs.turkserver.mturk.HITController;
+import edu.harvard.econcs.turkserver.mturk.TurkHITController;
 import edu.harvard.econcs.turkserver.server.gui.ServerFrame;
 import edu.harvard.econcs.turkserver.server.gui.TSTabbedPanel;
 import edu.harvard.econcs.turkserver.server.mysql.MySQLDataTracker;
@@ -101,28 +102,37 @@ public class TurkServer {
 		
 		HITController thm = childInjector.getInstance(HITController.class);			
 		
-		// TODO this may not be in conf, but in injector (graph coloring stuff?)
-		thm.setHITType(
-				conf.getString(TSConfig.MTURK_HIT_TITLE),
-				conf.getString(TSConfig.MTURK_HIT_DESCRIPTION),
-				conf.getString(TSConfig.MTURK_HIT_KEYWORDS),
-				conf.getDouble(TSConfig.MTURK_HIT_BASE_REWARD), 
-				conf.getInt(TSConfig.MTURK_ASSIGNMENT_DURATION),
-				conf.getInt(TSConfig.MTURK_AUTO_APPROVAL_DELAY),
-				// TODO read in qualifications from config file
-				null);
-		
-		thm.setExternalParams(url, 
-				conf.getInt(TSConfig.MTURK_HIT_FRAME_HEIGHT), 
-				conf.getInt(TSConfig.MTURK_HIT_LIFETIME));
+		// Post HITs if we are actually running on MTurk
+		if( childInjector.getExistingBinding(Key.get(TurkHITController.class)) != null ) {
+			// TODO this may not be in conf, but in injector (graph coloring stuff?)
+			thm.setHITType(
+					conf.getString(TSConfig.MTURK_HIT_TITLE),
+					conf.getString(TSConfig.MTURK_HIT_DESCRIPTION),
+					conf.getString(TSConfig.MTURK_HIT_KEYWORDS),
+					conf.getDouble(TSConfig.MTURK_HIT_BASE_REWARD), 
+					conf.getInt(TSConfig.MTURK_ASSIGNMENT_DURATION),
+					conf.getInt(TSConfig.MTURK_AUTO_APPROVAL_DELAY),
+					// TODO read in qualifications from config file
+					null);
+
+			thm.setExternalParams(url, 
+					conf.getInt(TSConfig.MTURK_HIT_FRAME_HEIGHT), 
+					conf.getInt(TSConfig.MTURK_HIT_LIFETIME));		
+		}
 		
 		// GUI is automatically created from parent injector now
 		sessionServer = getSessionServerInstance(childInjector);
 		
 		sessionServer.start();		
 		
-		// TODO do not post a fixed number of HITs here, use server hit goal
-		thm.postBatchHITs(1, 5000, 10);				
+		// post an adaptive number of HITs based on stuff
+		int target = conf.getInt(TSConfig.SERVER_HITGOAL);
+		int min = conf.getInt(TSConfig.HITS_MIN_OVERHEAD);
+		int max = conf.getInt(TSConfig.HITS_MAX_OVERHEAD);
+		double pct = conf.getDouble(TSConfig.HITS_OVERHEAD_PERCENT);
+		int delay = conf.getInt(TSConfig.HITS_MIN_DELAY);
+		
+		thm.postBatchHITs(target, min, max, delay, pct);
 	}
 	
 	public SessionServer getSessionServer() {
@@ -146,6 +156,7 @@ public class TurkServer {
 	 * Last check of sanity before we launch a server
 	 */
 	private static void checkExperimentConfiguration(Injector injector, Configuration conf) {
+		boolean debugMode = conf.getBoolean(TSConfig.SERVER_DEBUGMODE);
 		
 		// Check MySQL configuration if using
 		if( injector.getBinding(MySQLDataTracker.class) != null ) {
@@ -174,16 +185,12 @@ public class TurkServer {
 		
 		// Check properties
 		checkNotNull(conf.getProperty(TSConfig.CONCURRENCY_LIMIT), "concurrent limit not specified");
-		checkNotNull(conf.getProperty(TSConfig.EXP_REPEAT_LIMIT), "set limit not specified");
+		checkNotNull(conf.getProperty(TSConfig.EXP_REPEAT_LIMIT), "set limit not specified");			
 		
-		boolean debugMode = conf.getBoolean(TSConfig.SERVER_DEBUGMODE);
-		
-		if( !debugMode ) { // Ignore these settings for local test
+		// Check for Turk settings if real HITs will be created
+		if( injector.getExistingBinding(Key.get(TurkHITController.class)) != null ) {
 			checkNotNull(conf.getDouble(TSConfig.MTURK_HIT_BASE_REWARD, null),
-					"reward not specified");
-			
-			checkNotNull(injector.getBinding(Key.get(QualificationRequirement[].class)),
-					"No qualifications set!");
+					"reward not specified");			
 			
 			checkNotNull(conf.getInteger(TSConfig.MTURK_HIT_FRAME_HEIGHT, null),
 					"frame height not set");
@@ -192,16 +199,23 @@ public class TurkServer {
 			checkNotNull(conf.getString(TSConfig.MTURK_HIT_EXTERNAL_URL, null),
 					"external url not set");
 	
-			// TODO update these when more flexible config is created 
-			checkNotNull( conf.getInteger(TSConfig.HITS_INITIAL, null), 
-					"initial HITs not specified ");
-			checkNotNull( conf.getInteger(TSConfig.HITS_DELAY, null), 
-					"delay not specified" );
 			checkNotNull( conf.getInteger(TSConfig.SERVER_HITGOAL, null), 
 					"goal amount not specified");
-			checkNotNull( conf.getInteger(TSConfig.HITS_TOTAL, null),
-					"total HITs not specified");
-		}
+			
+			checkNotNull( conf.getDouble(TSConfig.HITS_OVERHEAD_PERCENT, null), 
+					"HIT overhead percentage not specified ");
+			checkNotNull( conf.getInteger(TSConfig.HITS_MIN_DELAY, null), 
+					"delay not specified" );
+			checkNotNull( conf.getInteger(TSConfig.HITS_MIN_OVERHEAD, null),
+					"HIT min overhead not specified");
+			checkNotNull( conf.getInteger(TSConfig.HITS_MAX_OVERHEAD, null),
+					"HIT max overhead not specified");
+		
+			if( !debugMode ) { // Ignore these settings for local test
+				checkNotNull(injector.getBinding(Key.get(QualificationRequirement[].class)),
+						"No qualifications set!");
+			}
+		}						
 		
 		// Check that experiment class is proper
 		Class<?> expClass = injector.getInstance(Key.get(new TypeLiteral<Class<?>>() {}, Names.named(TSConfig.EXP_CLASS)));

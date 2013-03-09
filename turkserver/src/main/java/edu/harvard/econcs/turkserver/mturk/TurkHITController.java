@@ -2,6 +2,7 @@ package edu.harvard.econcs.turkserver.mturk;
 
 import edu.harvard.econcs.turkserver.schema.Session;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
+import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker.SessionSummary;
 
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -31,6 +32,8 @@ public class TurkHITController implements HITController {
 	private static final int HIT_SLEEP_MILLIS = 200;
 	private static final int SERVICE_UNAVAILABLE_MILLIS = 5000;
 
+	private static final CreateTask POISON_PILL = new CreateTask(0,0,0,0,0);
+	
 	protected final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 	
 	private final RequesterServiceExt requester;
@@ -43,7 +46,7 @@ public class TurkHITController implements HITController {
 	private int frameHeight;
 	private int lifeTime;
 			
-	private final BlockingQueue<int[]> jobs;
+	private final BlockingQueue<CreateTask> jobs;
 	private volatile boolean expireFlag;
 	
 	/**
@@ -62,7 +65,7 @@ public class TurkHITController implements HITController {
 		this.requester = req;
 		this.tracker = tracker;
 				
-		jobs = new LinkedBlockingQueue<int[]>();
+		jobs = new LinkedBlockingQueue<CreateTask>();
 		expireFlag = false;
 	}
 
@@ -113,62 +116,76 @@ public class TurkHITController implements HITController {
 	@Override
 	public void disableAndShutdown() {
 		expireFlag = true;
-		jobs.offer(new int[] {});		
+		jobs.offer(POISON_PILL);		
 	}
 	
 	@Override
-	public void postBatchHITs(int initialAmount, int delay, int totalAmount) {
-		jobs.offer(new int[] {initialAmount, delay, totalAmount});
+	public void postBatchHITs(int target, int minOverhead, int maxOverhead, int minDelay, double pctOverhead) {
+		jobs.offer(new CreateTask(target, minOverhead, maxOverhead, minDelay, pctOverhead));
 	}
 	
+	static class CreateTask {
+		final int target, minOverhead, maxOverhead, minDelay;
+		final double pctOverhead;
+		public CreateTask(int target, int minOverhead, int maxOverhead, 
+				int minDelay, double pctOverhead) {
+			this.target = target;
+			this.minOverhead = minOverhead;
+			this.maxOverhead = maxOverhead;
+			this.minDelay = minDelay;
+			this.pctOverhead = pctOverhead;
+		}	
+	}
+
 	@Override
 	public void run() {
 		Thread.currentThread().setName(this.getClass().getSimpleName());			
 		
 		while( !expireFlag ) {
-			int[] nextJob = null;
+			CreateTask nextJob = null;
 			try { nextJob = jobs.take(); }
-			catch (InterruptedException e) { e.printStackTrace(); }
+			catch (InterruptedException e) { e.printStackTrace(); }			
+			if( nextJob == POISON_PILL ) continue;						
 			
-			if( nextJob == null || nextJob.length == 0 ) continue;
+			logger.info("Starting HIT creation: max overhead {}, min delay {}", nextJob.maxOverhead, nextJob.minDelay);			
 			
-			final int initialAmount = nextJob[0];
-			final int additionalDelay = nextJob[1];
-			final int hitAmount = nextJob[2];
-			
-			logger.info("Starting HIT creation: up to {} HITs", hitAmount);			
+			int maxHITs = getAdaptiveTarget(nextJob.target, nextJob);
+					
+			SessionSummary summary;
 			
 			// Create HITs until our limit is reached, or expire			
-			for( int i = 0; i < hitAmount; i++ ) {			
-				long sleepMillis = i > initialAmount ? additionalDelay : HIT_SLEEP_MILLIS; 
+			do {							
+				int sleepMillis = Math.max(HIT_SLEEP_MILLIS, nextJob.minDelay);								
 				logger.info("Sleeping for " + sleepMillis);
 				
 				try { Thread.sleep(sleepMillis); } 
-				catch (InterruptedException e1) { e1.printStackTrace();	}
+				catch (InterruptedException e) { e.printStackTrace();	}
 				
 				// Quit if expiration was reached while sleeping
-				if( expireFlag ) break;
+				if( expireFlag ) break;								
+				
+				summary = tracker.getSetSessionSummary();
+				
+				int target = getAdaptiveTarget(summary.assignedHITs, nextJob);
+				if( summary.createdHITs >= target ) continue;
 							
 				try {
 					HIT resp = requester.createHITExternalFromID(
 								hitTypeId, title, externalURL, frameHeight, String.valueOf(lifeTime));
 
 					String hitId = resp.getHITId();
-					tracker.saveHITId(hitId);				
-
-				} catch (ServiceException e) {
+					tracker.saveHITId(hitId);
 					
-					e.printStackTrace();
-					i--;
+					logger.info(String.format("Created %d HITs", summary.createdHITs + 1));
+				} catch (ServiceException e) {					
+					e.printStackTrace();					
 
-					logger.info("Throttling HIT creating");
+					logger.info("Got error; Throttling HIT creating");
 					// Throttle it a bit
 					try { Thread.sleep(SERVICE_UNAVAILABLE_MILLIS); } 
 					catch (InterruptedException e1) { e1.printStackTrace();	}				
-				}
-			
-				logger.info(String.format("Created %d HITs", i));
-			}						
+				}							
+			} while (summary.createdHITs < maxHITs);		
 		}								
 		
 		// Wait around until server tells us to expire HITs
@@ -189,6 +206,13 @@ public class TurkHITController implements HITController {
 		}
 		
 		logger.info("Turk HIT posting thread finished");
+	}
+
+	private static int getAdaptiveTarget(int target, CreateTask nextJob) {
+		int adjusted = (int) Math.round(target * (1 + nextJob.pctOverhead));
+		adjusted = Math.max(adjusted, target + nextJob.minOverhead);
+		adjusted = Math.min(adjusted, target + nextJob.maxOverhead);
+		return adjusted;
 	}
 
 }

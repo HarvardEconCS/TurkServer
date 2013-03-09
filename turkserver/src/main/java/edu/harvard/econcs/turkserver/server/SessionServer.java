@@ -297,6 +297,7 @@ public abstract class SessionServer extends Thread {
 		
 		/* Write any exit comments / logs for session
 		 * don't increment if the same HIT submits twice.
+		 * TODO: replace this with using SessionSummary
 		 */
 		String workerId = worker.getWorkerId();
 		Collection<Session> existing = tracker.getSetSessionInfoForWorker(workerId);

@@ -4,6 +4,8 @@ import edu.harvard.econcs.turkserver.schema.Experiment;
 import edu.harvard.econcs.turkserver.schema.Quiz;
 import edu.harvard.econcs.turkserver.schema.Session;
 import edu.harvard.econcs.turkserver.server.HITWorkerImpl;
+import edu.harvard.econcs.turkserver.server.SessionRecord;
+import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
 
 import java.net.InetAddress;
 import java.sql.Timestamp;
@@ -55,6 +57,32 @@ public class MockDataTracker extends ExperimentDataTracker {
 	@Override
 	public boolean hitExistsInDB(String hitId) {
 		return hitIdToSessions.containsKey(hitId);
+	}
+
+	@Override
+	public SessionSummary getSetSessionSummary() {
+		int created = 0;
+		int assigned = 0;
+		int completed = 0;
+		
+		for( Session s : hitIdToSessions.values() ) {
+			if( SessionRecord.status(s) == SessionStatus.COMPLETED ) {
+				completed++;
+				assigned++;
+				created++;
+			}
+			else if( SessionRecord.status(s) == SessionStatus.EXPERIMENT ||
+					SessionRecord.status(s) == SessionStatus.LOBBY ||
+					SessionRecord.status(s) == SessionStatus.ASSIGNED
+					) {
+				assigned++;
+				created++;
+			}
+			else {
+				created++;
+			}				
+		}
+		return new SessionSummary(created, assigned, completed);
 	}
 
 	@Override

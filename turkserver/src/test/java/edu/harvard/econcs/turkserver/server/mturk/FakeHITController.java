@@ -9,8 +9,6 @@ import edu.harvard.econcs.turkserver.mturk.HITController;
 
 public class FakeHITController implements HITController {
 
-	final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
-	
 	@Override
 	public void run() {
 		// TODO Auto-generated method stub
@@ -33,10 +31,8 @@ public class FakeHITController implements HITController {
 	}
 
 	@Override
-	public void postBatchHITs(int initialAmount, int delay, int totalAmount) {
-		
-		logger.info("Would post {} hits with delay {}", totalAmount, delay);
-
+	public void postBatchHITs(int target, int minOverhead, int maxOverhead, int minDelay, double pctOverhead) {		
+		System.out.printf("Would post up to %d hit overhead with delay %d\n", target + maxOverhead, minDelay);
 	}
 
 	@Override

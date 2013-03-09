@@ -73,11 +73,23 @@ public class TSConfig {
 	 * Number of HITs to be completed before server initiates shutdown
 	 */
 	public static final String SERVER_HITGOAL = "server.hitgoal";
-	public static final String SERVER_USERNAME = "server.usernames";	
-	
-	public static final String HITS_INITIAL = "server.hitinitial";
-	public static final String HITS_DELAY = "server.hitdelay";
-	public static final String HITS_TOTAL = "server.hittotal";		
+	public static final String SERVER_USERNAME = "server.usernames";			
+	/**
+	 * Minimum number of milliseconds between creating HITs
+	 */
+	public static final String HITS_MIN_DELAY = "server.hit.mindelay";	
+	/**
+	 * Overhead, percentage wise, of HITs that should be created (0 < x < 1)
+	 */
+	public static final String HITS_OVERHEAD_PERCENT = "server.hit.overheadpct";
+	/**
+	 * Minimum number of extra HITs that should be available
+	 */
+	public static final String HITS_MIN_OVERHEAD = "server.hit.minoverhead";
+	/**
+	 * Maximum number of extra HITs that should be created
+	 */
+	public static final String HITS_MAX_OVERHEAD = "server.hit.maxoverhead";	
 	
 	// Optional parameters
 	public static final String EXP_SPECIAL_WORKERS = "experiment.special.workers";
@@ -87,7 +99,7 @@ public class TSConfig {
 	
 	public static Configuration getDefault() {
 		Configuration conf = null;
-		try {
+		try {			
 			conf = new PropertiesConfiguration(TURKSERVER_CONFIG);
 			System.out.printf("Found and loaded %s\n", TURKSERVER_CONFIG);
 		} catch (ConfigurationException e) {
@@ -95,17 +107,23 @@ public class TSConfig {
 			conf = new PropertiesConfiguration();
 		}		
 		
-		// Sensible default values to fall back on	
-		conf.addProperty(SERVER_HTTPPORT, 9876);
-		conf.addProperty(CONCURRENCY_LIMIT, 1);
+		// Sensible default values to fall back on		
+		conf.setProperty(SERVER_HTTPPORT, 9876);
+		conf.setProperty(CONCURRENCY_LIMIT, 1);
 		
-		conf.addProperty(MTURK_ASSIGNMENT_DURATION, 86400);
-		conf.addProperty(MTURK_AUTO_APPROVAL_DELAY, 604800);
-		conf.addProperty(MTURK_HIT_LIFETIME, 604800);
+		conf.setProperty(MTURK_ASSIGNMENT_DURATION, 86400);
+		conf.setProperty(MTURK_AUTO_APPROVAL_DELAY, 604800);
+		conf.setProperty(MTURK_HIT_LIFETIME, 604800);
 		
 		// TODO: remove these
-		conf.addProperty(SERVER_DEBUGMODE, true);
-		conf.addProperty(SERVER_USERNAME, false);
+		conf.setProperty(SERVER_DEBUGMODE, true);
+		conf.setProperty(SERVER_USERNAME, false);
+		
+		// Sensible defaults for creating HITs		
+		conf.setProperty(HITS_MIN_DELAY, 1000);
+		conf.setProperty(HITS_OVERHEAD_PERCENT, 0.1);
+		conf.setProperty(HITS_MIN_OVERHEAD, 10);
+		conf.setProperty(HITS_MAX_OVERHEAD, 50);
 		
 		return conf;
 	}

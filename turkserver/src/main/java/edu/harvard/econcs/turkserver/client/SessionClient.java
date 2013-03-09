@@ -14,12 +14,16 @@ import org.cometd.bayeux.client.ClientSessionChannel.MessageListener;
 import org.cometd.client.BayeuxClient;
 import org.cometd.client.ext.AckExtension;
 import org.cometd.client.ext.TimesyncClientExtension;
-import org.cometd.client.transport.LongPollingTransport;
+import org.cometd.websocket.client.WebSocketTransport;
+
+import org.eclipse.jetty.websocket.WebSocketClientFactory;
 
 import edu.harvard.econcs.turkserver.Codec;
 import edu.harvard.econcs.turkserver.api.ClientController;
 
 public class SessionClient<C> implements ClientController {
+	
+	static final WebSocketClientFactory wsFactory = new WebSocketClientFactory();
 	
 	protected Logger logger;
 	
@@ -85,9 +89,9 @@ public class SessionClient<C> implements ClientController {
 		this.workerId = workerId;
 		
 		logger = Logger.getLogger(this.getClass().getSimpleName() + this.getHitId());
-		
-		// TODO: update this to use websocket
-		bayeuxClient = new BayeuxClient(url, LongPollingTransport.create(null));		
+				
+//		LongPollingTransport.create(null)		
+		bayeuxClient = new BayeuxClient(url, WebSocketTransport.create(null, wsFactory));		
 		
 		bayeuxClient.addExtension(new TimesyncClientExtension());
 		bayeuxClient.addExtension(new AckExtension());

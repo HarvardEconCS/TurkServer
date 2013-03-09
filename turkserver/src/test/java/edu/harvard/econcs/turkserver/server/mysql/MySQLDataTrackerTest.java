@@ -11,6 +11,7 @@ import edu.harvard.econcs.turkserver.schema.Session;
 import edu.harvard.econcs.turkserver.server.HITWorkerImpl;
 import edu.harvard.econcs.turkserver.server.SessionRecord;
 import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
+import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker.SessionSummary;
 
 import org.apache.commons.configuration.Configuration;
 import org.junit.*;
@@ -73,11 +74,13 @@ public class MySQLDataTrackerTest {
 	@Test
 	public void testSession() throws Exception {
 
+		assertSessionCount(0, 0, 0, dt.getSetSessionSummary());
+		
 		String hitId = "HIT12340931";
 		String assignmentId = "AsstIJFINGPEWRBNAE";
 		String workerId = "WorkerABJAER";
 		String username = "randomuser\" WHERE";
-
+		
 		// Recorded HITId
 		dt.saveHITId(hitId);
 		// Test for uniqueness (code copied from tracker)
@@ -85,6 +88,8 @@ public class MySQLDataTrackerTest {
 		assertEquals(SessionStatus.UNASSIGNED,
 				SessionRecord.status(dt.getStoredSessionInfo(hitId)));
 
+		assertSessionCount(1, 0, 0, dt.getSetSessionSummary());
+		
 		HITWorkerImpl hitw = new HITWorkerImpl(null,
 				dt.getStoredSessionInfo(hitId));
 
@@ -93,6 +98,8 @@ public class MySQLDataTrackerTest {
 		assertEquals(SessionStatus.ASSIGNED,
 				SessionRecord.status(dt.getStoredSessionInfo(hitId)));
 
+		assertSessionCount(1, 1, 0, dt.getSetSessionSummary());
+		
 		// Check that sessionIDs stored properly
 		Collection<Session> srs = dt.getSetSessionInfoForWorker(workerId);
 		assertTrue(srs.size() == 1);
@@ -109,9 +116,20 @@ public class MySQLDataTrackerTest {
 		assertEquals(SessionStatus.LOBBY,
 				SessionRecord.status(dt.getStoredSessionInfo(hitId)));
 
+		assertSessionCount(1, 1, 0, dt.getSetSessionSummary());
+		
 		// Test inactivePercent completion detection
 		dt.saveSessionCompleteInfo(hitw);
 		assertEquals(SessionStatus.COMPLETED,
 				SessionRecord.status(dt.getStoredSessionInfo(hitId)));
+		
+		assertSessionCount(1, 1, 1, dt.getSetSessionSummary());
+	}
+
+	private void assertSessionCount(int created, int assigned, int completed,
+			SessionSummary summary) {
+		assertEquals(created, summary.createdHITs);
+		assertEquals(assigned, summary.assignedHITs);
+		assertEquals(completed, summary.completedHITs);
 	}
 }

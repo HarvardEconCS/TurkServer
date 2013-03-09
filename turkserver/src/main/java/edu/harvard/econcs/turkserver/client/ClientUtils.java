@@ -13,8 +13,7 @@ public class ClientUtils {
 		client.clientWrapper = new ClientAnnotationManager<C>(client, clientClass);
 		return client;
 	}
-	
-	
+		
 	/**
 	 * Get a GroupClient that reflects a client class
 	 * @param clientClass

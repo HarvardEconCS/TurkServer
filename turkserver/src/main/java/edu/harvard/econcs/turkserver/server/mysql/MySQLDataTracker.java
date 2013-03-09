@@ -34,6 +34,7 @@ import com.mysema.query.sql.dml.SQLDeleteClause;
 import com.mysema.query.sql.dml.SQLInsertClause;
 import com.mysema.query.sql.dml.SQLUpdateClause;
 import com.mysema.query.types.TemplateExpressionImpl;
+import com.mysema.query.types.expr.Wildcard;
 import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 
 /**
@@ -140,6 +141,35 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			e.printStackTrace();
 		} 
 		return false;		
+	}
+
+	@Override
+	public SessionSummary getSetSessionSummary() {
+		try( Connection conn = pbds.getConnection() ) {						
+			SQLQuery query;
+			
+			query = new SQLQueryImpl(conn, dialect);			
+			int created = query.from(_session)
+					.where(_session.setId.eq(setID))
+					.singleResult(Wildcard.countAsInt);
+			
+			query = new SQLQueryImpl(conn, dialect);
+			int assigned = query.from(_session)
+					.where(_session.setId.eq(setID),
+							_session.workerId.isNotNull())
+					.singleResult(Wildcard.countAsInt);
+			
+			query = new SQLQueryImpl(conn, dialect);
+			int completed = query.from(_session)
+					.where(_session.setId.eq(setID),
+							_session.inactivePercent.isNotNull())
+					.singleResult(Wildcard.countAsInt);
+			
+			return new SessionSummary(created, assigned, completed);
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		}
+		return null;
 	}
 
 	@Override

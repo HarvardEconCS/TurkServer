@@ -33,6 +33,18 @@ public abstract class ExperimentDataTracker {
 	
 	public static final int USERNAME_LIMIT = 40;			
 
+	public static class SessionSummary {
+		public final int createdHITs;
+		public final int assignedHITs;
+		public final int completedHITs;
+		
+		SessionSummary(int createdHITs, int assignedHITs, int completedHITs) {
+			this.createdHITs = createdHITs;
+			this.assignedHITs = assignedHITs;
+			this.completedHITs = completedHITs;
+		}
+	}
+
 	/**
 	 * Get all experiments in this set
 	 * @return
@@ -46,6 +58,12 @@ public abstract class ExperimentDataTracker {
 	 * @return
 	 */	
 	public abstract boolean hitExistsInDB(String hitID);
+
+	/**
+	 * Get information about currently recorded HITs in the database
+	 * @return
+	 */
+	public abstract SessionSummary getSetSessionSummary();
 
 	/**
 	 * Get the quiz results in the current set for the worker in question

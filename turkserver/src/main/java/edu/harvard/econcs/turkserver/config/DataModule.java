@@ -8,11 +8,14 @@ import org.apache.commons.configuration.ConfigurationException;
 
 import com.amazonaws.mturk.util.ClientConfig;
 import com.google.inject.AbstractModule;
+import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.Scopes;
 import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 
+import edu.harvard.econcs.turkserver.mturk.RequesterServiceExt;
 import edu.harvard.econcs.turkserver.server.gui.TSTabbedPanel;
+import edu.harvard.econcs.turkserver.server.mturk.MockRequesterService;
 
 public class DataModule extends AbstractModule {
 
@@ -43,10 +46,10 @@ public class DataModule extends AbstractModule {
 		bind(Configuration.class).toInstance(conf);		
 
 		// Create a single MySQL connection pool
-		bind(MysqlConnectionPoolDataSource.class).toProvider(new MysqlCPDSProvider()).asEagerSingleton();
+		bind(MysqlConnectionPoolDataSource.class).toProvider(MysqlCPDSProvider.class).in(Scopes.SINGLETON);
 		
 		// Create AWS Requester, if any
-		bind(ClientConfig.class).toProvider(new ClientConfigProvider()).in(Scopes.SINGLETON);
+		bind(RequesterServiceExt.class).toProvider(RequesterProvider.class).in(Scopes.SINGLETON);
 		
 		// GUI stuff
 		bind(TSTabbedPanel.class).in(Scopes.SINGLETON);
@@ -58,14 +61,35 @@ public class DataModule extends AbstractModule {
 		conf.addProperty(TSConfig.AWS_SANDBOX, sandbox);
 	}
 
-	public class ClientConfigProvider implements Provider<ClientConfig> {
+	static class RequesterProvider implements Provider<RequesterServiceExt> {
+		Configuration conf;
+		
+		@Inject	RequesterProvider(Configuration conf) {
+			this.conf = conf;
+		}
+		
 		@Override
-		public ClientConfig get() {		
-			return TSConfig.getClientConfig(conf);				
+		public RequesterServiceExt get() {					
+			RequesterServiceExt req;
+			try {
+				ClientConfig reqConf = TSConfig.getClientConfig(conf);
+				req = new RequesterServiceExt(reqConf);
+			} catch( RuntimeException e ) {
+				e.printStackTrace();
+				System.out.println("Failed to create MTurk requester service. Using mock requester.");
+				req = new MockRequesterService();
+			}
+			return req;
 		}	
 	}
 
-	public class MysqlCPDSProvider implements Provider<MysqlConnectionPoolDataSource> {
+	static class MysqlCPDSProvider implements Provider<MysqlConnectionPoolDataSource> {
+		Configuration conf;
+		
+		@Inject	MysqlCPDSProvider(Configuration conf) {
+			this.conf = conf;
+		}
+		
 		@Override
 		public MysqlConnectionPoolDataSource get() {
 			return TSConfig.getMysqlCPDS(conf);			

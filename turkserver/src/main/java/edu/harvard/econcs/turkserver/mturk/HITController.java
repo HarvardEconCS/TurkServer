@@ -24,12 +24,13 @@ public interface HITController extends Runnable {
 	void setExternalParams(String url, int frameHeight, int lifetime);
 	
 	/**
-	 * Post a batch of hits starting with some amount, then over time
-	 * @param initialAmount
-	 * @param delay
-	 * @param totalAmount
+	 * Post a batch of hits, adaptively keeping some overhead above accepted HITs
+	 * @param minOverhead
+	 * @param maxOverhead
+	 * @param minDelay
+	 * @param pctOverhead
 	 */
-	void postBatchHITs(int initialAmount, int delay, int totalAmount);
+	void postBatchHITs(int target, int minOverhead, int maxOverhead, int minDelay, double pctOverhead);
 
 	/**
 	 * Called by the server to expire all remaining HITs once a set is finished
