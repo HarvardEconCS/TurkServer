@@ -1,7 +1,4 @@
-package edu.harvard.econcs.turkserver.server.mturk;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+package edu.harvard.econcs.turkserver.mturk;
 
 import com.amazonaws.mturk.requester.QualificationRequirement;
 

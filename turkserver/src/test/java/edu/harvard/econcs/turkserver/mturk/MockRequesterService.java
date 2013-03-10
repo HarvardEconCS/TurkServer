@@ -1,8 +1,10 @@
-package edu.harvard.econcs.turkserver.server.mturk;
+package edu.harvard.econcs.turkserver.mturk;
 
 import java.util.List;
+import java.util.Set;
 
 import com.amazonaws.mturk.requester.HIT;
+import com.amazonaws.mturk.requester.QualificationRequirement;
 import com.amazonaws.mturk.service.exception.ServiceException;
 import com.amazonaws.mturk.util.ClientConfig;
 
@@ -20,15 +22,42 @@ public class MockRequesterService extends RequesterServiceExt {
 		mockConfig.setServiceURL(ClientConfig.SANDBOX_SERVICE_URL);
 	}
 	
+	int hitCount = 0;	
+	Set<String> createdHitIds;
+	Set<String> disabledHitIds;
+	
 	public MockRequesterService() {
 		super(mockConfig);		
 	}
 	
+	void setCreationSet(Set<String> set) {
+		this.createdHitIds = set;
+	}
+	
+	void setDisableSet(Set<String> set) {
+		this.disabledHitIds = set;
+	}
+	
+	@Override
+	public String registerHITType(Long autoApprovalDelayInSeconds,
+			Long assignmentDurationInSeconds, Double reward, String title,
+			String keywords, String description,
+			QualificationRequirement[] qualRequirements)
+			throws ServiceException {
+		throw new UnsupportedOperationException();
+	}
+
 	@Override
 	public HIT createHITExternalFromID(String hitTypeID, String title,
 			String url, int frameHeight, String lifetimeInSeconds)
 			throws ServiceException {
-		throw new UnsupportedOperationException();
+		HIT hit = new HIT();
+		
+		String hitId = "HIT " + ++hitCount; 			
+		hit.setHITId(hitId);
+		if( createdHitIds != null ) createdHitIds.add(hitId);
+		
+		return hit;
 	}
 
 	@Override
@@ -38,10 +67,10 @@ public class MockRequesterService extends RequesterServiceExt {
 	}
 
 	@Override
-	public int disableAllHITs() {
+	public int disableAllHITs() {		
 		throw new UnsupportedOperationException();
 	}
-
+	
 	@Override
 	public int disableUnassignedHITs() {
 		throw new UnsupportedOperationException();
@@ -49,9 +78,8 @@ public class MockRequesterService extends RequesterServiceExt {
 
 	@Override
 	public void safeDisableHIT(String hitId) {
-		throw new UnsupportedOperationException();
-	}
-	
-	
+		if( disabledHitIds != null )
+			disabledHitIds.add(hitId);		
+	}		
 
 }

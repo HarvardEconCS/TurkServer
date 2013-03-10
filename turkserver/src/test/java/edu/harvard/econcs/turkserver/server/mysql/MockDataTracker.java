@@ -60,7 +60,7 @@ public class MockDataTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	public SessionSummary getSetSessionSummary() {
+	public synchronized SessionSummary getSetSessionSummary() {
 		int created = 0;
 		int assigned = 0;
 		int completed = 0;
@@ -244,8 +244,18 @@ public class MockDataTracker extends ExperimentDataTracker {
 
 	@Override
 	public List<Session> expireUnusedSessions() {
-		logger.warn("Expiring HITs not yet implemented in dummy tracker");
-		return new LinkedList<Session>();
+		// TODO implement this if needed for testing
+		logger.warn("Deleting expiring HITs not yet implemented in dummy tracker");
+		
+		List<Session> unused = new LinkedList<Session>();
+		
+		for( Session s : hitIdToSessions.values() ) {
+			if( SessionRecord.status(s) == SessionStatus.UNASSIGNED || 
+					SessionRecord.status(s) == SessionStatus.ASSIGNED )
+				unused.add(s);
+		}
+		
+		return unused;
 	}
 
 }

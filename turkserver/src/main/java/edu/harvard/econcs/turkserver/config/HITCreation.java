@@ -3,9 +3,9 @@ package edu.harvard.econcs.turkserver.config;
 import com.google.inject.AbstractModule;
 import com.google.inject.Scopes;
 
+import edu.harvard.econcs.turkserver.mturk.FakeHITController;
 import edu.harvard.econcs.turkserver.mturk.HITController;
 import edu.harvard.econcs.turkserver.mturk.TurkHITController;
-import edu.harvard.econcs.turkserver.server.mturk.FakeHITController;
 
 public class HITCreation {
 

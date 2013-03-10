@@ -13,9 +13,9 @@ import com.google.inject.Provider;
 import com.google.inject.Scopes;
 import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 
+import edu.harvard.econcs.turkserver.mturk.MockRequesterService;
 import edu.harvard.econcs.turkserver.mturk.RequesterServiceExt;
 import edu.harvard.econcs.turkserver.server.gui.TSTabbedPanel;
-import edu.harvard.econcs.turkserver.server.mturk.MockRequesterService;
 
 public class DataModule extends AbstractModule {
 

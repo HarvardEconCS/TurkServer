@@ -154,11 +154,10 @@ public class TurkHITController implements HITController {
 			SessionSummary summary;
 			
 			// Create HITs until our limit is reached, or expire			
-			do {							
-				int sleepMillis = Math.max(HIT_SLEEP_MILLIS, nextJob.minDelay);								
-				logger.info("Sleeping for " + sleepMillis);
+			do {																		
+				logger.info("Sleeping for " + nextJob.minDelay);
 				
-				try { Thread.sleep(sleepMillis); } 
+				try { Thread.sleep(nextJob.minDelay); } 
 				catch (InterruptedException e) { e.printStackTrace();	}
 				
 				// Quit if expiration was reached while sleeping
@@ -208,7 +207,7 @@ public class TurkHITController implements HITController {
 		logger.info("Turk HIT posting thread finished");
 	}
 
-	private static int getAdaptiveTarget(int target, CreateTask nextJob) {
+	static int getAdaptiveTarget(int target, CreateTask nextJob) {
 		int adjusted = (int) Math.round(target * (1 + nextJob.pctOverhead));
 		adjusted = Math.max(adjusted, target + nextJob.minOverhead);
 		adjusted = Math.min(adjusted, target + nextJob.maxOverhead);

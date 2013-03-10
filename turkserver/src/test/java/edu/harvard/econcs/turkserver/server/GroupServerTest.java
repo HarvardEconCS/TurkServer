@@ -12,10 +12,10 @@ import org.junit.Test;
 import edu.harvard.econcs.turkserver.Codec;
 import edu.harvard.econcs.turkserver.cometd.MockServerSession;
 import edu.harvard.econcs.turkserver.config.TSConfig;
+import edu.harvard.econcs.turkserver.mturk.FakeHITController;
 import edu.harvard.econcs.turkserver.schema.Quiz;
 import edu.harvard.econcs.turkserver.schema.Session;
 import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
-import edu.harvard.econcs.turkserver.server.mturk.FakeHITController;
 import edu.harvard.econcs.turkserver.server.mysql.MockDataTracker;
 
 @SuppressWarnings("unchecked")
