@@ -62,19 +62,15 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	QQuiz _quiz = QQuiz.quiz;
 	QWorker _worker = QWorker.worker;
 	
-	private final String setID;		
+	private String setID;		
 	
 	private final BoneCPDataSource pbds;	
 	private final SQLTemplates dialect;	
 
 	@Inject
-	public MySQLDataTracker(			
-			MysqlConnectionPoolDataSource ds, 
-			@Named(TSConfig.EXP_SETID) String setID) throws PropertyVetoException {
-		super();
-		
-		this.setID = setID;
-		
+	public MySQLDataTracker(MysqlConnectionPoolDataSource ds 
+			) throws PropertyVetoException {
+		super();		
 		/*
 		 * Setup BoneCP
 		 * TODO fix these settings more flexibly
@@ -89,6 +85,11 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 		pbds.setPartitionCount(1);
 						 							
 		dialect = new MySQLTemplates();					
+	}
+	
+	@Inject(optional=true)
+	public void setSetId(@Named(TSConfig.EXP_SETID) String setID) {
+		this.setID = setID;		
 		
 		try( Connection conn = pbds.getConnection() ) {	
 			

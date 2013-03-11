@@ -7,6 +7,7 @@ import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 
 import com.google.inject.Inject;
+import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 
 import edu.harvard.econcs.turkserver.mturk.RequesterServiceExt;
 
@@ -17,7 +18,9 @@ public class TSTabbedPanel extends JPanel {
 	private JTabbedPane tabbedPane;	
 	
 	@Inject
-	public TSTabbedPanel(@Nullable RequesterServiceExt req) {
+	public TSTabbedPanel(
+			MysqlConnectionPoolDataSource cpds,
+			@Nullable RequesterServiceExt req) {
 		super(new GridLayout(1, 1));
 				
 		tabbedPane = new JTabbedPane();
@@ -32,7 +35,7 @@ public class TSTabbedPanel extends JPanel {
 		WorkerPanel workerPanel = new WorkerPanel();
 		tabbedPane.addTab("Workers", null, workerPanel, null);
 		
-		ExperimentsPanel experimentsPanel = new ExperimentsPanel();
+		ExperimentsPanel experimentsPanel = new ExperimentsPanel(cpds, req);
 		tabbedPane.addTab("Experiments", null, experimentsPanel, null);		
 		
 		MaintenancePanel maintenancePanel = new MaintenancePanel(req);

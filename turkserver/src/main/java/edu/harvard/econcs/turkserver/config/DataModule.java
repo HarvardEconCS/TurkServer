@@ -13,7 +13,6 @@ import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 
-import edu.harvard.econcs.turkserver.mturk.MockRequesterService;
 import edu.harvard.econcs.turkserver.mturk.RequesterServiceExt;
 import edu.harvard.econcs.turkserver.server.gui.TSTabbedPanel;
 
