@@ -53,7 +53,7 @@ public class LobbySyncTest {
 	@Before
 	public void setUp() throws Exception {
 		Configuration conf = new PropertiesConfiguration();
-		conf.addProperty(TSConfig.SERVER_DEBUGMODE, true);
+		conf.addProperty(TSConfig.SERVER_LOBBY_DEFAULT, true);
 	
 		lobby = new ReadyStateLobby(new DummyConfigurator(groupsize), conf);		
 		lobby.setListener(listener = new TestLobbyListener());					

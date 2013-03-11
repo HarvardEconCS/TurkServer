@@ -73,6 +73,7 @@ public class TSConfig {
 	 * Number of HITs to be completed before server initiates shutdown
 	 */
 	public static final String SERVER_HITGOAL = "server.hitgoal";
+	public static final String SERVER_LOBBY_DEFAULT = "server.lobby.default";
 	public static final String SERVER_USERNAME = "server.usernames";			
 	/**
 	 * Minimum number of milliseconds between creating HITs
@@ -115,8 +116,10 @@ public class TSConfig {
 		conf.setProperty(MTURK_AUTO_APPROVAL_DELAY, 604800);
 		conf.setProperty(MTURK_HIT_LIFETIME, 604800);
 		
-		// TODO: remove these
+		// TODO: remove this
 		conf.setProperty(SERVER_DEBUGMODE, true);
+		
+		conf.setProperty(SERVER_LOBBY_DEFAULT, false);
 		conf.setProperty(SERVER_USERNAME, false);
 		
 		// Sensible defaults for creating HITs		

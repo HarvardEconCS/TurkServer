@@ -30,7 +30,7 @@ public class ReadyStateLobby implements Lobby {
 	
 	protected final Logger logger = LoggerFactory.getLogger(getClass().getSimpleName());
 
-	final boolean debugMode;
+	final boolean defaultStatus;
 	final Configurator configurator;	
 	
 	private final ConcurrentBooleanCounter<HITWorkerImpl> lobbyStatus;		
@@ -45,7 +45,7 @@ public class ReadyStateLobby implements Lobby {
 			) {
 		
 		this.configurator = configurator;
-		this.debugMode = conf.getBoolean(TSConfig.SERVER_DEBUGMODE);
+		this.defaultStatus = conf.getBoolean(TSConfig.SERVER_LOBBY_DEFAULT);
 		
 		lobbyStatus = new ConcurrentBooleanCounter<HITWorkerImpl>();								
 		serverMessage = new AtomicReference<String>("");
@@ -70,24 +70,27 @@ public class ReadyStateLobby implements Lobby {
 	@Override
 	public void userJoined(HITWorkerImpl hitw) {
 		/*
-		 * NOTE: Seems possible to remove synchronization from this method
+		 * NOTE: Seemed possible to remove synchronization from this method
 		 * Giving it a shot with lobby unit tests
 		 */
 		
-		// Auto-true if debug mode, otherwise false
-		lobbyStatus.put(hitw, debugMode);
+		// Put default lobby status in here
+		lobbyStatus.put(hitw, defaultStatus);
 		
-		if( debugMode ) {
+		if( defaultStatus ) {
 			// Create debug experiments if we have enough players, default to ready			
-			logger.info("Debug mode: lobby has {} people, {} ready", lobbyStatus.size(), lobbyStatus.getTrueCount());			
+			logger.info("lobby has {} people, {} ready", lobbyStatus.size(), lobbyStatus.getTrueCount());			
 			tryExperimentStart();			
-		}				
+		}
+
+		// TODO remove this and let users send their own ready message
+		broadcastLobbyStatus();
 	}
 	
-	private synchronized void tryExperimentStart() {
+	private synchronized boolean tryExperimentStart() {
 		// Don't try anything if not enough people in lobby
 		int expSize = configurator.groupSize(); 
-		if( lobbyStatus.getTrueCount() < expSize ) return;
+		if( lobbyStatus.getTrueCount() < expSize ) return false;
 		
 		// Generate the list of experiment clients					
 		
@@ -120,12 +123,13 @@ public class ReadyStateLobby implements Lobby {
 			lobbyStatus.remove((HITWorkerImpl) id);
 		
 //		System.out.println("Current lobby after sending: " + lobbyStatus);
+		return true;
 	}
 
 	@Override
 	public boolean updateStatus(HITWorkerImpl hitw, Map<String, Object> data) {
 		
-		boolean isReady = debugMode || Boolean.parseBoolean(data.get("ready").toString());
+		boolean isReady = defaultStatus || Boolean.parseBoolean(data.get("ready").toString());
 		
 		/*
 		 * Ignore lobby updates for people not in lobby
@@ -141,7 +145,7 @@ public class ReadyStateLobby implements Lobby {
 		
 		tryExperimentStart();
 		
-		if( !debugMode && lobbyStatus.size() < configurator.groupSize() ) {				
+		if( !defaultStatus && lobbyStatus.size() < configurator.groupSize() ) {				
 			// Make sure everyone's ready is disabled
 			for( HITWorkerImpl id : lobbyStatus.keySet() ) {
 				lobbyStatus.replace(id, false);
@@ -150,6 +154,7 @@ public class ReadyStateLobby implements Lobby {
 		
 		// Notify everyone who is remaining in the lobby
 		broadcastLobbyStatus();
+		
 		return true;
 	}
 
@@ -163,18 +168,17 @@ public class ReadyStateLobby implements Lobby {
 		}
 		
 		logger.info(String.format("%s (%s) removed from lobby",
-				worker.getHitId(), worker.getUsername()));			
-		ServerSession session = worker.cometdSession.get();
-
-		// TODO check on this quit message to lobby, be more robust 
-
-		Map<String, Object> data = new TreeMap<String, Object>();
-
-		data.put("status", "quit");
-		if( session != null ) data.put("id", session.getId());
-		data.put("username", worker.getUsername());
-
-		lobbyListener.broadcastLobbyMessage(data);
+				worker.getHitId(), worker.getUsername()));	
+		
+		// TODO forward this quit message to lobby instead of a whole list
+//		ServerSession session = worker.cometdSession.get();		 
+//		Map<String, Object> data = new TreeMap<String, Object>();
+//		data.put("status", "quit");
+//		if( session != null ) data.put("id", session.getId());
+//		data.put("username", worker.getUsername());
+//		lobbyListener.broadcastLobbyMessage(data);
+		
+		broadcastLobbyStatus();
 		
 		return true;
 	}
@@ -216,12 +220,11 @@ public class ReadyStateLobby implements Lobby {
 			if( session == null ) continue;
 			
 			// clientId, username, and status
-			users.add(new Object[] { session.getId(),	user.getUsername(), e.getValue() });
+			users.add(new Object[] { session.getId(), user.getUsername(), e.getValue() });
 		}
 		data.put("users", users);
 		
-		lobbyListener.broadcastLobbyMessage(data);
-		
+		lobbyListener.broadcastLobbyMessage(data);		
 	}
 
 }
