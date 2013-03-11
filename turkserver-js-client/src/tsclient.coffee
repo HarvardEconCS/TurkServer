@@ -20,6 +20,7 @@ class TSClient
   
   @expBroadcastSubscription = null
   @expServiceSubscription = null
+  @lobbySubscription = null
   @userSubscription = null
 
   @connect_callback = undefined
@@ -30,6 +31,7 @@ class TSClient
   @quizfail_cb = undefined
   @requestUsername_cb = undefined
   @enterLobby_cb = undefined
+  @lobbyMessage_cb = undefined
   @preSubmit_cb = undefined
 
   @startExperiment_cb = undefined    
@@ -57,6 +59,9 @@ class TSClient
   
   @EnterLobby: (callback) ->
     @enterLobby_cb = callback
+  
+  @LobbyMessage: (callback) ->
+    @lobbyMessage_cb = callback
   
   @PreSubmit: (callback) ->
     @preSubmit_cb = callback
@@ -217,11 +222,13 @@ class TSClient
       when Codec.username  
         @requestUsername_cb?()
       when Codec.connectLobbyAck
+        @subscribeLobby()
         # don't send enter lobby message if we got a service subscription already
         @enterLobby_cb?() if not @expServiceSubscription
       when Codec.connectExpAck
         @subscribeExp data.channel
         @startExperiment_cb?()
+        @unsubscribeLobby()
       when Codec.roundStartMsg
         @startRound_cb? data.round
       when Codec.doneExpMsg
@@ -272,22 +279,39 @@ class TSClient
       value: @params.workerId
       )
     form.submit()
+  
+  @subscribeLobby: ->
+    @lobbySubscription = $.cometd.subscribe "/lobby", (message) => @lobbyMessage_cb?(message.data)
+    console.log "Subscribed to lobby"
+  
+  @unsubscribeLobby: ->
+    $.cometd.unsubscribe @lobbySubscription if @lobbySubscription
+    @lobbySubscription = null
     
   @subscribeExp: (channel) ->
-    @expServiceSubscription = $.cometd.subscribe Codec.expSvcPrefix + channel, (message) => @serviceMessage_cb? message.data
-    @expBroadcastSubscription = $.cometd.subscribe Codec.expChanPrefix + channel, (message) => @broadcastMessage_cb? message.data
+    @expServiceSubscription = $.cometd.subscribe Codec.expSvcPrefix + channel, (message) => @serviceMessage_cb?(message.data)
+    @expBroadcastSubscription = $.cometd.subscribe Codec.expChanPrefix + channel, (message) => @broadcastMessage_cb?(message.data)
     console.log "Subscribed to exp channels " + channel
+  
+  @unsubscribeExp: ->
+    $.cometd.unsubscribe @expBroadcastSubscrption if @expBroadcastSubscription
+    @expBroadcastSubscription = null    
+    $.cometd.unsubscribe @expServiceSubscription if @expServiceSubscription
+    @expServiceSubscription = null     
     
   @subscribe: ->
     @userSubscription = $.cometd.subscribe "/service/user", @userData
     
   @unsubscribe: ->
+    # TODO batch these?
+    @unsubscribeLobby()
+    @unsubscribeExp()
     $.cometd.unsubscribe @userSubscription if @userSubscription
     @userSubscription = null
-    $.cometd.unsubscribe @expBroadcastSubscrption if @expBroadcastSubscription
-    @expBroadcastSubscription = null    
-    $.cometd.unsubscribe @expServiceSubscription if @expServiceSubscription
-    @expServiceSubscription = null
+
+  ###
+  TODO: implement lobby updates from client
+  ###    
       
   @sendExperimentBroadcast: (msg) =>
     unless @localMode

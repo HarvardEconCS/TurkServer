@@ -8,9 +8,9 @@ import org.apache.commons.configuration.ConfigurationException;
 
 import com.amazonaws.mturk.util.ClientConfig;
 import com.google.inject.AbstractModule;
-import com.google.inject.Inject;
-import com.google.inject.Provider;
+import com.google.inject.Provides;
 import com.google.inject.Scopes;
+import com.google.inject.Singleton;
 import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 
 import edu.harvard.econcs.turkserver.mturk.MockRequesterService;
@@ -41,58 +41,40 @@ public class DataModule extends AbstractModule {
 		return conf;
 	}
 	
-	@Override
-	protected void configure() {		
-		bind(Configuration.class).toInstance(conf);		
-
-		// Create a single MySQL connection pool
-		bind(MysqlConnectionPoolDataSource.class).toProvider(MysqlCPDSProvider.class).in(Scopes.SINGLETON);
-		
-		// Create AWS Requester, if any
-		bind(RequesterServiceExt.class).toProvider(RequesterProvider.class).in(Scopes.SINGLETON);
-		
-		// GUI stuff
-		bind(TSTabbedPanel.class).in(Scopes.SINGLETON);
-	}
-	
 	public void setAWSConfig(String accessKeyId, String secretAccessKey, boolean sandbox) {
 		conf.addProperty(TSConfig.AWS_ACCESSKEYID, accessKeyId);		
 		conf.addProperty(TSConfig.AWS_SECRETACCESSKEY, secretAccessKey);
 		conf.addProperty(TSConfig.AWS_SANDBOX, sandbox);
 	}
 
-	static class RequesterProvider implements Provider<RequesterServiceExt> {
-		Configuration conf;
+	@Override
+	protected void configure() {		
+		bind(Configuration.class).toInstance(conf);		
 		
-		@Inject	RequesterProvider(Configuration conf) {
-			this.conf = conf;
-		}
+		// See providers below for other bindings
 		
-		@Override
-		public RequesterServiceExt get() {					
-			RequesterServiceExt req;
-			try {
-				ClientConfig reqConf = TSConfig.getClientConfig(conf);
-				req = new RequesterServiceExt(reqConf);
-			} catch( RuntimeException e ) {
-				e.printStackTrace();
-				System.out.println("Failed to create MTurk requester service. Using mock requester.");
-				req = new MockRequesterService();
-			}
-			return req;
-		}	
+		// GUI stuff
+		bind(TSTabbedPanel.class).in(Scopes.SINGLETON);
 	}
+	
+	@Provides @Singleton 
+	RequesterServiceExt getRequesterService() {
+		// Create AWS Requester, if any
+		RequesterServiceExt req = null;
+		try {
+			ClientConfig reqConf = TSConfig.getClientConfig(conf);
+			req = new RequesterServiceExt(reqConf);
+		} catch( RuntimeException e ) {
+			e.printStackTrace();			
+			System.out.println("Bad configuration for MTurk requester service. MTurk functions will be unavailable.");			
+		}
+		return req;
+	}	
 
-	static class MysqlCPDSProvider implements Provider<MysqlConnectionPoolDataSource> {
-		Configuration conf;
-		
-		@Inject	MysqlCPDSProvider(Configuration conf) {
-			this.conf = conf;
-		}
-		
-		@Override
-		public MysqlConnectionPoolDataSource get() {
-			return TSConfig.getMysqlCPDS(conf);			
-		}	
-	}
+	@Provides @Singleton 
+	MysqlConnectionPoolDataSource getMysqlCPDS() {
+		// Create a single MySQL connection pool
+		return TSConfig.getMysqlCPDS(conf);			
+	}	
+
 }

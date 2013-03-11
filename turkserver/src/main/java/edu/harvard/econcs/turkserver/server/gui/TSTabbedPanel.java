@@ -2,6 +2,7 @@ package edu.harvard.econcs.turkserver.server.gui;
 
 import java.awt.GridLayout;
 
+import javax.annotation.Nullable;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 
@@ -16,7 +17,7 @@ public class TSTabbedPanel extends JPanel {
 	private JTabbedPane tabbedPane;	
 	
 	@Inject
-	public TSTabbedPanel(RequesterServiceExt req) {
+	public TSTabbedPanel(@Nullable RequesterServiceExt req) {
 		super(new GridLayout(1, 1));
 				
 		tabbedPane = new JTabbedPane();
