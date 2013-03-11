@@ -119,7 +119,7 @@ public class TSConfig {
 		// TODO: remove this
 		conf.setProperty(SERVER_DEBUGMODE, true);
 		
-		conf.setProperty(SERVER_LOBBY_DEFAULT, false);
+		conf.setProperty(SERVER_LOBBY_DEFAULT, true);
 		conf.setProperty(SERVER_USERNAME, false);
 		
 		// Sensible defaults for creating HITs		

@@ -104,6 +104,18 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 		}
 	}
 	
+	public List<Sets> getAllSets() {
+		try( Connection conn = pbds.getConnection() ) {				
+			// ensure this setId exists
+			return new SQLQueryImpl(conn, dialect)
+			.from(_sets)			
+			.list(_sets);
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		}
+		return null;
+	}
+
 	@Override
 	public Collection<Experiment> getSetExperiments() {
 		try( Connection conn = pbds.getConnection() ) {	

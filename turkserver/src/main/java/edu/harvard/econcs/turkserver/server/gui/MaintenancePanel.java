@@ -31,14 +31,16 @@ public class MaintenancePanel extends JPanel {
 		JButton btnDisableUnassigned = new JButton("Disable Unassigned HITs");
 		btnDisableUnassigned.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				new DisableUnassignedWorker().execute();
+				if (GUIUtils.checkRequesterNotNull(req, MaintenancePanel.this))
+					new DisableUnassignedWorker().execute();
 			}
 		});
 		
 		JButton btnDisableAllHits = new JButton("Disable All HITs on MTurk");
 		btnDisableAllHits.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				new DisableAllHITsWorker().execute();
+				if (GUIUtils.checkRequesterNotNull(req, MaintenancePanel.this))
+					new DisableAllHITsWorker().execute();
 			}
 		});
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
