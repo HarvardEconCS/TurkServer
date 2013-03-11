@@ -37,7 +37,8 @@ public class MySQLDataTrackerTest {
 
 	@Before
 	public void setup() throws Exception {
-		dt = new MySQLDataTracker(ds, "test");
+		dt = new MySQLDataTracker(ds);
+		dt.setSetId("test");
 	}
 
 	@After

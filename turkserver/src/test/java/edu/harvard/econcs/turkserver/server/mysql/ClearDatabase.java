@@ -19,7 +19,7 @@ public class ClearDatabase {
 		
 		MysqlConnectionPoolDataSource ds = TSConfig.getMysqlCPDS(conf);
 
-		MySQLDataTracker dt = new MySQLDataTracker(ds, "");
+		MySQLDataTracker dt = new MySQLDataTracker(ds);		
 		
 		dt.clearDatabase();
 	}
