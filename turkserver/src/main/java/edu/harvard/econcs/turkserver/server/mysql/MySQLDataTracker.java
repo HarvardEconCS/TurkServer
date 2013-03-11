@@ -87,7 +87,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 		dialect = new MySQLTemplates();					
 	}
 	
-	@Inject(optional=true)
+	@Inject
 	public void setSetId(@Named(TSConfig.EXP_SETID) String setID) {
 		this.setID = setID;		
 		
