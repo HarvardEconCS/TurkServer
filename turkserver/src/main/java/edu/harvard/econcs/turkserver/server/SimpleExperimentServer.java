@@ -49,6 +49,7 @@ public final class SimpleExperimentServer extends SessionServer {
 	
 	@Inject(optional=true) 
 	public void injectGUI(final TSTabbedPanel guiTabs) {
+		// TODO: divide up a null lobby from a mock lobby
 		final ServerPanel serverGUI = new ServerPanel(this, new Lobby.NullLobby());
 		
 		SwingUtilities.invokeLater(new Runnable() {	public void run() {

@@ -36,6 +36,8 @@ public interface Lobby {
 	Set<HITWorkerImpl> getLobbyUsers();
 
 	public class NullLobby implements Lobby {
+		
+		boolean gotUsers = false; // For a unit test
 	
 		@Override
 		public void setListener(LobbyListener listener) {}
@@ -66,6 +68,7 @@ public interface Lobby {
 	
 		@Override
 		public Set<HITWorkerImpl> getLobbyUsers() {
+			gotUsers = true;
 			return Collections.emptySet();
 		}	
 	}

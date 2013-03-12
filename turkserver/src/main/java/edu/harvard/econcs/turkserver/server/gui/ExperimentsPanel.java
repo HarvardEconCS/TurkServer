@@ -248,8 +248,7 @@ public class ExperimentsPanel extends JSplitPane {
 	}
 
 	public class CheckAndDisposeWorker extends SwingWorker<Integer, Object> {	
-		@Override
-		protected Integer doInBackground() throws Exception {			
+		@Override protected Integer doInBackground() throws Exception {			
 			return hits.checkAndDispose();
 		}
 		@Override protected void done() {

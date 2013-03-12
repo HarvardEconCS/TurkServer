@@ -178,7 +178,7 @@ public abstract class SessionServer extends Thread {
 			return null;
 		}
 		
-		if( completedHITs > hitGoal ) {
+		if( completedHITs >= hitGoal ) {
 			SessionUtils.sendStatus(conn, Codec.status_batchfinished, Messages.BATCH_COMPLETED);
 			logger.info("Ignoring connection after quota reached (HIT {})", hitId);
 			return null;
@@ -424,17 +424,9 @@ public abstract class SessionServer extends Thread {
 	 * @return whether the server should shut down
 	 */
 	boolean groupCompleted(HITWorkerGroup group) {
-		updateCompletion();
+		updateCompletion(); // Will interrupt if necesasry
 		
-		if( completedHITs >= hitGoal ) {
-			logger.info("Goal of {} users reached: {}", completedHITs, hitGoal);
-			
-			// Quit the thread
-			this.interrupt();						
-			return true;
-		}
-		
-		return false;
+		return completedHITs >= hitGoal;
 	}
 
 	void updateCompletion() {
@@ -477,7 +469,7 @@ public abstract class SessionServer extends Thread {
 			catch (InterruptedException e) {}
 		}
 				
-		System.out.println("Deleting remaining HITs");
+		logger.info("Goal reached or shut down initiated - deleting remaining HITs");
 		
 		if( hitCont != null ) {
 			hitCont.disableAndShutdown();
@@ -486,14 +478,12 @@ public abstract class SessionServer extends Thread {
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}			
-		}			
+		}				
 		
-		/* 
-		 * TODO send a message to people that took HITs after the deadline
-		 * and kick out still-connected clients		
-		 */				
-		
-		// Sleep until submitted HITs to equal completed HITs
+		/*
+		 * Sleep until submitted HITs to equal completed HITs
+		 * This may be less than hitGoal
+		 */
 		if( !debugMode ) {
 			logger.info("Waiting for workers to submit HITs");
 			do try {

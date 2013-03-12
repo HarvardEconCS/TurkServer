@@ -246,8 +246,13 @@ class TSClient
       when Codec.status_expfinished
         @errorMessage_cb?(status, data.msg)
       when Codec.status_completed
-        alert data.msg
+        alert(data.msg)
         @triggerTurkSubmit()
+      when Codec.status_batchfinished
+        # disconnect from the server and tell worker to return the hit
+        @unsubscribe()
+        $.cometd.disconnect()        
+        alert(data.msg)
       
   @submitHIT: (data) =>
     @channelSend "/service/user",
@@ -303,11 +308,11 @@ class TSClient
     @userSubscription = $.cometd.subscribe "/service/user", @userData
     
   @unsubscribe: ->
-    # TODO batch these?
-    @unsubscribeLobby()
-    @unsubscribeExp()
-    $.cometd.unsubscribe @userSubscription if @userSubscription
-    @userSubscription = null
+    $.cometd.batch =>
+      @unsubscribeLobby()
+      @unsubscribeExp()
+      $.cometd.unsubscribe(@userSubscription) if @userSubscription
+      @userSubscription = null
 
   ###
   TODO: implement lobby updates from client

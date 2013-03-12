@@ -15,6 +15,7 @@ import edu.harvard.econcs.turkserver.config.TSConfig;
 import edu.harvard.econcs.turkserver.mturk.FakeHITController;
 import edu.harvard.econcs.turkserver.schema.Quiz;
 import edu.harvard.econcs.turkserver.schema.Session;
+import edu.harvard.econcs.turkserver.server.Lobby.NullLobby;
 import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
 import edu.harvard.econcs.turkserver.server.mysql.MockDataTracker;
 
@@ -26,6 +27,8 @@ public class GroupServerTest {
 	MockDataTracker tracker; 
 	GroupServer server;
 	
+	NullLobby lobby;
+	
 	@Before
 	public void setUp() throws Exception {
 		
@@ -33,7 +36,7 @@ public class GroupServerTest {
 		
 		Configuration conf = TSConfig.getDefault();
 		conf.setProperty(TSConfig.EXP_REPEAT_LIMIT, 1);
-		conf.setProperty(TSConfig.SERVER_HITGOAL, 10);
+		conf.setProperty(TSConfig.SERVER_HITGOAL, 2);
 		
 		QuizFactory qf = new QuizFactory.NullQuizFactory();
 		QuizPolicy onePassQuiz = new QuizPolicy.PercentageQuizPolicy(1d, 1);
@@ -46,7 +49,7 @@ public class GroupServerTest {
 				workerAuth,
 				new Experiments(null, null, null, tracker, null),			
 				conf,
-				new Lobby.NullLobby()
+				lobby = new Lobby.NullLobby()
 				);		
 	}
 
@@ -279,5 +282,51 @@ public class GroupServerTest {
 		
 		// Check workerId reassigned
 		assertEquals(record.getWorkerId(), workerId);
+	}
+	
+	@Test
+	public void testAcceptBatchFinished() {
+		String hitId = "testHITId";		
+		String workerId = "workerId";
+		
+		Session s = new Session();		
+		s.setHitId(hitId);
+		s.setWorkerId(workerId);
+		s.setInactivePercent(0.00);
+		s.setComment("something");
+		
+		tracker.saveSession(s);
+		
+		String hitId2 = "testHITId2";
+		
+		Session s2 = new Session();		
+		s2.setHitId(hitId2);
+		s2.setWorkerId(workerId);
+		s2.setInactivePercent(0.00);
+		s2.setComment("something");
+		
+		tracker.saveSession(s2);
+
+		assertEquals(SessionStatus.COMPLETED, SessionRecord.status(s));
+		assertEquals(SessionStatus.COMPLETED, SessionRecord.status(s2));
+		
+		server.updateCompletion();
+		
+		assertEquals(2, server.completedHITs);		
+		
+		MockServerSession conn = new MockServerSession();
+		
+		server.sessionAccept(conn, "someHitId", "someAssignmentId", "someWorkerId");
+		
+		assertEquals(conn.lastChannel, USER_CHANNEL);
+		assertEquals(Codec.status_batchfinished, ((Map<String, Object>) conn.lastData).get("status"));
+		
+		/*
+		 * Check that lobby was notified
+		 * TODO this should be more robust
+		 */
+		assertTrue(!lobby.gotUsers);		
+		server.groupCompleted(null);
+		assertTrue(lobby.gotUsers);
 	}
 }

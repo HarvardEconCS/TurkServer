@@ -198,9 +198,15 @@ public final class GroupServer extends SessionServer {
 		boolean completed;
 		
 		if ( completed = super.groupCompleted(group) ) {
-			// Only notify people in lobby, not (experiment people need to submit)
+			/* 
+			 * send a message to people that took HITs after the deadline
+			 * and kick out still-connected clients
+			 * 
+			 * Only notify people in lobby, not (experiment people need to submit)		
+			 */
 			for( HITWorkerImpl worker : lobby.getLobbyUsers() )
-				SessionUtils.sendStatus(worker.cometdSession.get(), Codec.status_batchfinished);
+				SessionUtils.sendStatus(worker.cometdSession.get(), 
+						Codec.status_batchfinished, Messages.BATCH_COMPLETED);
 		}
 		
 		return completed;
