@@ -165,18 +165,18 @@ public class RequesterServiceExt extends RequesterService {
 	 * Disable a hit with retries for throttling.
 	 * @param hitId
 	 */
-	public void safeDisableHIT(String hitId) {		
+	public boolean safeDisableHIT(String hitId) {		
 		int tries = 0;
 		do {
 			try {
 				super.disableHIT(hitId);
 				logger.info("Disabled " + hitId);
-				break;
+				return true;
 			}
 			catch( ObjectDoesNotExistException e ) {
 				logger.warn("Could not disable HIT {} as it doesn't exist", hitId);
 				e.printStackTrace();
-				break;				
+				return false;				
 			} catch (ServiceException e) {
 				e.printStackTrace();					
 				if(++tries < MAX_RETRIES) throw e;

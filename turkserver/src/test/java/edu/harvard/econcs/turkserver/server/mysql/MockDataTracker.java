@@ -9,6 +9,7 @@ import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
 
 import java.net.InetAddress;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedList;
@@ -57,6 +58,18 @@ public class MockDataTracker extends ExperimentDataTracker {
 	@Override
 	public boolean hitExistsInDB(String hitId) {
 		return hitIdToSessions.containsKey(hitId);
+	}
+
+	@Override
+	public List<Session> getCompletedSessions() {
+		List<Session> stuff = new ArrayList<>();
+		
+		for( Session s : hitIdToSessions.values() ) {
+			if( SessionRecord.status(s) == SessionStatus.COMPLETED )				
+				stuff.add(s);
+		}
+		
+		return stuff;
 	}
 
 	@Override

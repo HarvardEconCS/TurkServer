@@ -52,6 +52,12 @@ public abstract class ExperimentDataTracker {
 	public abstract Collection<Experiment> getSetExperiments();
 	
 	/**
+	 * Get all completed sessions in this set.
+	 * @return
+	 */
+	public abstract List<Session> getCompletedSessions();
+
+	/**
 	 * Check if we have a record of a sessionID in the database,
 	 * including from other sets
 	 * @param hitID
@@ -91,7 +97,7 @@ public abstract class ExperimentDataTracker {
 	 * To be implemented method to save the session for a tracker
 	 * @param record
 	 */
-	protected abstract void saveSession(Session record);
+	public abstract void saveSession(Session record);
 
 	/**
 	 * Adds a hitId to the current set in the database
@@ -288,7 +294,9 @@ public abstract class ExperimentDataTracker {
 		
 		// store final client info, with inactive time measured properly for disconnections
 		for( HITWorker session : expCont.getGroup().getHITWorkers() ) {
-			saveSessionCompleteInfo((HITWorkerImpl) session);
+			HITWorkerImpl hitw = (HITWorkerImpl) session;
+			hitw.finalizeActivity();
+			saveSessionCompleteInfo(hitw);
 		}		
 
 	}	

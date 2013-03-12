@@ -77,9 +77,10 @@ public class MockRequesterService extends RequesterServiceExt {
 	}
 
 	@Override
-	public void safeDisableHIT(String hitId) {
+	public boolean safeDisableHIT(String hitId) {
 		if( disabledHitIds != null )
-			disabledHitIds.add(hitId);		
+			disabledHitIds.add(hitId);
+		return true;
 	}		
 
 }

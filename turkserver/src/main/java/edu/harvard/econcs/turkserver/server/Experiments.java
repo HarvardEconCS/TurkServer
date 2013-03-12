@@ -409,6 +409,8 @@ public class Experiments {
 
 		// save the log to db
 		String logOutput = cont.log.getOutput();
+		
+		// This also counts the inactive time of anyone who disconnected before finish
 		tracker.experimentFinished(cont, logOutput);					
 		
 //		String filename = String.format("%s/%s %d.log", path, expFile, clients.groupSize());
@@ -418,11 +420,7 @@ public class Experiments {
 			el.experimentFinished(cont);
 		}
 
-		unmapWorkers(cont.group);
-		
-		// TODO Count the inactive time of anyone who disconnected before finish 
-//		super.finalizeInactiveTime();
-			
+		unmapWorkers(cont.group);		
 	}
 	
 	public ScheduledExecutorService stop() {

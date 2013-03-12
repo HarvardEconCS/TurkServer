@@ -4,7 +4,6 @@ import edu.harvard.econcs.turkserver.config.TSConfig;
 import edu.harvard.econcs.turkserver.schema.*;
 import edu.harvard.econcs.turkserver.server.HITWorkerImpl;
 
-import java.beans.PropertyVetoException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -68,8 +67,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	private final SQLTemplates dialect;	
 
 	@Inject
-	public MySQLDataTracker(MysqlConnectionPoolDataSource ds 
-			) throws PropertyVetoException {
+	public MySQLDataTracker(MysqlConnectionPoolDataSource ds) {
 		super();		
 		/*
 		 * Setup BoneCP
@@ -127,6 +125,28 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 		} catch (SQLException e) {			
 			e.printStackTrace();
 		} 
+		return null;
+	}
+
+	@Override
+	public List<Session> getCompletedSessions() {
+		try( Connection conn = pbds.getConnection() ) {
+			
+//			"SELECT hitId, assignmentId, workerId " +				
+//			"FROM session " +				
+//			"WHERE inactivePercent IS NOT NULL " +
+//			"AND setId=? " + // Use this line to filter by some set
+//			"AND paid IS NULL";
+			
+			return new SQLQueryImpl(conn, dialect)
+			.from(_session)
+			.where(_session.setId.eq(setID),
+					_session.inactivePercent.isNotNull())
+			.list(_session);
+			
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		} 				
 		return null;
 	}
 
@@ -249,7 +269,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	protected void saveSession(Session record) {
+	public void saveSession(Session record) {
 		try( Connection conn = pbds.getConnection() ) {	
 			
 			// Make sure worker exists

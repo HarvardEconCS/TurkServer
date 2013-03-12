@@ -140,7 +140,7 @@ public class HITWorkerImpl implements HITWorker, HITWorkerGroup {
 	/**
 	 * Call at the end of an experiment to finish any uncomputed values
 	 */
-	void finalizeActivity() {
+	public void finalizeActivity() {
 		if( !isConnected() ) {
 			Long lastDisc = lastDisconnectTime.get();
 			if( lastDisc == null ) {

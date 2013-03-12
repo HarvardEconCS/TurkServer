@@ -1,5 +1,6 @@
 package edu.harvard.econcs.turkserver.server.gui;
 
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.JTable;
@@ -10,7 +11,6 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
-import java.beans.PropertyVetoException;
 import java.util.List;
 
 import javax.swing.border.EtchedBorder;
@@ -21,10 +21,12 @@ import javax.swing.BoxLayout;
 import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 
 import edu.harvard.econcs.turkserver.mturk.RequesterServiceExt;
+import edu.harvard.econcs.turkserver.mturk.TurkHITController;
 import edu.harvard.econcs.turkserver.schema.Sets;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker.SessionSummary;
 import edu.harvard.econcs.turkserver.server.mysql.MySQLDataTracker;
 import javax.swing.ListSelectionModel;
+import javax.swing.JTextArea;
 
 public class ExperimentsPanel extends JSplitPane {
 
@@ -33,6 +35,7 @@ public class ExperimentsPanel extends JSplitPane {
 	MysqlConnectionPoolDataSource cpds;
 	MySQLDataTracker dt;
 	RequesterServiceExt req;
+	TurkHITController hits;
 	
 	volatile String selectedSet;
 	
@@ -47,6 +50,7 @@ public class ExperimentsPanel extends JSplitPane {
 	private JLabel lblTotalHits;
 	private JLabel label;
 	private JLabel lblSelectASet;
+	private JTextArea txtrThanksForYour;
 
 	/**
 	 * Create the panel.
@@ -57,11 +61,8 @@ public class ExperimentsPanel extends JSplitPane {
 		
 		initGUI();
 		
-		try {
-			dt = new MySQLDataTracker(cpds);
-		} catch (PropertyVetoException e) {			
-			e.printStackTrace();
-		}
+		dt = new MySQLDataTracker(cpds);
+		hits = new TurkHITController(req, dt);
 		
 		new RefreshDatabaseWorker().execute();
 	}
@@ -117,6 +118,10 @@ public class ExperimentsPanel extends JSplitPane {
 					new ReviewAndPayWorker().execute();
 			}
 		});
+		
+		txtrThanksForYour = new JTextArea();
+		txtrThanksForYour.setText("Thanks for your work!");
+		panel.add(txtrThanksForYour);
 		
 		panel.add(btnPayWorkers);
 		
@@ -205,34 +210,57 @@ public class ExperimentsPanel extends JSplitPane {
 		}
 	}
 
-	public class DisableUnusedWorker extends SwingWorker<Object, Object> {
-	
-		@Override
-		protected Object doInBackground() throws Exception {
-			// TODO Auto-generated method stub
-			return null;
+	public class DisableUnusedWorker extends SwingWorker<Integer, Object> {	
+		@Override protected Integer doInBackground() throws Exception {
+			return hits.disableUnusedFromDB();			
 		}
-	
+		@Override protected void done() {
+			int deletedCount;
+			try {
+				deletedCount = get();
+			} catch (Exception e) {
+				GUIUtils.showException(e, ExperimentsPanel.this);
+				e.printStackTrace();
+				return;
+			}
+			JOptionPane.showMessageDialog(ExperimentsPanel.this, deletedCount + " unused HITs disabled");
+		}
 	}
 
-	public class ReviewAndPayWorker extends SwingWorker<Object, Object> {
-	
-		@Override
-		protected Object doInBackground() throws Exception {
-			// TODO Auto-generated method stub
-			return null;
+	public class ReviewAndPayWorker extends SwingWorker<Integer, Object> {	
+		@Override protected Integer doInBackground() throws Exception {
+			return hits.reviewAndPayWorkers(txtrThanksForYour.getText());
 		}
-	
+		// TODO inform about how many workers paid and $ spent
+		@Override protected void done() {
+			int approvedCount;
+			try {
+				approvedCount = get();
+			} catch (Exception e) {
+				GUIUtils.showException(e, ExperimentsPanel.this);
+				e.printStackTrace();
+				return;
+			}
+			JOptionPane.showMessageDialog(ExperimentsPanel.this, approvedCount + " HITs paid");
+		}
 	}
 
-	public class CheckAndDisposeWorker extends SwingWorker<Object, Object> {
-	
+	public class CheckAndDisposeWorker extends SwingWorker<Integer, Object> {	
 		@Override
-		protected Object doInBackground() throws Exception {
-			// TODO Auto-generated method stub
-			return null;
+		protected Integer doInBackground() throws Exception {			
+			return hits.checkAndDispose();
 		}
-	
+		@Override protected void done() {
+			int disposedCount;
+			try {
+				disposedCount = get();
+			} catch (Exception e) {
+				GUIUtils.showException(e, ExperimentsPanel.this);
+				e.printStackTrace();
+				return;
+			}
+			JOptionPane.showMessageDialog(ExperimentsPanel.this, disposedCount + " HITs disposed");
+		}
 	}
 
 }

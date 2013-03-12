@@ -210,28 +210,31 @@ public class GroupServerTest {
 		HITWorkerImpl hitw = new HITWorkerImpl(null, s);
 		server.hitWorkerTable.put(hitId, workerId, hitw);
 		
-		assertEquals(0, server.completedHITs.get());
-		assertEquals(SessionStatus.COMPLETED, SessionRecord.status(s));
+		assertEquals(0, server.completedHITs);
+		assertEquals(SessionStatus.COMPLETED, SessionRecord.status(s));		
 		
 		MockServerSession conn = new MockServerSession();
 		
 		server.sessionAccept(conn, hitId, assignmentId, workerId);
 		
 		assertEquals(conn.lastChannel, USER_CHANNEL);
-		assertEquals(Codec.status_expfinished, ((Map<String, Object>) conn.lastData).get("status"));
+		assertEquals(Codec.status_expfinished, ((Map<String, Object>) conn.lastData).get("status"));				
 		
 		// Try to submit the HIT and ensure it goes through
+		server.updateCompletion();
 		server.sessionSubmit(conn, "some random results");
 				
 		assertEquals(conn.lastChannel, USER_CHANNEL);
 		assertEquals(Codec.status_completed, ((Map<String, Object>) conn.lastData).get("status"));
-		assertEquals(1, server.completedHITs.get());
+		assertEquals(1, server.completedHITs);
 		
 		// Make sure that a double-submit doesn't count twice
+		server.updateCompletion();
 		server.sessionSubmit(conn, "some random results");
+		
 		assertEquals(conn.lastChannel, USER_CHANNEL);
 		assertEquals(Codec.status_completed, ((Map<String, Object>) conn.lastData).get("status") );
-		assertEquals(1, server.completedHITs.get());
+		assertEquals(1, server.completedHITs);
 	}
 	
 	/*

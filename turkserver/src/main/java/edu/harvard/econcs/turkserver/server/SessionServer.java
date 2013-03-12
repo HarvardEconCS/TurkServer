@@ -1,13 +1,11 @@
 package edu.harvard.econcs.turkserver.server;
 
 import java.net.InetAddress;
-import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.configuration.Configuration;
 import org.cometd.bayeux.server.BayeuxServer;
@@ -42,6 +40,7 @@ import edu.harvard.econcs.turkserver.schema.Quiz;
 import edu.harvard.econcs.turkserver.schema.Session;
 import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
 import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker;
+import edu.harvard.econcs.turkserver.server.mysql.ExperimentDataTracker.SessionSummary;
 
 public abstract class SessionServer extends Thread {
 
@@ -64,7 +63,7 @@ public abstract class SessionServer extends Thread {
 	protected ConcurrentMap<ServerSession, HITWorkerImpl> clientToHITWorker;
 	protected Table<String, String, HITWorkerImpl> hitWorkerTable;
 	
-	protected final AtomicInteger completedHITs;	
+	protected volatile int completedHITs = 0;	
 	private volatile boolean running = true;
 	
 	@Inject
@@ -79,9 +78,7 @@ public abstract class SessionServer extends Thread {
 		this.tracker = tracker;								
 		this.hitCont = hitCont;
 		this.workerAuth = workerAuth;
-		this.experiments = experiments;
-		
-		this.completedHITs = new AtomicInteger();
+		this.experiments = experiments;		
 		
 		/*
 		 * Process configuration
@@ -150,7 +147,7 @@ public abstract class SessionServer extends Thread {
 	public abstract int getExpsCompleted();
 	
 	public int getNumCompleted() {		
-		return completedHITs.get();
+		return completedHITs;
 	}
 
 	void sessionView(ServerSession conn, String hitId) {
@@ -295,28 +292,17 @@ public abstract class SessionServer extends Thread {
 			return;
 		}
 		
-		/* Write any exit comments / logs for session
-		 * don't increment if the same HIT submits twice.
-		 * TODO: replace this with using SessionSummary
-		 */
-		String workerId = worker.getWorkerId();
-		Collection<Session> existing = tracker.getSetSessionInfoForWorker(workerId);
-		
-		boolean alreadySubmitted = false;
-		for( Session s : existing ) {
-			if( s.getHitId().equals(worker.getHitId()) && s.getComment() != null )
-			alreadySubmitted = true;
-			break;			
-		}					
+		// Write any exit comments / logs for session		 
+		Session existing = worker.getSessionRecord();			
+		boolean alreadySubmitted = existing.getComment() != null;						
 		
 		if( !alreadySubmitted ) {
-			tracker.saveExitSurveyResults(worker, survey);
-			int completed = completedHITs.incrementAndGet();
-			System.out.println(completed + " HITs completed");			
-		}		
+			// We do this because the first survey is probably going to be better than subsequent ones
+			tracker.saveExitSurveyResults(worker, survey);			
+		}				
 		
 		// TODO check the total number of possible different tasks as well, from assigner									
-		int additional = workerAuth.getSetLimit() - existing.size();		
+		int additional = workerAuth.getSetLimit() - tracker.getSetSessionInfoForWorker(worker.getWorkerId()).size();		
 		SessionUtils.sendStatus(conn, Codec.status_completed, 
 				"Thanks for your work! You may do " + additional + " more HITs in this session.");		
 	}
@@ -429,8 +415,10 @@ public abstract class SessionServer extends Thread {
 	 * @return whether the server should shut down
 	 */
 	boolean groupCompleted(HITWorkerGroup group) {
-		if( completedHITs.addAndGet(group.groupSize()) >= hitGoal ) {
-			logger.info("Goal of " + hitGoal + " users reached!");
+		updateCompletion();
+		
+		if( completedHITs >= hitGoal ) {
+			logger.info("Goal of {} users reached: {}", completedHITs, hitGoal);
 			
 			// Quit the thread
 			this.interrupt();						
@@ -438,6 +426,12 @@ public abstract class SessionServer extends Thread {
 		}
 		
 		return false;
+	}
+
+	void updateCompletion() {
+		SessionSummary currentState = tracker.getSetSessionSummary();
+		completedHITs = currentState.completedHITs;
+		logger.info(currentState.completedHITs + " HITs completed");
 	}
 
 	@Override
@@ -462,7 +456,7 @@ public abstract class SessionServer extends Thread {
 		runServerInit();
 		
 	    // Hang out until goal # of HITs are reached and shutdown jetty server
-		while( running && completedHITs.get() < hitGoal ) {			
+		while( running && completedHITs < hitGoal ) {			
 			try { Thread.sleep(5000); }
 			catch (InterruptedException e) {}
 		}
