@@ -6,8 +6,6 @@ package edu.harvard.econcs.turkserver.schema;
  */
 public class Experiment {
 
-    private String comment;
-
     private java.sql.Timestamp endTime;
 
     private String id;
@@ -21,14 +19,6 @@ public class Experiment {
     private String setId;
 
     private java.sql.Timestamp startTime;
-
-    public String getComment() {
-        return comment;
-    }
-
-    public void setComment(String comment) {
-        this.comment = comment;
-    }
 
     public java.sql.Timestamp getEndTime() {
         return endTime;

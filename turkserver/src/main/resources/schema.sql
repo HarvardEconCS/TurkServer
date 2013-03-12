@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.6.10, for osx10.7 (x86_64)
+-- MySQL dump 10.13  Distrib 5.1.67, for pc-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: turkserver
 -- ------------------------------------------------------
--- Server version	5.6.10
+-- Server version	5.1.67-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -29,8 +29,7 @@ CREATE TABLE `experiment` (
   `inputdata` varchar(24) DEFAULT NULL,
   `startTime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `endTime` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
-  `results` text,
-  `comment` text,
+  `results` mediumtext,
   PRIMARY KEY (`id`),
   KEY `experiment_ibfk_1` (`setId`),
   CONSTRAINT `experiment_ibfk_1` FOREIGN KEY (`setId`) REFERENCES `sets` (`name`) ON UPDATE CASCADE
@@ -118,7 +117,7 @@ CREATE TABLE `round` (
   `startTime` timestamp NULL DEFAULT NULL,
   `endTime` timestamp NULL DEFAULT NULL,
   `inputdata` varchar(24) DEFAULT NULL,
-  `results` text,
+  `results` mediumtext,
   PRIMARY KEY (`experimentId`,`roundnum`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -193,7 +192,7 @@ CREATE TABLE `sets` (
   `descript` text,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -237,4 +236,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2013-03-02 14:56:52
+-- Dump completed on 2013-03-11 23:29:08

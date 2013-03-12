@@ -19,8 +19,6 @@ public class QExperiment extends com.mysema.query.sql.RelationalPathBase<Experim
 
     public static final QExperiment experiment = new QExperiment("experiment");
 
-    public final StringPath comment = createString("comment");
-
     public final DateTimePath<java.sql.Timestamp> endTime = createDateTime("endTime", java.sql.Timestamp.class);
 
     public final StringPath id = createString("id");
