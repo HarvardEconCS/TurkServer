@@ -18,6 +18,7 @@ import com.amazonaws.mturk.requester.HIT;
 import com.amazonaws.mturk.requester.HITStatus;
 import com.amazonaws.mturk.requester.Price;
 import com.amazonaws.mturk.requester.QualificationRequirement;
+import com.amazonaws.mturk.service.exception.InvalidStateException;
 import com.amazonaws.mturk.service.exception.ServiceException;
 import com.google.inject.Inject;
 
@@ -160,7 +161,7 @@ public class TurkHITController implements HITController {
 			
 			// Create HITs until our limit is reached, or expire			
 			do {																		
-				logger.info("Sleeping for " + nextJob.minDelay);
+				logger.debug("Sleeping for " + nextJob.minDelay);
 				
 				try { Thread.sleep(nextJob.minDelay); } 
 				catch (InterruptedException e) { e.printStackTrace();	}
@@ -251,7 +252,7 @@ public class TurkHITController implements HITController {
 	public int reviewAndPayWorkers(String feedback) {
 		int approved = 0;
 		int rejected = 0;
-		int unpaid = 0;
+		int skipped = 0;
 		int unreviewable = 0;
 		
 		/* Get a list of workers that have been assigned to experiments, 
@@ -266,7 +267,7 @@ public class TurkHITController implements HITController {
 			if( s.getPaid() && (s.getBonus() == null || s.getBonusPaid()) ) continue;
 			
 			String hitId = s.getHitId();
-			String assignmentId = s.getWorkerId();			
+			String assignmentId = s.getAssignmentId();			
 			String workerId = s.getWorkerId();
 						
 			while(true) {
@@ -276,7 +277,7 @@ public class TurkHITController implements HITController {
 					Assignment[] assts = requester.getAllAssignmentsForHIT(hitId);	
 
 					if( assts.length < 1 ) {
-						System.out.printf("No assignments for HIT %s\n", hitId);
+						logger.info("No assignments for HIT {} (probably did not complete submission)", hitId);
 						unreviewable++;
 						break;
 					} else if (assts.length > 1) {
@@ -318,25 +319,32 @@ public class TurkHITController implements HITController {
 						if( HITStatus.Disposed.equals(status) ) {
 							// TODO if it's disposed, they should have been paid, right?
 							System.out.println("Skipping payment for previously disposed HIT " + hitId);
-							unpaid++;
+							skipped++;
 							break;
 						}					
 
-						// Approve and pay assignment
-						requester.approveAssignment(assignmentId, feedback); 					
-						// Save in database that we paid them
-						s.setPayment(reward);
-						s.setPaid(true);
+						System.out.println(a.getAssignmentStatus());
+						if( AssignmentStatus.Submitted.equals(a.getAssignmentStatus()) ) {
+							// Approve and pay assignment
+							requester.approveAssignment(assignmentId, feedback); 					
+							// Save in database that we paid them
+							s.setPayment(reward);
+							s.setPaid(true);
 
-						BigDecimal bonus = s.getBonus();
+							BigDecimal bonus = s.getBonus();
 
-						// Check if we pay bonus
-						if( bonus != null && !s.getBonusPaid() ) {
-							requester.grantBonus(workerId, bonus.doubleValue(), assignmentId, feedback);
-							s.setBonusPaid(true);
+							// Check if we pay bonus
+							if( bonus != null && !s.getBonusPaid() ) {
+								requester.grantBonus(workerId, bonus.doubleValue(), assignmentId, feedback);
+								s.setBonusPaid(true);
+							}
+
+							approved++;					
 						}
-
-						approved++;					
+						else {
+							logger.warn("HIT {} was already approved or rejected, skipping", hitId);
+							skipped++;
+						}
 
 					} else {							
 						logger.info("HIT {} has status {}, skipping", hitId, hit.getHITStatus().toString());							
@@ -344,7 +352,12 @@ public class TurkHITController implements HITController {
 					}
 
 					// break out of loop
-				} catch (ServiceException e) {					
+				}
+				catch (InvalidStateException e) {
+					// To be fixed if we observe any other of these
+					e.printStackTrace();
+				}
+				catch (ServiceException e) {					
 					e.printStackTrace();
 
 					System.out.println("Throttling");
@@ -360,8 +373,8 @@ public class TurkHITController implements HITController {
 		
 		System.out.println("Total approved: " + approved);
 		System.out.println("Total rejected: " + rejected);
-		System.out.println("Total not paid: " + unpaid);
-		System.out.println("Total skipped:" + unreviewable);
+		System.out.println("Total skipped: " + skipped);
+		System.out.println("Total unreviewable:" + unreviewable);
 		
 		// TODO return something more meaningful
 		return approved;
@@ -416,8 +429,11 @@ public class TurkHITController implements HITController {
 					BigDecimal paidReward = s.getPayment();
 
 					if( AssignmentStatus.Approved.equals(a.getAssignmentStatus())) {
-						if ( !reward.getAmount().toPlainString().equals(paidReward) )
+						if ( !reward.getAmount().equals(paidReward) ) {
+							logger.error("Paid reward: " + paidReward);
+							logger.error("Recorded reward: " + reward.getAmount());
 							throw new RuntimeException("amount we recorded as paid is different from actual amount!");
+						}
 					}
 					else if ( AssignmentStatus.Rejected.equals(a.getAssignmentStatus()) ) {
 						if ( paidReward.doubleValue() != 0d )

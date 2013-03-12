@@ -198,7 +198,13 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 							_session.inactivePercent.isNotNull())
 					.singleResult(Wildcard.countAsInt);
 			
-			return new SessionSummary(created, assigned, completed);
+			query = new SQLQueryImpl(conn, dialect);
+			int submitted = query.from(_session)
+					.where(_session.setId.eq(setID),
+							_session.comment.isNotNull())
+					.singleResult(Wildcard.countAsInt);
+			
+			return new SessionSummary(created, assigned, completed, submitted);
 		} catch (SQLException e) {			
 			e.printStackTrace();
 		}

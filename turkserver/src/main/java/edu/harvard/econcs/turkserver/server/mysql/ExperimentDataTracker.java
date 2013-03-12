@@ -34,14 +34,17 @@ public abstract class ExperimentDataTracker {
 	public static final int USERNAME_LIMIT = 40;			
 
 	public static class SessionSummary {
+		
 		public final int createdHITs;
 		public final int assignedHITs;
 		public final int completedHITs;
+		public final int submittedHITs;
 		
-		SessionSummary(int createdHITs, int assignedHITs, int completedHITs) {
+		SessionSummary(int createdHITs, int assignedHITs, int completedHITs, int submittedHITs) {
 			this.createdHITs = createdHITs;
 			this.assignedHITs = assignedHITs;
 			this.completedHITs = completedHITs;
+			this.submittedHITs = submittedHITs;
 		}
 	}
 

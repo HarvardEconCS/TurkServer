@@ -174,8 +174,7 @@ public class RequesterServiceExt extends RequesterService {
 				return true;
 			}
 			catch( ObjectDoesNotExistException e ) {
-				logger.warn("Could not disable HIT {} as it doesn't exist", hitId);
-				e.printStackTrace();
+				logger.warn("Could not disable HIT {} as it doesn't exist", hitId);				
 				return false;				
 			} catch (ServiceException e) {
 				e.printStackTrace();					

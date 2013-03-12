@@ -42,14 +42,11 @@ public class Messages {
 			"This session belongs to someone that has already started a game,\n" +
 			"but returned the HIT afterwards, so it can't be reused.\n" +
 			"You may return this HIT and take another one from the group.";
-
 	
 	public static final String EXPIRED_SESSION = 
 		"All games for this batch have been completed.\n" +
 		"If you have signed up for notifications, we will let you know\n" +
 		"when we post more games. Please return the HIT.";
-
-
 
 	public static final String SESSION_COMPLETED = 
 		"This HIT has already been completed by you.\n" +
@@ -69,5 +66,10 @@ public class Messages {
 	public static final String TOO_MANY_FAILS =
 			"Sorry, you've failed the quiz too many times.\n" +
 			"Please return this HIT and try again later.";
+
+	public static final String BATCH_COMPLETED = 
+			"All games for this batch have been completed.\n" +
+			"If you have signed up for notifications, we will let you know\n" +
+			"when we post more games. Please return the HIT.";
 
 }

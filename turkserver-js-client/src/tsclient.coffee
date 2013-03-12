@@ -285,7 +285,7 @@ class TSClient
     console.log "Subscribed to lobby"
   
   @unsubscribeLobby: ->
-    $.cometd.unsubscribe @lobbySubscription if @lobbySubscription
+    $.cometd.unsubscribe(@lobbySubscription) if @lobbySubscription
     @lobbySubscription = null
     
   @subscribeExp: (channel) ->
@@ -294,9 +294,9 @@ class TSClient
     console.log "Subscribed to exp channels " + channel
   
   @unsubscribeExp: ->
-    $.cometd.unsubscribe @expBroadcastSubscrption if @expBroadcastSubscription
+    $.cometd.unsubscribe(@expBroadcastSubscrption) if @expBroadcastSubscription
     @expBroadcastSubscription = null    
-    $.cometd.unsubscribe @expServiceSubscription if @expServiceSubscription
+    $.cometd.unsubscribe(@expServiceSubscription) if @expServiceSubscription
     @expServiceSubscription = null     
     
   @subscribe: ->

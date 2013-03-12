@@ -117,7 +117,7 @@ public class TSConfig {
 		conf.setProperty(MTURK_HIT_LIFETIME, 604800);
 		
 		// TODO: remove this
-		conf.setProperty(SERVER_DEBUGMODE, true);
+		conf.setProperty(SERVER_DEBUGMODE, false);
 		
 		conf.setProperty(SERVER_LOBBY_DEFAULT, true);
 		conf.setProperty(SERVER_USERNAME, false);

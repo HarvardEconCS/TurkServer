@@ -77,9 +77,11 @@ public class MockDataTracker extends ExperimentDataTracker {
 		int created = 0;
 		int assigned = 0;
 		int completed = 0;
+		int submitted = 0;
 		
 		for( Session s : hitIdToSessions.values() ) {
 			if( SessionRecord.status(s) == SessionStatus.COMPLETED ) {
+				if( s.getComment() != null ) submitted++;
 				completed++;
 				assigned++;
 				created++;
@@ -95,7 +97,7 @@ public class MockDataTracker extends ExperimentDataTracker {
 				created++;
 			}				
 		}
-		return new SessionSummary(created, assigned, completed);
+		return new SessionSummary(created, assigned, completed, submitted);
 	}
 
 	@Override

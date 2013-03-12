@@ -6,6 +6,7 @@ import java.util.Set;
 
 import org.eclipse.jetty.util.resource.Resource;
 
+import com.amazonaws.mturk.requester.QualificationRequirement;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
@@ -20,13 +21,13 @@ public class TestServerModule extends ServerModule {
 	protected void configure() {
 		super.configure();
 		
-		// Provide some default mturk settings for testing
+		// Provide some default mturk settings for testing		
 		
-		
-		bind(QuizFactory.class).toProvider(Providers.of((QuizFactory) null));
-		bind(QuizPolicy.class).toProvider(Providers.of((QuizPolicy) null));			
+		bind(QuizFactory.class).toProvider(Providers.<QuizFactory>of(null));
+		bind(QuizPolicy.class).toProvider(Providers.<QuizPolicy>of(null));			
 		
 		bindResources(new Resource[] {});
+		bind(QualificationRequirement[].class).toProvider(Providers.<QualificationRequirement[]>of(null));
 		
 		bind(new TypeLiteral<Set<String>>() {})
 		.annotatedWith(Names.named(TSConfig.EXP_INPUT_LIST)).toInstance(Collections.singleton("test-treatment"));

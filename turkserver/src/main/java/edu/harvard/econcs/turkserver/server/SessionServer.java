@@ -63,7 +63,9 @@ public abstract class SessionServer extends Thread {
 	protected ConcurrentMap<ServerSession, HITWorkerImpl> clientToHITWorker;
 	protected Table<String, String, HITWorkerImpl> hitWorkerTable;
 	
-	protected volatile int completedHITs = 0;	
+	protected volatile int completedHITs = 0;
+	protected volatile int submittedHITs = 0;
+	
 	private volatile boolean running = true;
 	
 	@Inject
@@ -175,6 +177,12 @@ public abstract class SessionServer extends Thread {
 			logger.warn("Received null hitId for session {}", conn.getId());
 			return null;
 		}
+		
+		if( completedHITs > hitGoal ) {
+			SessionUtils.sendStatus(conn, Codec.status_batchfinished, Messages.BATCH_COMPLETED);
+			logger.info("Ignoring connection after quota reached (HIT {})", hitId);
+			return null;
+		}		
 		
 		Session hitIdRecord = tracker.getStoredSessionInfo(hitId);
 		
@@ -298,7 +306,8 @@ public abstract class SessionServer extends Thread {
 		
 		if( !alreadySubmitted ) {
 			// We do this because the first survey is probably going to be better than subsequent ones
-			tracker.saveExitSurveyResults(worker, survey);			
+			tracker.saveExitSurveyResults(worker, survey);
+			updateCompletion();
 		}				
 		
 		// TODO check the total number of possible different tasks as well, from assigner									
@@ -430,8 +439,15 @@ public abstract class SessionServer extends Thread {
 
 	void updateCompletion() {
 		SessionSummary currentState = tracker.getSetSessionSummary();
+		
 		completedHITs = currentState.completedHITs;
+		submittedHITs = currentState.submittedHITs;
+		
 		logger.info(currentState.completedHITs + " HITs completed");
+		logger.info(currentState.submittedHITs + " HITs submitted");
+		
+		if( completedHITs >= hitGoal && completedHITs == submittedHITs ) 
+			this.interrupt();
 	}
 
 	@Override
@@ -472,17 +488,23 @@ public abstract class SessionServer extends Thread {
 			}			
 		}			
 		
-		/* TODO send a message to people that took HITs after the deadline
-		 * or still-connected clients		
-		 */
+		/* 
+		 * TODO send a message to people that took HITs after the deadline
+		 * and kick out still-connected clients		
+		 */				
 		
-		try {	
-			// Sleep for a bit before shutting down jetty server
-			if( debugMode ) Thread.sleep(1000); 
-			else Thread.sleep(5 * 60 * 1000);
+		// Sleep until submitted HITs to equal completed HITs
+		if( !debugMode ) {
+			logger.info("Waiting for workers to submit HITs");
+			do try {
+				Thread.sleep(5000);
+			} catch(InterruptedException e ) {} 
+			while( completedHITs > submittedHITs );
+			logger.info("Got all HIT submissions");
 		}
-		catch (Exception e ) {
-			e.printStackTrace();
+		else {						
+			try { Thread.sleep(1000); }
+			catch (Exception e ) { e.printStackTrace();	}
 		}
 
 		// Stop experiments thread

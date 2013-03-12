@@ -104,7 +104,7 @@ public class ExperimentsPanel extends JSplitPane {
 		btnDisableUnusedHits = new JButton("Disable Unused HITs");
 		btnDisableUnusedHits.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if (GUIUtils.checkRequesterNotNull(req, ExperimentsPanel.this))
+				if (selectedSet != null && GUIUtils.checkRequesterNotNull(req, ExperimentsPanel.this))
 					new DisableUnusedWorker().execute();
 			}
 		});
@@ -114,7 +114,7 @@ public class ExperimentsPanel extends JSplitPane {
 		btnPayWorkers = new JButton("Review and Pay Workers");
 		btnPayWorkers.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if (GUIUtils.checkRequesterNotNull(req, ExperimentsPanel.this))
+				if (selectedSet != null && GUIUtils.checkRequesterNotNull(req, ExperimentsPanel.this))
 					new ReviewAndPayWorker().execute();
 			}
 		});
@@ -128,7 +128,7 @@ public class ExperimentsPanel extends JSplitPane {
 		btnCheckAndDispose = new JButton("Check and Dispose HITs");
 		btnCheckAndDispose.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if (GUIUtils.checkRequesterNotNull(req, ExperimentsPanel.this))
+				if (selectedSet != null && GUIUtils.checkRequesterNotNull(req, ExperimentsPanel.this))
 					new CheckAndDisposeWorker().execute();
 			}
 		});
@@ -163,7 +163,7 @@ public class ExperimentsPanel extends JSplitPane {
 		@Override
 		public void valueChanged(ListSelectionEvent e) {
 			int selectedRow = table.getSelectedRow();
-			selectedSet = expModel.getValueAt(selectedRow, 0).toString();
+			selectedSet = selectedRow < 0 ? null : expModel.getValueAt(selectedRow, 0).toString();
 			if( selectedSet != null ) new RefreshSetWorker().execute();
 		}	
 	}
@@ -207,6 +207,7 @@ public class ExperimentsPanel extends JSplitPane {
 			lblTotalHits.setText("Total HITs: " + data.createdHITs);
 			lblAssignedHits.setText("Assigned HITs: " + data.assignedHITs);
 			lblCompletedHits.setText("Completed HITs: " + data.completedHITs);
+						
 		}
 	}
 
@@ -223,7 +224,8 @@ public class ExperimentsPanel extends JSplitPane {
 				e.printStackTrace();
 				return;
 			}
-			JOptionPane.showMessageDialog(ExperimentsPanel.this, deletedCount + " unused HITs disabled");
+			new RefreshDatabaseWorker().execute();
+			JOptionPane.showMessageDialog(ExperimentsPanel.this, deletedCount + " unused HITs disabled");			
 		}
 	}
 

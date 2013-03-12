@@ -112,8 +112,7 @@ public class TurkServer {
 					conf.getDouble(TSConfig.MTURK_HIT_BASE_REWARD), 
 					conf.getInt(TSConfig.MTURK_ASSIGNMENT_DURATION),
 					conf.getInt(TSConfig.MTURK_AUTO_APPROVAL_DELAY),
-					// TODO read in qualifications from config file
-					null);
+					childInjector.getInstance(QualificationRequirement[].class));
 
 			thm.setExternalParams(url, 
 					conf.getInt(TSConfig.MTURK_HIT_FRAME_HEIGHT), 
