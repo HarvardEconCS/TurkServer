@@ -176,13 +176,7 @@ public abstract class SessionServer extends Thread {
 		if( hitId == null ) {
 			logger.warn("Received null hitId for session {}", conn.getId());
 			return null;
-		}
-		
-		if( completedHITs >= hitGoal ) {
-			SessionUtils.sendStatus(conn, Codec.status_batchfinished, Messages.BATCH_COMPLETED);
-			logger.info("Ignoring connection after quota reached (HIT {})", hitId);
-			return null;
-		}		
+		}	
 		
 		Session hitIdRecord = tracker.getStoredSessionInfo(hitId);
 		
@@ -208,14 +202,20 @@ public abstract class SessionServer extends Thread {
 					hitw.setServerSession(conn);				
 				}
 				clientToHITWorker.put(conn, hitw);
-			}					
-			
+			}								
 			return null;
 		} catch (SessionOverlapException e) {
 			SessionUtils.sendStatus(conn, Codec.status_sessionoverlap, Messages.SESSION_OVERLAP);
 			logger.info("Worker {} connected to overlapping session (HIT {})", workerId, hitId);
 			return null;
 		}
+		
+		// Check for this AFTER possible completed sessions
+		if( completedHITs >= hitGoal ) {
+			SessionUtils.sendStatus(conn, Codec.status_batchfinished, Messages.BATCH_COMPLETED);
+			logger.info("Ignoring connection after quota reached (HIT {})", hitId);
+			return null;
+		}	
 		
 		try {
 			workerAuth.checkWorkerLimits(hitId, workerId, hitIdRecord);
@@ -462,6 +462,9 @@ public abstract class SessionServer extends Thread {
 		}
 		
 		runServerInit();
+		
+		// TODO: clean up half-baked experiments in database
+		updateCompletion();
 		
 	    // Hang out until goal # of HITs are reached and shutdown jetty server
 		while( running && completedHITs < hitGoal ) {			

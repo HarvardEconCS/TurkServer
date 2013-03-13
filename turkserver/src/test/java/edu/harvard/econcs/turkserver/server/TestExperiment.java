@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 
 import edu.harvard.econcs.turkserver.api.BroadcastMessage;
@@ -56,7 +57,16 @@ class TestExperiment {
 	void startExp() {
 		lastCall = "startExp";
 		
-		if( cont != null ) cont.startRounds();
+		if( cont != null ) {
+			if( rounds > 0 ) cont.startRounds();
+			else {
+				try {
+					cont.sendExperimentBroadcast(
+							ImmutableMap.<String, Object>of("status", "something start")
+							);
+				} catch (MessageException e) { e.printStackTrace(); }
+			}
+		}
 	}
 	
 	@StartRound
@@ -111,9 +121,13 @@ class TestExperiment {
 		
 		uniqueMessages.clear();
 		
-		if( cont.getCurrentRound() < rounds )
+		if( cont.getCurrentRound() < rounds ) {
+			log.print("Finishing round");
 			cont.finishRound();
-		else
+		}			
+		else {
+			log.print("Finishing experiment");
 			cont.finishExperiment();
+		}
 	}
 }

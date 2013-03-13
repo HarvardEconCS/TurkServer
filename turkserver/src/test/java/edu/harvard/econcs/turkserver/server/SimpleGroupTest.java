@@ -91,8 +91,10 @@ public class SimpleGroupTest {
 		DataModule dm = new DataModule();
 		
 		Configuration conf = dm.getConfiguration();
-		conf.addProperty(TSConfig.SERVER_HITGOAL, clients);						
-		conf.addProperty(TSConfig.EXP_REPEAT_LIMIT, 1);
+		conf.setProperty(TSConfig.SERVER_DEBUGMODE, true); // No waiting for hit submits
+		conf.setProperty(TSConfig.SERVER_LOBBY_DEFAULT, true);
+		conf.setProperty(TSConfig.SERVER_HITGOAL, clients);						
+		conf.setProperty(TSConfig.EXP_REPEAT_LIMIT, 1);
 		
 		ts = new TurkServer(dm);
 		
@@ -173,7 +175,6 @@ public class SimpleGroupTest {
 			assertEquals("finishExp", lc.getClientBean().lastCall );		
 				
 		ts.awaitTermination();		
-
 	}
 
 }

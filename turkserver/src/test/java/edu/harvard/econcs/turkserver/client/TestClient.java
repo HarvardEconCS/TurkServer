@@ -38,6 +38,10 @@ public class TestClient {
 		this.delay = delay;
 	}
 	
+	public ClientController getController() {
+		return cont;
+	}
+	
 	@StartExperiment
 	void startExp() {
 		lastCall = "startExp";
@@ -77,13 +81,13 @@ public class TestClient {
 	
 	@BroadcastMessage
 	void broadcast(Map<String, Object> msg) {
-//		System.out.println("Got broadcast: " + msg.toString());
+		System.out.println("Got broadcast: " + msg);
 		lastCall = "broadcast";			
 	}
 	
 	@ServiceMessage
 	void service(Map<String, Object> msg) {
-//		System.out.println("Got service: " + msg.toString());
+		System.out.println("Got service: " + msg);
 		lastCall = "service";
 	}
 }

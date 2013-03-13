@@ -77,7 +77,7 @@ public class SessionClient<C> implements ClientController {
 	}
 
 	@Override
-	public boolean isConnected() { return connected; }
+	public boolean isConnected() { return bayeuxClient == null ? connected : bayeuxClient.isConnected(); }
 
 	public boolean isError() { return isError; }
 	
@@ -228,7 +228,8 @@ public class SessionClient<C> implements ClientController {
 		
 		@Listener(Channel.META_DISCONNECT)
 		public void metaDisconnect(Message disconnect) {
-			if( disconnect.isSuccessful() ) {
+			// TODO: this doesn't seem to be working with websocket
+			if( disconnect.isSuccessful() ) {				
 				connected = false;
 			}			
 		}
@@ -262,11 +263,11 @@ public class SessionClient<C> implements ClientController {
 					clientWrapper.triggerClientError(Codec.status_batchfinished);					
 					disconnect();					
 				}
-				else if( "error".equals(status.toString()) ) {					
+				else if( Codec.status_error.equals(status.toString()) ) {					
 					clientWrapper.triggerClientError(m.get("msg").toString());
 					isError = true;
 				}
-				else if( "completed".equals(status.toString()) ) {
+				else if( Codec.status_completed.equals(status.toString()) ) {
 					System.out.println("Got complete confirmation, disconnecting.");
 					disconnect();
 				}
@@ -333,12 +334,11 @@ public class SessionClient<C> implements ClientController {
 		
 	}
 
-	public void submit() {
+	public void submit(String comments) {
 		Map<String, Object> m = new HashMap<String, Object>();
 		
-		m.put("status", "submit");
-		m.put("hitId", hitId);
-		m.put("workerId", workerId);
+		m.put("status", Codec.hitSubmit);
+		m.put("comments", comments);
 		
 		bayeuxClient.getChannel("/service/user").publish(m);
 	}

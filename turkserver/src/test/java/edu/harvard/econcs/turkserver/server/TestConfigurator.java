@@ -5,18 +5,18 @@ import edu.harvard.econcs.turkserver.api.Configurator;
 public class TestConfigurator implements Configurator {
 	
 	final int groupSize;
-	final int delay;
+	final int rounds;
 	
-	public TestConfigurator(int groupSize, int delay) {
+	public TestConfigurator(int groupSize, int rounds) {
 		this.groupSize = groupSize;
-		this.delay = delay;
+		this.rounds = rounds;
 	}
 
 	@Override
 	public void configure(Object experiment, String inputData) {
 		TestExperiment te = (TestExperiment) experiment;
 				
-		te.init(groupSize, delay);
+		te.init(groupSize, rounds);
 	}
 
 	@Override
