@@ -165,6 +165,7 @@ class TSClient
 
       else
         # TODO Do we need to always disconnect even on reload?
+        @unsubscribe()
         $.cometd.disconnect()
 
   # CometD callbacks
