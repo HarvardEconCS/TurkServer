@@ -149,16 +149,20 @@ public class ReadyStateLobby implements Lobby {
 		
 		tryExperimentStart();
 		
+		checkLobbyState();
+		
+		// Notify everyone who is remaining in the lobby
+		broadcastLobbyStatus();
+		return true;
+	}
+
+	void checkLobbyState() {
 		if( !defaultStatus && lobbyStatus.size() < configurator.groupSize() ) {				
 			// Make sure everyone's ready is disabled
 			for( HITWorkerImpl id : lobbyStatus.keySet() ) {
 				lobbyStatus.replace(id, false);
 			}
 		}
-		
-		// Notify everyone who is remaining in the lobby
-		broadcastLobbyStatus();
-		return true;
 	}
 
 	@Override
@@ -172,6 +176,8 @@ public class ReadyStateLobby implements Lobby {
 		
 		logger.info(String.format("%s (%s) removed from lobby",
 				worker.getHitId(), worker.getUsername()));	
+		
+		checkLobbyState();
 		
 		// TODO forward this quit message to lobby instead of a whole list
 		
