@@ -338,6 +338,8 @@ public class TurkHITController implements HITController {
 								requester.grantBonus(workerId, bonus.doubleValue(), assignmentId, feedback);
 								s.setBonusPaid(true);
 							}
+							
+							tracker.saveSession(s);
 
 							approved++;					
 						}
