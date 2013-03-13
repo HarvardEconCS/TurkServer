@@ -120,7 +120,7 @@ public class ExperimentsPanel extends JSplitPane {
 		});
 		
 		txtrFeedback = new JTextArea();
-		txtrFeedback.setText("Thanks for your work!");
+		txtrFeedback.setText("Thanks for playing the trick or treat game!");
 		panel.add(txtrFeedback);
 		
 		panel.add(btnPayWorkers);

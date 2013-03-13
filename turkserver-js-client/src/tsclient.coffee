@@ -314,10 +314,13 @@ class TSClient
       @unsubscribeExp()
       $.cometd.unsubscribe(@userSubscription) if @userSubscription
       @userSubscription = null
-
-  ###
-  TODO: implement lobby updates from client
-  ###    
+  
+  @updateLobbyStatus: (readyStatus) =>
+    unless @localMode
+      @channelSend @lobbySubscription[0],
+        ready: readyStatus
+    else
+      console.log "Lobby status: " + readyStatus
       
   @sendExperimentBroadcast: (msg) =>
     unless @localMode

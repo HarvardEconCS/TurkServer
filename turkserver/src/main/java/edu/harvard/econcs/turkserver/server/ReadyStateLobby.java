@@ -141,7 +141,10 @@ public class ReadyStateLobby implements Lobby {
 		 * Do nothing if user was already removed from lobby
 		 * or there was no change to the status
 		 */
-		if( oldStatus == null || oldStatus == isReady ) return false;
+		if( oldStatus == null || oldStatus == isReady ) {
+			broadcastLobbyStatus(); // TODO remove this line when clients lobby stuff works properly
+			return false;
+		}
 		
 		tryExperimentStart();
 		
@@ -154,7 +157,6 @@ public class ReadyStateLobby implements Lobby {
 		
 		// Notify everyone who is remaining in the lobby
 		broadcastLobbyStatus();
-		
 		return true;
 	}
 
