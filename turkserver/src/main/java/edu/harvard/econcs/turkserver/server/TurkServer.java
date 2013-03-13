@@ -88,17 +88,17 @@ public class TurkServer {
 		childInjector = parentInjector.createChildInjector(Lists.asList(serverModule, otherModules));
 		
 		Configuration conf = dataModule.getConfiguration();				
-		checkExperimentConfiguration(childInjector, conf);
 		
-		String url = conf.getString(TSConfig.MTURK_HIT_EXTERNAL_URL, null);
-		
+		String url = conf.getString(TSConfig.MTURK_HIT_EXTERNAL_URL, null);		
 		if( url == null ) {
 			System.out.println("URL not provided, finding public IP and port...");
 			InetAddress publicAddr = Utils.getNetworkAddr();
 			checkNotNull(publicAddr, "Couldn't find public a IP on this server");
 			int port = conf.getInt(TSConfig.SERVER_HTTPPORT);			
-			url = String.format("http://%s:%d/", publicAddr, port);
+			url = String.format("http://%s:%d/", publicAddr.getHostAddress(), port);
 		}
+		
+		checkExperimentConfiguration(childInjector, conf);
 		
 		HITController thm = childInjector.getInstance(HITController.class);			
 		
@@ -195,8 +195,6 @@ public class TurkServer {
 					"frame height not set");
 			checkNotNull(conf.getInteger(TSConfig.MTURK_HIT_LIFETIME, null),
 					"hit lifetime not set");
-			checkNotNull(conf.getString(TSConfig.MTURK_HIT_EXTERNAL_URL, null),
-					"external url not set");
 	
 			checkNotNull( conf.getInteger(TSConfig.SERVER_HITGOAL, null), 
 					"goal amount not specified");
@@ -261,7 +259,8 @@ public class TurkServer {
 
 	@Override
 	protected void finalize() {
-		gui.dispose();
+		// Was causing mysterious window closings
+		// gui.dispose();
 	}
 
 	public static void main(String[] args) throws Exception {
