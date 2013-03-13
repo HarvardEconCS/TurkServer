@@ -207,6 +207,14 @@ public abstract class SessionServer extends Thread {
 		} catch (SessionOverlapException e) {
 			SessionUtils.sendStatus(conn, Codec.status_sessionoverlap, Messages.SESSION_OVERLAP);
 			logger.info("Worker {} connected to overlapping session (HIT {})", workerId, hitId);
+			
+			/*
+			 * Disable this HIT and prevent recurring problems
+			 * We can do this synchronously in this thread
+			 */
+			logger.info("Disabling overlapping HIT {} as it was picked up by someone else", hitId);
+			hitCont.disableHIT(hitId);
+			
 			return null;
 		}
 		

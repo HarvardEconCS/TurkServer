@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import net.andrewmao.misc.ConcurrentBooleanCounter;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
@@ -129,20 +130,20 @@ public class ReadyStateLobby implements Lobby {
 	@Override
 	public boolean updateStatus(HITWorkerImpl hitw, Map<String, Object> data) {
 		
-		boolean isReady = defaultStatus || Boolean.parseBoolean(data.get("ready").toString());
+		boolean newStatus = defaultStatus || Boolean.parseBoolean(data.get("ready").toString());
 		
 		/*
 		 * Ignore lobby updates for people not in lobby
 		 * MONUMENT FOR MASSIVE DOUBLE-JOIN MYSTERY BUG
 		 */
-		Boolean oldStatus = lobbyStatus.replace(hitw, isReady);
+		Boolean oldStatus = lobbyStatus.replace(hitw, newStatus);
 		
 		/*
 		 * Do nothing if user was already removed from lobby
 		 * or there was no change to the status
 		 */
-		if( oldStatus == null || oldStatus == isReady ) {
-			broadcastLobbyStatus(); // TODO remove this line when clients lobby stuff works properly
+		if( oldStatus == null || oldStatus == newStatus ) {
+			broadcastLobbyStatus(); // TODO remove this once lobby updates are fixed
 			return false;
 		}
 		
@@ -173,6 +174,7 @@ public class ReadyStateLobby implements Lobby {
 				worker.getHitId(), worker.getUsername()));	
 		
 		// TODO forward this quit message to lobby instead of a whole list
+		
 //		ServerSession session = worker.cometdSession.get();		 
 //		Map<String, Object> data = new TreeMap<String, Object>();
 //		data.put("status", "quit");
@@ -222,7 +224,10 @@ public class ReadyStateLobby implements Lobby {
 			if( session == null ) continue;
 			
 			// clientId, username, and status
-			users.add(new Object[] { session.getId(), user.getUsername(), e.getValue() });
+			users.add(ImmutableMap.<String, Object>of(
+					"id", session.getId(),
+					"username", user.getUsername(),
+					"ready", e.getValue() ));
 		}
 		data.put("users", users);
 		

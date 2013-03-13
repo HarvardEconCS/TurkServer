@@ -220,6 +220,11 @@ public class TurkHITController implements HITController {
 		return adjusted;
 	}
 
+	@Override
+	public void disableHIT(String hitId) {
+		requester.safeDisableHIT(hitId);		
+	}
+
 	/**
 	 * Disables all hits with no experiment or result in the current set
 	 * Synchronous method.

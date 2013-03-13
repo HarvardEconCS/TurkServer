@@ -187,11 +187,13 @@ public final class GroupServer extends SessionServer {
 			return false;
 		}
 		
-		boolean broadcast;
-		if( broadcast = lobby.updateStatus(hitw, data) )
-			serverGUI.updateLobbyModel();
+		boolean broadcastUpdate;
 		
-		return broadcast;
+		if( broadcastUpdate = lobby.updateStatus(hitw, data) ) {
+			serverGUI.updateLobbyModel();
+		}
+		
+		return broadcastUpdate;
 	}
 
 	@Override

@@ -140,7 +140,7 @@ public class LobbyClient<C> extends SessionClient<C> implements ClientLobbyContr
 		if( this.isReady != isReady ) {
 			this.isReady = isReady;
 			
-			// Only update if changed			
+			// TODO Only update if changed			
 			updateLobbyStatus(null);
 		}
 	}		

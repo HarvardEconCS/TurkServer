@@ -33,6 +33,12 @@ public interface HITController extends Runnable {
 	void postBatchHITs(int target, int minOverhead, int maxOverhead, int minDelay, double pctOverhead);
 
 	/**
+	 * Disable a particular HIT (mostly due to overlapping sessions)
+	 * @param hitId
+	 */
+	void disableHIT(String hitId);
+
+	/**
 	 * Called by the server to expire all remaining HITs once a set is finished
 	 */
 	void disableAndShutdown();

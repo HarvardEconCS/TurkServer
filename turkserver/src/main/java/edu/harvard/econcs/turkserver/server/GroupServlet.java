@@ -46,19 +46,13 @@ public class GroupServlet extends SessionServlet {
 			
 			Map<String,Object> data = message.getDataAsMap();			
 			
-			if( data.containsKey("status") ) {
-				if( "join".equals(data.get("status".toString()))) {
-					// TODO put this in a consistent spot - username is before lobby now
-					return theServer.lobbyLogin(session, data.get("username").toString());
-				}
-				else {
-					// broadcast all quit (or other) messages
-					return true;
-				}
+			if( data.containsKey("status") ) {				
+				// broadcast all join quit (or other) messages, once they are implemented
+				return true;		
 			}
 			else if( data.containsKey("ready") ) {														
 				return theServer.lobbyUpdate(session, data);
-			}				
+			}
 			
 			return true;
 		}

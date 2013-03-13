@@ -33,6 +33,12 @@ public class FakeHITController implements HITController {
 	}
 
 	@Override
+	public void disableHIT(String hitId) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
 	public void disableAndShutdown() {
 		// TODO Auto-generated method stub
 
