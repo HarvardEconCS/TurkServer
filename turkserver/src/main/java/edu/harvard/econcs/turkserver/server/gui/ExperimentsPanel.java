@@ -50,7 +50,7 @@ public class ExperimentsPanel extends JSplitPane {
 	private JLabel lblTotalHits;
 	private JLabel label;
 	private JLabel lblSelectASet;
-	private JTextArea txtrThanksForYour;
+	private JTextArea txtrFeedback;
 
 	/**
 	 * Create the panel.
@@ -115,13 +115,13 @@ public class ExperimentsPanel extends JSplitPane {
 		btnPayWorkers.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				if (selectedSet != null && GUIUtils.checkRequesterNotNull(req, ExperimentsPanel.this))
-					new ReviewAndPayWorker().execute();
+					new ReviewAndPayWorker(txtrFeedback.getText()).execute();
 			}
 		});
 		
-		txtrThanksForYour = new JTextArea();
-		txtrThanksForYour.setText("Thanks for your work!");
-		panel.add(txtrThanksForYour);
+		txtrFeedback = new JTextArea();
+		txtrFeedback.setText("Thanks for your work!");
+		panel.add(txtrFeedback);
 		
 		panel.add(btnPayWorkers);
 		
@@ -194,6 +194,7 @@ public class ExperimentsPanel extends JSplitPane {
 			dt.setSetId(selectedSet);
 			return dt.getSetSessionSummary();
 		}
+		
 		@Override protected void done() {
 			SessionSummary data;
 			try {
@@ -215,6 +216,7 @@ public class ExperimentsPanel extends JSplitPane {
 		@Override protected Integer doInBackground() throws Exception {
 			return hits.disableUnusedFromDB();			
 		}
+		
 		@Override protected void done() {
 			int deletedCount;
 			try {
@@ -230,9 +232,16 @@ public class ExperimentsPanel extends JSplitPane {
 	}
 
 	public class ReviewAndPayWorker extends SwingWorker<Integer, Object> {	
-		@Override protected Integer doInBackground() throws Exception {
-			return hits.reviewAndPayWorkers(txtrThanksForYour.getText());
+		final String approvalText;
+		
+		ReviewAndPayWorker(String approvalText) { 
+			this.approvalText = approvalText; 
 		}
+		
+		@Override protected Integer doInBackground() throws Exception {					
+			return hits.reviewAndPayWorkers(approvalText);
+		}
+		
 		// TODO inform about how many workers paid and $ spent
 		@Override protected void done() {
 			int approvedCount;
@@ -251,6 +260,7 @@ public class ExperimentsPanel extends JSplitPane {
 		@Override protected Integer doInBackground() throws Exception {			
 			return hits.checkAndDispose();
 		}
+		
 		@Override protected void done() {
 			int disposedCount;
 			try {
