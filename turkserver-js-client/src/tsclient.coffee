@@ -252,7 +252,8 @@ class TSClient
         # disconnect from the server and tell worker to return the hit
         @unsubscribe()
         $.cometd.disconnect()        
-        alert(data.msg)
+        @errorMessage_cb?(status, data.msg)
+        # alert(data.msg)
       
   @submitHIT: (data) =>
     @channelSend "/service/user",
