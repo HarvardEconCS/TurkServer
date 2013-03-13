@@ -14,11 +14,9 @@ import com.google.common.collect.Lists;
 import edu.harvard.econcs.turkserver.client.LobbyClient;
 import edu.harvard.econcs.turkserver.client.TestClient;
 import edu.harvard.econcs.turkserver.config.DataModule;
-import edu.harvard.econcs.turkserver.config.DatabaseType;
-import edu.harvard.econcs.turkserver.config.ExperimentType;
-import edu.harvard.econcs.turkserver.config.HITCreation;
-import edu.harvard.econcs.turkserver.config.LoggingType;
+import edu.harvard.econcs.turkserver.config.ConfigModules;
 import edu.harvard.econcs.turkserver.config.TSConfig;
+import edu.harvard.econcs.turkserver.config.TestConfigModules;
 import edu.harvard.econcs.turkserver.config.TestServerModule;
 
 public class ConcurrentGroupTest {
@@ -76,10 +74,10 @@ public class ConcurrentGroupTest {
 		
 		ts.runExperiment(
 				new GroupModule(),
-				DatabaseType.TEMP_DATABASE,
-				ExperimentType.GROUP_EXPERIMENTS,
-				HITCreation.NO_HITS,
-				LoggingType.SCREEN_LOGGING				
+				TestConfigModules.TEMP_DATABASE,
+				ConfigModules.GROUP_EXPERIMENTS,
+				TestConfigModules.NO_HITS,
+				TestConfigModules.SCREEN_LOGGING				
 				);
 		
 		SessionServer ss = ts.sessionServer;

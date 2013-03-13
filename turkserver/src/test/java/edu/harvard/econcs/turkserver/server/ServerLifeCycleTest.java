@@ -8,11 +8,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import edu.harvard.econcs.turkserver.config.DataModule;
-import edu.harvard.econcs.turkserver.config.DatabaseType;
-import edu.harvard.econcs.turkserver.config.ExperimentType;
-import edu.harvard.econcs.turkserver.config.HITCreation;
-import edu.harvard.econcs.turkserver.config.LoggingType;
+import edu.harvard.econcs.turkserver.config.ConfigModules;
 import edu.harvard.econcs.turkserver.config.TSConfig;
+import edu.harvard.econcs.turkserver.config.TestConfigModules;
 import edu.harvard.econcs.turkserver.config.TestServerModule;
 
 /**
@@ -60,10 +58,10 @@ public class ServerLifeCycleTest {
 		
 		ts.runExperiment(
 				new GroupModule(),
-				ExperimentType.GROUP_EXPERIMENTS,
-				DatabaseType.TEMP_DATABASE,
-				HITCreation.NO_HITS,
-				LoggingType.SCREEN_LOGGING
+				ConfigModules.GROUP_EXPERIMENTS,
+				TestConfigModules.TEMP_DATABASE,
+				TestConfigModules.NO_HITS,
+				TestConfigModules.SCREEN_LOGGING
 				);
 		
 		ts.sessionServer.join();		

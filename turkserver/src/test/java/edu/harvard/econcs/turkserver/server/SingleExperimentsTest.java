@@ -24,11 +24,9 @@ import com.google.common.collect.Multimap;
 import edu.harvard.econcs.turkserver.client.SessionClient;
 import edu.harvard.econcs.turkserver.client.TestClient;
 import edu.harvard.econcs.turkserver.config.DataModule;
-import edu.harvard.econcs.turkserver.config.DatabaseType;
-import edu.harvard.econcs.turkserver.config.ExperimentType;
-import edu.harvard.econcs.turkserver.config.HITCreation;
-import edu.harvard.econcs.turkserver.config.LoggingType;
+import edu.harvard.econcs.turkserver.config.ConfigModules;
 import edu.harvard.econcs.turkserver.config.TSConfig;
+import edu.harvard.econcs.turkserver.config.TestConfigModules;
 import edu.harvard.econcs.turkserver.config.TestServerModule;
 
 public class SingleExperimentsTest {
@@ -106,10 +104,10 @@ public class SingleExperimentsTest {
 		
 		ts.runExperiment(
 				new SingleTestModule(),
-				ExperimentType.SINGLE_EXPERIMENTS,
-				DatabaseType.TEMP_DATABASE,
-				HITCreation.NO_HITS,
-				LoggingType.SCREEN_LOGGING
+				ConfigModules.SINGLE_EXPERIMENTS,
+				TestConfigModules.TEMP_DATABASE,
+				TestConfigModules.NO_HITS,
+				TestConfigModules.SCREEN_LOGGING
 				);
 				
 		Thread.sleep(500);
