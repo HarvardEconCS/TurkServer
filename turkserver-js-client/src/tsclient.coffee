@@ -299,7 +299,7 @@ class TSClient
     console.log "Subscribed to exp channels " + channel
   
   @unsubscribeExp: ->
-    $.cometd.unsubscribe(@expBroadcastSubscrption) if @expBroadcastSubscription
+    $.cometd.unsubscribe(@expBroadcastSubscription) if @expBroadcastSubscription
     @expBroadcastSubscription = null    
     $.cometd.unsubscribe(@expServiceSubscription) if @expServiceSubscription
     @expServiceSubscription = null     
