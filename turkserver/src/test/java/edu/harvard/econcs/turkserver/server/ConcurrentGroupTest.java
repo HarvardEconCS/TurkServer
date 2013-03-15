@@ -18,6 +18,7 @@ import edu.harvard.econcs.turkserver.config.ConfigModules;
 import edu.harvard.econcs.turkserver.config.TSConfig;
 import edu.harvard.econcs.turkserver.config.TestConfigModules;
 import edu.harvard.econcs.turkserver.config.TestServerModule;
+import edu.harvard.econcs.turkserver.server.mysql.MySQLDataTracker;
 
 public class ConcurrentGroupTest {
 	
@@ -63,12 +64,15 @@ public class ConcurrentGroupTest {
 	@Test(timeout=20000)
 	public void test() throws Exception {
 		DataModule dataModule = new DataModule("turkserver.properties");
-		
+						
 		Configuration conf = dataModule.getConfiguration();
 		conf.setProperty(TSConfig.SERVER_DEBUGMODE, true); // No waiting for hit submits
 		conf.setProperty(TSConfig.SERVER_LOBBY_DEFAULT, true);
 		conf.setProperty(TSConfig.SERVER_HITGOAL, clients);						
 		conf.setProperty(TSConfig.EXP_REPEAT_LIMIT, clients);
+		
+		// Create database
+		MySQLDataTracker.createSchema(conf);
 		
 		TurkServer ts = new TurkServer(dataModule);
 		
