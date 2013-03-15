@@ -77,7 +77,10 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 		pbds = new BoneCPDataSource();		
 		pbds.setDatasourceBean(ds);
 		pbds.setMinConnectionsPerPartition(1);
+		
+//		pbds.setMaxConnectionsPerPartition(5); // Want some deadlocks?
 		pbds.setMaxConnectionsPerPartition(10);
+		
 		pbds.setIdleConnectionTestPeriodInMinutes(60);
 		pbds.setIdleMaxAgeInMinutes(240);
 		pbds.setPartitionCount(1);

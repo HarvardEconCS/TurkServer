@@ -62,7 +62,7 @@ public class ConcurrentGroupTest {
 
 	@Test(timeout=20000)
 	public void test() throws Exception {
-		DataModule dataModule = new DataModule();
+		DataModule dataModule = new DataModule("turkserver.properties");
 		
 		Configuration conf = dataModule.getConfiguration();
 		conf.setProperty(TSConfig.SERVER_DEBUGMODE, true); // No waiting for hit submits
@@ -74,10 +74,10 @@ public class ConcurrentGroupTest {
 		
 		ts.runExperiment(
 				new GroupModule(),
-				TestConfigModules.TEMP_DATABASE,
+				ConfigModules.MYSQL_DATABASE,
 				ConfigModules.GROUP_EXPERIMENTS,
 				TestConfigModules.NO_HITS,
-				TestConfigModules.SCREEN_LOGGING				
+				ConfigModules.PERSIST_LOGGING				
 				);
 		
 		SessionServer ss = ts.sessionServer;
