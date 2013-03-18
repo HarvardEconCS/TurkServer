@@ -78,7 +78,9 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 		pbds.setDatasourceBean(ds);
 		pbds.setMinConnectionsPerPartition(1);
 		
+//		pbds.setCloseConnectionWatch(true);
 //		pbds.setMaxConnectionsPerPartition(5); // Want some deadlocks?
+		
 		pbds.setMaxConnectionsPerPartition(10);
 		
 		pbds.setIdleConnectionTestPeriodInMinutes(60);
@@ -445,6 +447,37 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	}
 	
 	@Override
+	public Session deleteUnusedSession() {
+		try( Connection conn = pbds.getConnection() ) {	
+			
+			/*
+			 * SELECT * FROM session WHERE setId=? AND experimentId IS NULL
+			 */
+			Session unused = new SQLQueryImpl(conn, dialect)
+			.from(_session)
+			.where(_session.setId.eq(setID), 
+					_session.workerId.isNull(),
+					_session.assignmentId.isNull())
+			.limit(1)
+			.singleResult(_session);
+			
+			if( unused == null ) return null;
+			
+			logger.info("Found unused session {}, deleting", unused.getHitId());
+							
+			new SQLDeleteClause(conn, dialect, _session)
+			.where(_session.setId.eq(setID), _session.hitId.eq(unused.getHitId()))
+			.execute();
+			
+			return unused;
+			
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	@Override
 	public List<Session> expireUnusedSessions() {
 		try( Connection conn = pbds.getConnection() ) {	
 			
@@ -506,34 +539,20 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 		final Process pr = Runtime.getRuntime().exec(cmd);
 
 		new Thread() {
-			public void run() {
-				OutputStream stdin = null;
-				try {
-					Files.copy(f, stdin = pr.getOutputStream());
+			public void run() {				 
+				try (OutputStream stdin = pr.getOutputStream()) {
+					Files.copy(f, stdin);
 				} 
-				catch (IOException e) { e.printStackTrace(); }
-				finally {
-					if( stdin != null ) {
-						try { stdin.close(); } 
-						catch (IOException e) { e.printStackTrace(); }
-					}
-				}				
+				catch (IOException e) { e.printStackTrace(); }							
 			}
 		}.start();
 		
 		new Thread() {
-			public void run() {
-				InputStream stdout = null;
-				try {
-					ByteStreams.copy(stdout = pr.getInputStream(), System.out);
+			public void run() {				
+				try (InputStream stdout = pr.getInputStream() ) {
+					ByteStreams.copy(stdout, System.out);
 				} 
 				catch (IOException e) { e.printStackTrace(); }
-				finally {
-					if( stdout != null ) {
-						try { stdout.close(); } 
-						catch (IOException e) { e.printStackTrace(); }
-					}
-				}				
 			}
 		}.start();				
 

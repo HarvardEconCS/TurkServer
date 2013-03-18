@@ -130,8 +130,9 @@ public class TurkServer {
 		int max = conf.getInt(TSConfig.HITS_MAX_OVERHEAD);
 		double pct = conf.getDouble(TSConfig.HITS_OVERHEAD_PERCENT);
 		int delay = conf.getInt(TSConfig.HITS_MIN_DELAY);
+		int maxDelay = conf.getInt(TSConfig.HITS_MAX_DELAY);
 		
-		thm.postBatchHITs(target, min, max, delay, pct);
+		thm.postBatchHITs(target, min, max, delay, maxDelay, pct);
 	}
 	
 	public SessionServer getSessionServer() {

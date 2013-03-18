@@ -78,7 +78,11 @@ public class TSConfig {
 	/**
 	 * Minimum number of milliseconds between creating HITs
 	 */
-	public static final String HITS_MIN_DELAY = "server.hit.mindelay";	
+	public static final String HITS_MIN_DELAY = "server.hit.mindelay";
+	/**
+	 * Maximum amount of millis between creating HITs (keeps at top of list)
+	 */
+	public static final String HITS_MAX_DELAY = "server.hit.maxdelay";
 	/**
 	 * Overhead, percentage wise, of HITs that should be created (0 < x < 1)
 	 */
@@ -124,6 +128,7 @@ public class TSConfig {
 		
 		// Sensible defaults for creating HITs		
 		conf.setProperty(HITS_MIN_DELAY, 1000);
+		conf.setProperty(HITS_MAX_DELAY, 60000);
 		conf.setProperty(HITS_OVERHEAD_PERCENT, 0.1);
 		conf.setProperty(HITS_MIN_OVERHEAD, 10);
 		conf.setProperty(HITS_MAX_OVERHEAD, 50);

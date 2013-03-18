@@ -38,7 +38,7 @@ public class TurkHITController implements HITController {
 	private static final int HIT_SLEEP_MILLIS = 200;
 	private static final int SERVICE_UNAVAILABLE_MILLIS = 5000;
 
-	private static final CreateTask POISON_PILL = new CreateTask(0,0,0,0,0);
+	private static final CreateTask POISON_PILL = new CreateTask(0,0,0,0,0,0);
 	
 	protected final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 	
@@ -54,6 +54,8 @@ public class TurkHITController implements HITController {
 			
 	private final BlockingQueue<CreateTask> jobs;
 	private volatile boolean expireFlag;
+	
+	private long lastHitCreation = 0;
 	
 	/**
 	 * 
@@ -120,19 +122,20 @@ public class TurkHITController implements HITController {
 	}		
 	
 	@Override
-	public void postBatchHITs(int target, int minOverhead, int maxOverhead, int minDelay, double pctOverhead) {
-		jobs.offer(new CreateTask(target, minOverhead, maxOverhead, minDelay, pctOverhead));
+	public void postBatchHITs(int target, int minOverhead, int maxOverhead, int minDelay, int maxDelay, double pctOverhead) {
+		jobs.offer(new CreateTask(target, minOverhead, maxOverhead, minDelay, maxDelay, pctOverhead));
 	}
 	
 	static class CreateTask {
-		final int target, minOverhead, maxOverhead, minDelay;
+		final int target, minOverhead, maxOverhead, minDelay, maxDelay;
 		final double pctOverhead;
 		public CreateTask(int target, int minOverhead, int maxOverhead, 
-				int minDelay, double pctOverhead) {
+				int minDelay, int maxDelay, double pctOverhead) {
 			this.target = target;
 			this.minOverhead = minOverhead;
 			this.maxOverhead = maxOverhead;
 			this.minDelay = minDelay;
+			this.maxDelay = maxDelay;
 			this.pctOverhead = pctOverhead;
 		}	
 	}
@@ -148,30 +151,41 @@ public class TurkHITController implements HITController {
 		Thread.currentThread().setName(this.getClass().getSimpleName());			
 		
 		while( !expireFlag ) {
-			CreateTask nextJob = null;
-			try { nextJob = jobs.take(); }
+			CreateTask job = null;
+			try { job = jobs.take(); }
 			catch (InterruptedException e) { e.printStackTrace(); }			
-			if( nextJob == POISON_PILL ) continue;						
+			if( job == POISON_PILL ) continue;						
 			
-			logger.info("Starting HIT creation: max overhead {}, min delay {}", nextJob.maxOverhead, nextJob.minDelay);			
+			logger.info("Starting HIT creation: max overhead {}, min delay {}", job.maxOverhead, job.minDelay);			
 			
-			int maxHITs = getAdaptiveTarget(nextJob.target, nextJob);
+			int maxHITs = getAdaptiveTarget(job.target, job);
 					
 			SessionSummary summary;
 			
 			// Create HITs until our limit is reached, or expire			
 			do {																		
-				logger.debug("Sleeping for " + nextJob.minDelay);
+				logger.debug("Sleeping for " + job.minDelay);
 				
-				try { Thread.sleep(nextJob.minDelay); } 
+				try { Thread.sleep(job.minDelay); } 
 				catch (InterruptedException e) { e.printStackTrace();	}
 				
 				// Quit if expiration was reached while sleeping
 				if( expireFlag ) break;								
 				
-				summary = tracker.getSetSessionSummary();
+				if( System.currentTimeMillis() - lastHitCreation > job.maxDelay ) {
+					// Delete a HIT from DB and disable it
+					Session unused = tracker.deleteUnusedSession();
+					if( unused == null ) {
+						logger.warn("Could not find any unused HITs to delete for reposting");
+					}
+					else {
+						logger.info("Disabling {} to repost another HIT", unused.getHitId());
+						requester.safeDisableHIT(unused.getHitId());
+					}
+				}
 				
-				int target = getAdaptiveTarget(summary.assignedHITs, nextJob);
+				summary = tracker.getSetSessionSummary();				
+				int target = getAdaptiveTarget(summary.assignedHITs, job);
 				if( summary.createdHITs >= target ) continue;
 							
 				try {
@@ -180,6 +194,7 @@ public class TurkHITController implements HITController {
 
 					String hitId = resp.getHITId();
 					tracker.saveHITId(hitId);
+					lastHitCreation = System.currentTimeMillis();
 					
 					logger.info(String.format("Created %d HITs", summary.createdHITs + 1));
 				} catch (ServiceException e) {					

@@ -258,6 +258,19 @@ public class MockDataTracker extends ExperimentDataTracker {
 	}
 
 	@Override
+	public Session deleteUnusedSession() {
+		for( Map.Entry<String, Session> e : hitIdToSessions.entrySet() ) {
+			Session s = e.getValue();
+			if( s.getWorkerId() == null ) {
+				hitIdToSessions.remove(e.getKey());
+				return s;
+			}
+		}
+		
+		return null;				
+	}
+
+	@Override
 	public List<Session> expireUnusedSessions() {
 		// TODO implement this if needed for testing
 		logger.warn("Deleting expiring HITs not yet implemented in dummy tracker");

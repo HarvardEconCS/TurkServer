@@ -28,7 +28,8 @@ public class FakeHITController implements HITController {
 	}
 
 	@Override
-	public void postBatchHITs(int target, int minOverhead, int maxOverhead, int minDelay, double pctOverhead) {		
+	public void postBatchHITs(int target, int minOverhead, int maxOverhead, 
+			int minDelay, int maxDelay, double pctOverhead) {		
 		System.out.printf("Would post up to %d hit overhead with delay %d\n", target + maxOverhead, minDelay);
 	}
 

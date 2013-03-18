@@ -28,9 +28,11 @@ public interface HITController extends Runnable {
 	 * @param minOverhead
 	 * @param maxOverhead
 	 * @param minDelay
+	 * @param maxDelay
 	 * @param pctOverhead
 	 */
-	void postBatchHITs(int target, int minOverhead, int maxOverhead, int minDelay, double pctOverhead);
+	void postBatchHITs(int target, int minOverhead, int maxOverhead, 
+			int minDelay, int maxDelay, double pctOverhead);
 
 	/**
 	 * Disable a particular HIT (mostly due to overlapping sessions)

@@ -34,7 +34,7 @@ public class TurkHITControllerTest {
 		int min = 10;
 		int max = 50;
 		double overhead = 0.15;
-		CreateTask someTask = new CreateTask(num, min, max, 0, overhead);
+		CreateTask someTask = new CreateTask(num, min, max, 0, 0, overhead);
 		
 		for( int i = 0; i <= 400; i++ ) {
 			int target = TurkHITController.getAdaptiveTarget(i, someTask);						
@@ -59,6 +59,7 @@ public class TurkHITControllerTest {
 		int min = 10;
 		int max = 50;
 		int delay = 2;
+		int maxdelay = 1000;
 		double overhead = 0.1;		
 		
 		Set<String> unusedHITs = Collections.synchronizedSet(new HashSet<String>());
@@ -66,7 +67,7 @@ public class TurkHITControllerTest {
 		Set<String> completedHITs = new HashSet<String>();
 		
 		mockReq.setCreationSet(unusedHITs);
-		hits.postBatchHITs(num, min, max, delay, overhead);
+		hits.postBatchHITs(num, min, max, delay, maxdelay, overhead);
 		
 		// Randomly accept, return, and complete HITs
 		do {
