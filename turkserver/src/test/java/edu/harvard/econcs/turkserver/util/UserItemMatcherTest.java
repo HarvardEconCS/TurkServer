@@ -52,9 +52,8 @@ public class UserItemMatcherTest {
 		this.arrivals = numItems * repetition;
 	}
 	
-	Set<String> items;
-	Set<String> users;
-	UserItemMatcher<String, String> assigner;	
+	Set<String> items, users;
+	UserItemMatcher<String, String> matcher;	
 	
 	Map<String, String> busyUsers;
 	Set<String> availableUsers;
@@ -73,7 +72,7 @@ public class UserItemMatcherTest {
 			users.add("User " + i);
 		}
 		
-		assigner = new UserItemMatcher<>(items, comp);
+		matcher = new UserItemMatcher<>(items, comp);
 		
 		busyUsers = new HashMap<String, String>();
 		availableUsers = new HashSet<String>(users);
@@ -115,7 +114,7 @@ public class UserItemMatcherTest {
 		
 		int totalAssignments = 0;
 		
-		for( Entry<String, Set<String>> itemUsersEntry : assigner.itemUsers.entrySet() ) {
+		for( Entry<String, Set<String>> itemUsersEntry : matcher.itemUsers.entrySet() ) {
 			// Check that each item was done the same number of times
 			int nTimesDone = itemUsersEntry.getValue().size();
 								
@@ -123,10 +122,10 @@ public class UserItemMatcherTest {
 		}
 		
 		// This should ensure no one was assigned to the same item twice
-		assertEquals(numItems, assigner.itemUsers.size());
+		assertEquals(numItems, matcher.itemUsers.size());
 		assertEquals(arrivals, totalAssignments);
 		
-		for( Entry<String, Set<String>> itemUsersEntry : assigner.itemUsers.entrySet() ) {
+		for( Entry<String, Set<String>> itemUsersEntry : matcher.itemUsers.entrySet() ) {
 			// Check that each item was done the same number of times
 			int nTimesDone = itemUsersEntry.getValue().size();
 			
@@ -143,7 +142,7 @@ public class UserItemMatcherTest {
 	}
 
 	void beginAssignment(String user) {
-		String item = assigner.getNewAssignment(user);
+		String item = matcher.getNewAssignment(user);
 //		System.out.println(user + " started " + item);
 		
 		availableUsers.remove(user);
@@ -151,7 +150,7 @@ public class UserItemMatcherTest {
 	}
 
 	void completeAssignment(String user, String item) {
-		assigner.completeAssignment(user, item);
+		matcher.completeAssignment(user, item);
 //		System.out.println(user + " completed " + item);
 		
 		busyUsers.remove(user);

@@ -170,7 +170,7 @@ public class TurkHITController implements HITController {
 				catch (InterruptedException e) { e.printStackTrace();	}
 				
 				// Quit if expiration was reached while sleeping
-				if( expireFlag ) break;								
+				if( expireFlag ) break;
 				
 //				if( System.currentTimeMillis() - lastHitCreation > job.maxDelay ) {
 					/*

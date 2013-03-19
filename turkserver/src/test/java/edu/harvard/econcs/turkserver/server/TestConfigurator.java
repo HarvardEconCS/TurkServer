@@ -1,6 +1,7 @@
 package edu.harvard.econcs.turkserver.server;
 
 import edu.harvard.econcs.turkserver.api.Configurator;
+import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
 
 public class TestConfigurator implements Configurator {
 	
@@ -13,10 +14,12 @@ public class TestConfigurator implements Configurator {
 	}
 
 	@Override
-	public void configure(Object experiment, String inputData) {
+	public String configure(Object experiment, String expId, HITWorkerGroup group) {
 		TestExperiment te = (TestExperiment) experiment;
 				
 		te.init(groupSize, rounds);
+		
+		return "test treatment";
 	}
 
 	@Override

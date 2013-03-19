@@ -24,17 +24,18 @@ import com.google.inject.name.Named;
 
 import edu.harvard.econcs.turkserver.config.TSConfig;
 import edu.harvard.econcs.turkserver.schema.Experiment;
-import edu.harvard.econcs.turkserver.server.Assigner;
 
 /**
  * Simple assigner that just assigns items to incoming users without regard to
  * user-item uniqueness 
  * 
+ * TODO: replace this whole class using UserItemMatcher
+ * 
  * @author mao
  *
  */
 @Singleton
-public class RoundRobinAssigner implements Assigner {
+public class RoundRobinAssigner {
 
 	protected final Logger logger = LoggerFactory.getLogger(this.getClass().getSimpleName());
 	
@@ -68,19 +69,13 @@ public class RoundRobinAssigner implements Assigner {
 	public RoundRobinAssigner(Set<String> assignments) {
 		this(assignments, null);				
 	}
-
-	@Override
-	public String getAssignment() {
-		return getAssignment(null, null);
-	}
-
+	
 	/**
 	 * Get an assignment for an experiment
 	 * 
 	 * @param exp can be null, or contain prior data
 	 * @return
-	 */
-	@Override
+	 */	
 	public String getAssignment(String user, String prevItem) {
 		
 		if( prevItem != null && assignments.contains(prevItem) ) {
@@ -103,8 +98,7 @@ public class RoundRobinAssigner implements Assigner {
 		// choose randomly among the lowest counts
 		return RandomSelection.selectRandom(li).obj;		
 	}
-	
-	@Override
+		
 	public void completeAssignment(String item) {
 		if( !itemCounts.containsKey(item) ) {
 			System.out.println("Warning: unexpected assignment completed: " + item);
@@ -120,15 +114,6 @@ public class RoundRobinAssigner implements Assigner {
 			ent.count.incrementAndGet();
 			assignments.add(ent);	
 		}
-	}
-
-	/**
-	 * Increment the completed assignment record 
-	 * @param item
-	 */
-	@Override
-	public void completeAssignment(String user, String item) {
-		completeAssignment(item);
 	}
 	
 	static class CountingEntry<E extends Comparable<? super E>> implements Comparable<CountingEntry<E>> {

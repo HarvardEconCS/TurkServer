@@ -2,8 +2,6 @@ package edu.harvard.econcs.turkserver.server;
 
 import static org.junit.Assert.*;
 
-import java.util.Collections;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -12,7 +10,6 @@ import edu.harvard.econcs.turkserver.cometd.MockServerSession;
 import edu.harvard.econcs.turkserver.logging.FakeExperimentLog;
 import edu.harvard.econcs.turkserver.schema.Session;
 import edu.harvard.econcs.turkserver.server.mysql.MockDataTracker;
-import edu.harvard.econcs.turkserver.util.RoundRobinAssigner;
 
 public class ExperimentsTest {
 	
@@ -23,8 +20,7 @@ public class ExperimentsTest {
 	public void setUp() throws Exception {
 		exps = new Experiments(
 				TestExperiment.class,
-				new DummyConfigurator(1),
-				new RoundRobinAssigner(Collections.singleton("test"), null),
+				new DummyConfigurator(1),				
 				new MockDataTracker(),
 				new EventAnnotationManager()
 				);

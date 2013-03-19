@@ -57,8 +57,7 @@ public class Experiments {
 		}			
 	};
 	
-	final EventAnnotationManager manager;
-	final Assigner assigner;
+	final EventAnnotationManager manager;	
 	final ExperimentDataTracker tracker;
 	
 	final Configurator configurator;
@@ -74,7 +73,6 @@ public class Experiments {
 	Experiments(
 			@Named(TSConfig.EXP_CLASS) Class<?> expClass,
 			@Named(TSConfig.EXP_CONFIGURATOR) Configurator configurator,			
-			Assigner assigner,
 			ExperimentDataTracker tracker,
 			EventAnnotationManager manager
 			) {
@@ -84,7 +82,6 @@ public class Experiments {
 		this.configurator = configurator;
 		
 		this.tracker = tracker;
-		this.assigner = assigner;
 		this.manager = manager;
 		
 		this.currentExps = concMapMaker.makeMap();
@@ -163,14 +160,13 @@ public class Experiments {
 	void startExperiment(final HITWorkerGroup group,
 			final ExperimentControllerImpl cont, Object experimentBean) {		
 		
-		// Initialize the experiment data
-		String inputData = assigner.getAssignment();
-		configurator.configure(experimentBean, inputData);
-		
 		// Create a unique ID for an experiment, based on current timestamp
 		long startTime = System.currentTimeMillis();
 		final String expId = Utils.getTimeString(startTime);
 		String expChannel = expId.replace(" ", "_");
+		
+		// Initialize the experiment data
+		String inputData = configurator.configure(experimentBean, expId, group);
 		
 		// Register callbacks on the experiment class
 		manager.processExperiment(expId, experimentBean);		

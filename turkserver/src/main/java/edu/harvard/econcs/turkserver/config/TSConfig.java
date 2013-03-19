@@ -53,6 +53,7 @@ public class TSConfig {
 	public static final String EXP_CONFIGURATOR = "experiment.configurator";
 	public static final String EXP_CLASS = "experiment.class";	
 	public static final String EXP_SETID = "experiment.setid";	
+	
 	public static final String EXP_INPUT_LIST = "experiment.inputdata";	
 	
 	/**

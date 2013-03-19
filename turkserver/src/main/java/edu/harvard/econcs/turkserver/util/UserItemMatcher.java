@@ -37,11 +37,15 @@ public class UserItemMatcher<U, I> {
 
 	Map<I, Set<U>> itemUsers;
 	ConcurrentHashMap<U, I> currentAssignments;
-	ConcurrentSkipListSet<CountingKey<I>> orderedItems;
+	ConcurrentSkipListSet<CountingKey> orderedItems;
+	
+	Comparator<I> defaultOrder;
 	
 	public UserItemMatcher(Set<I> items,
 			final Comparator<I> defaultOrder,
 			@Nullable Multimap<U, I> existing) {
+		
+		this.defaultOrder = defaultOrder;
 		
 		Map<I, Set<U>> temp = Maps.newHashMap();
 		for( I asst : items ) {
@@ -62,10 +66,10 @@ public class UserItemMatcher<U, I> {
 		}				
 		
 		// Set up counts for existing keys
-		orderedItems = new ConcurrentSkipListSet<CountingKey<I>>(new CountingKeyComparator<I>(defaultOrder));
+		orderedItems = new ConcurrentSkipListSet<CountingKey>();
 		
 		for( Map.Entry<I, Set<U>> e : itemUsers.entrySet() ) {
-			orderedItems.add(new CountingKey<I>(e.getKey(), e.getValue().size()));
+			orderedItems.add(new CountingKey(e.getKey(), e.getValue().size()));
 		}
 		
 		currentAssignments = new ConcurrentHashMap<U, I>();
@@ -81,12 +85,12 @@ public class UserItemMatcher<U, I> {
 	 */
 	public I getNewAssignment(U user) {
 		
-		List<CountingKey<I>> lowestItems = Lists.newLinkedList();
+		List<CountingKey> lowestItems = Lists.newLinkedList();
 				 
 		int lowest = 0;		
 		
-		for( Iterator<CountingKey<I>> it = orderedItems.iterator(); it.hasNext(); ) {
-			CountingKey<I> currentKey = it.next();
+		for( Iterator<CountingKey> it = orderedItems.iterator(); it.hasNext(); ) {
+			CountingKey currentKey = it.next();
 			
 			if( currentKey.count > lowest ) {
 				if( lowestItems.isEmpty() ) {
@@ -106,7 +110,7 @@ public class UserItemMatcher<U, I> {
 		}
 		
 		// choose randomly among the lowest counts
-		CountingKey<I> selected = RandomSelection.selectRandom(lowestItems);
+		CountingKey selected = RandomSelection.selectRandom(lowestItems);
 		
 		I prevAssigned = null;
 		
@@ -121,7 +125,7 @@ public class UserItemMatcher<U, I> {
 		}	
 		
 		// To prevent others from viewing an empty map in the case of 1 assignment, we insert a duplicate before removing		
-		CountingKey<I> newKey = new CountingKey<I>(selected.key, selected.count + 1);
+		CountingKey newKey = new CountingKey(selected.key, selected.count + 1);
 		orderedItems.add(newKey);
 		
 		// Remove old key from map, and update users in set		
@@ -165,30 +169,22 @@ public class UserItemMatcher<U, I> {
 		}
 	}
 	
-	static class CountingKey<T> {
-		T key;
+	class CountingKey implements Comparable<CountingKey> {
+		I key;
 		int count;
 		
-		CountingKey(T key, int count) {
+		CountingKey(I key, int count) {
 			this.key = key;
 			this.count = count;
 		}
-	}
 
-	static class CountingKeyComparator<T> implements Comparator<CountingKey<T>> {
-		Comparator<T> defaultOrder;
-		
-		CountingKeyComparator(Comparator<T> defaultOrder) {
-			this.defaultOrder = defaultOrder;
-		}
-		
 		@Override
-		public int compare(CountingKey<T> item, CountingKey<T> otherItem) {											
-			// Two strings can't be equal so we just sort alphabetically in that case
-			if( item.count == otherItem.count )
-				return defaultOrder.compare(item.key, otherItem.key);
+		public int compareTo(CountingKey other) {
+			// Two strings can't be equal so we just sort by some other order in that case
+			if( this.count == other.count )
+				return defaultOrder.compare(this.key, other.key);
 			else
-				return (item.count < otherItem.count ? -1 : 1);				
+				return (this.count < other.count ? -1 : 1);			
 		}
 	}
 

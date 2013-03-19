@@ -8,9 +8,11 @@ public interface Configurator {
 	 * TODO allow this to throw an exception
 	 * 
 	 * @param experiment
-	 * @param inputData
+	 * @param expId
+	 * @param group
+	 * @return the treatment id used for the experiment
 	 */
-	void configure(Object experiment, String inputData);
+	String configure(Object experiment, String expId, HITWorkerGroup group);
 
 	/**
 	 * Number of people required for each experiment

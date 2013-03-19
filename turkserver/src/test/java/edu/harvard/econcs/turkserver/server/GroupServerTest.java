@@ -47,7 +47,7 @@ public class GroupServerTest {
 				tracker,
 				new FakeHITController(),
 				workerAuth,
-				new Experiments(null, null, null, tracker, null),			
+				new Experiments(null, null, tracker, null),			
 				conf,
 				lobby = new Lobby.NullLobby()
 				);		

@@ -17,7 +17,6 @@ import edu.harvard.econcs.turkserver.api.Configurator;
 import edu.harvard.econcs.turkserver.api.ExperimentController;
 import edu.harvard.econcs.turkserver.api.HITWorker;
 import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
-import edu.harvard.econcs.turkserver.server.Assigner;
 import edu.harvard.econcs.turkserver.server.EventAnnotationManager;
 import edu.harvard.econcs.turkserver.server.ExperimentControllerImpl;
 import edu.harvard.econcs.turkserver.server.ExperimentScoped;
@@ -27,7 +26,6 @@ import edu.harvard.econcs.turkserver.server.Lobby;
 import edu.harvard.econcs.turkserver.server.ReadyStateLobby;
 import edu.harvard.econcs.turkserver.server.ThreadLocalScope;
 import edu.harvard.econcs.turkserver.server.WorkerAuthenticator;
-import edu.harvard.econcs.turkserver.util.RoundRobinAssigner;
 
 public abstract class ServerModule extends AbstractModule {	
 	
@@ -46,16 +44,14 @@ public abstract class ServerModule extends AbstractModule {
 		bind(Experiments.class);
 		bind(JettyCometD.class);
 		bind(WorkerAuthenticator.class);
-				
-		bind(Assigner.class).to(RoundRobinAssigner.class);
+						
 		bind(Lobby.class).to(ReadyStateLobby.class);
 		
 		// bind(ExperimentLog.class).to(LogController.class);		
 		bind(ExperimentController.class).to(ExperimentControllerImpl.class);
 		
 		bind(HITWorker.class).toProvider(ThreadLocalScope.<HITWorker>seededKeyProvider()).in(ExperimentScoped.class);
-		bind(HITWorkerGroup.class).toProvider(ThreadLocalScope.<HITWorkerGroup>seededKeyProvider()).in(ExperimentScoped.class);
-				
+		bind(HITWorkerGroup.class).toProvider(ThreadLocalScope.<HITWorkerGroup>seededKeyProvider()).in(ExperimentScoped.class);				
 	}
 	
 	protected void bindBoolean(String setting, boolean value) {

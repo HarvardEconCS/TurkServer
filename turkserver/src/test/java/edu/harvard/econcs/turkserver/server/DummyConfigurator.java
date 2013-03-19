@@ -1,6 +1,7 @@
 package edu.harvard.econcs.turkserver.server;
 
 import edu.harvard.econcs.turkserver.api.Configurator;
+import edu.harvard.econcs.turkserver.api.HITWorkerGroup;
 
 public class DummyConfigurator implements Configurator {
 
@@ -11,8 +12,8 @@ public class DummyConfigurator implements Configurator {
 	}
 	
 	@Override
-	public void configure(Object experiment, String inputData) {
-
+	public String configure(Object experiment, String expId, HITWorkerGroup group) {
+		return "dummy-treatment";
 	}
 
 	@Override
