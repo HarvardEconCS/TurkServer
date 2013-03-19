@@ -172,21 +172,29 @@ public class TurkHITController implements HITController {
 				// Quit if expiration was reached while sleeping
 				if( expireFlag ) break;								
 				
-				if( System.currentTimeMillis() - lastHitCreation > job.maxDelay ) {
-					// Delete a HIT from DB and disable it
-					Session unused = tracker.deleteUnusedSession();
-					if( unused == null ) {
-						logger.warn("Could not find any unused HITs to delete for reposting");
-					}
-					else {
-						logger.info("Disabling {} to repost another HIT", unused.getHitId());
-						requester.safeDisableHIT(unused.getHitId());
-					}
-				}
+//				if( System.currentTimeMillis() - lastHitCreation > job.maxDelay ) {
+					/*
+					 * Delete a HIT from DB and disable it
+					 * TODO this causes payment problems with HITs that are accepted even after disabling
+					 * (i.e. during quiz)
+					 */
+//					Session unused = tracker.deleteUnusedSession();
+//					if( unused == null ) {
+//						logger.warn("Could not find any unused HITs to delete for reposting");
+//					}
+//					else {
+//						logger.info("Disabling {} to repost another HIT", unused.getHitId());
+//						requester.safeDisableHIT(unused.getHitId());
+//					}
+//				}
 				
 				summary = tracker.getSetSessionSummary();				
 				int target = getAdaptiveTarget(summary.assignedHITs, job);
-				if( summary.createdHITs >= target ) continue;
+				
+				// Skip creating HIT if we are above the target and have created a hit recently
+				if( summary.createdHITs >= target && 
+						System.currentTimeMillis() <= lastHitCreation + job.maxDelay ) 
+					continue;
 							
 				try {
 					HIT resp = requester.createHITExternalFromID(

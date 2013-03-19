@@ -128,7 +128,7 @@ public class TSConfig {
 		
 		// Sensible defaults for creating HITs		
 		conf.setProperty(HITS_MIN_DELAY, 1000);
-		conf.setProperty(HITS_MAX_DELAY, 60000);
+		conf.setProperty(HITS_MAX_DELAY, 300 * 1000); // posts at most every 5 minutes
 		conf.setProperty(HITS_OVERHEAD_PERCENT, 0.1);
 		conf.setProperty(HITS_MIN_OVERHEAD, 10);
 		conf.setProperty(HITS_MAX_OVERHEAD, 50);
