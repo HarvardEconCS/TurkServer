@@ -34,7 +34,7 @@ import com.google.common.collect.Multimap;
  *
  */
 public class UserItemMatcher<U, I> {
-
+	
 	Map<I, Set<U>> itemUsers;
 	ConcurrentHashMap<U, I> currentAssignments;
 	ConcurrentSkipListSet<CountingKey> orderedItems;
@@ -78,10 +78,14 @@ public class UserItemMatcher<U, I> {
 	public UserItemMatcher(Set<I> items, final Comparator<I> defaultOrder) {
 		this(items, defaultOrder, null);
 	}
-		
+			
 	/**
 	 * Give this worker an item with lowest count that he has not already done
 	 * don't reassign the same items to workers
+	 * 
+	 * Returns null if no more tasks available for this user
+	 * @param user
+	 * @return
 	 */
 	public I getNewAssignment(U user) {
 		
@@ -96,9 +100,7 @@ public class UserItemMatcher<U, I> {
 				if( lowestItems.isEmpty() ) {
 					lowest = currentKey.count;
 				}
-				else {
-					break;
-				}
+				else break;				
 			}
 			
 			// do not assign users to items they have already seen

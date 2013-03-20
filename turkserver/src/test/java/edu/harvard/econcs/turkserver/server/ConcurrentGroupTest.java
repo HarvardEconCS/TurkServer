@@ -78,7 +78,8 @@ public class ConcurrentGroupTest {
 		
 		ts.runExperiment(
 				new GroupModule(),
-				ConfigModules.MYSQL_DATABASE,
+//				ConfigModules.MYSQL_DATABASE, // Subject to occasional BoneCP hangs
+				TestConfigModules.TEMP_DATABASE,
 				ConfigModules.GROUP_EXPERIMENTS,
 				TestConfigModules.NO_HITS,
 				ConfigModules.PERSIST_LOGGING				

@@ -210,7 +210,7 @@ public class TurkServer {
 					"HIT max overhead not specified");
 		
 			if( !debugMode ) { // Ignore these settings for local test
-				checkNotNull(injector.getBinding(Key.get(QualificationRequirement[].class)),
+				checkNotNull(injector.getExistingBinding(Key.get(QualificationRequirement[].class)),
 						"No qualifications set!");
 			}
 		}						

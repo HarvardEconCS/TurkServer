@@ -86,7 +86,12 @@ public class ExperimentControllerImpl implements ExperimentController {
 	}
 
 	@Override
-	public void startRounds() {		
+	public void startRounds() {
+		if (currentRound != null ) {
+			System.out.println("Warning: startRounds called more than once. We are already in round " + currentRound.get());
+			return;
+		}
+		
 		currentRound = new AtomicInteger(1);
 		
 		log.startRound(currentRound.get());
