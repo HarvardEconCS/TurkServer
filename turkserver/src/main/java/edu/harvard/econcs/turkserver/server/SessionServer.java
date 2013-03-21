@@ -361,9 +361,9 @@ public abstract class SessionServer extends Thread {
 			}
 		}
 		
+		// Debug check for any strange inconsistencies
 		String sessionHitId = (String) conn.getAttribute("hitId");		
-		if( workerHitId != null && !workerHitId.equals(sessionHitId) || 
-				sessionHitId != null && !sessionHitId.equals(workerHitId) ) {
+		if( workerHitId != null && sessionHitId != null	&& !workerHitId.equals(sessionHitId) ) {
 			logger.error("Session and worker HIT IDs don't match for {}", conn.getId());
 		}
 		
