@@ -248,6 +248,43 @@ public class TurkHITController implements HITController {
 		requester.safeDisableHIT(hitId);		
 	}
 
+	public Integer disableUnassignedAndRemoveFromDB() {
+		HIT[] hits = requester.searchAllHITs();
+		
+		int deleted = 0;
+		logger.info("{} total HITs found", hits.length);
+
+		for (HIT hit : hits ) {
+			
+			System.out.printf("HIT %s has status %s (Pending:%d, Available:%d, Completed:%d)\n",
+					hit.getHITId(), hit.getHITStatus().toString(),
+					hit.getNumberOfAssignmentsPending(), hit.getNumberOfAssignmentsAvailable(), 
+					hit.getNumberOfAssignmentsCompleted());
+
+			HITStatus hitStatus = hit.getHITStatus();
+
+			// TODO we're assuming here that each HIT just has one assignment
+			if( hit.getNumberOfAssignmentsAvailable() == 1) {					
+				if( !HITStatus.Assignable.equals(hitStatus) ) {
+					logger.info("Hit has 1 assignment but not assignable: " + hitStatus);
+					continue;
+				}
+				
+				logger.info("HIT " + hit + " is available, will be disabled");					
+							
+				requester.safeDisableHIT(hit.getHITId());
+				tracker.deleteSession(hit.getHITId());
+				deleted++;								
+			}
+			else if (HITStatus.Unassignable.equals(hitStatus) && hit.getNumberOfAssignmentsPending() == 1) {
+				logger.info("HIT " + hit + " is being held, skipping");
+			}
+		}
+		
+		logger.info("Disabled " + deleted + " hits");	
+		return deleted;				
+	}
+
 	/**
 	 * Disables all hits with no experiment or result in the current set
 	 * Synchronous method.

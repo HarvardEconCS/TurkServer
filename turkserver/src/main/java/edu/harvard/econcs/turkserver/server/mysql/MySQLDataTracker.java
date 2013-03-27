@@ -3,6 +3,8 @@ package edu.harvard.econcs.turkserver.server.mysql;
 import edu.harvard.econcs.turkserver.config.TSConfig;
 import edu.harvard.econcs.turkserver.schema.*;
 import edu.harvard.econcs.turkserver.server.HITWorkerImpl;
+import edu.harvard.econcs.turkserver.server.SessionRecord;
+import edu.harvard.econcs.turkserver.server.SessionRecord.SessionStatus;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -447,34 +449,32 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	}
 	
 	@Override
-	public Session deleteUnusedSession() {
+	public boolean deleteSession(String hitId) {
 		try( Connection conn = pbds.getConnection() ) {	
 			
-			/*
-			 * SELECT * FROM session WHERE setId=? AND experimentId IS NULL
-			 */
-			Session unused = new SQLQueryImpl(conn, dialect)
+			Session record = new SQLQueryImpl(conn, dialect)
 			.from(_session)
-			.where(_session.setId.eq(setID), 
-					_session.workerId.isNull(),
-					_session.assignmentId.isNull())
-			.limit(1)
+			.where(_session.hitId.eq(hitId))
 			.singleResult(_session);
 			
-			if( unused == null ) return null;
+			if( record == null ) return false;
 			
-			logger.info("Found unused session {}, deleting", unused.getHitId());
-							
-			new SQLDeleteClause(conn, dialect, _session)
-			.where(_session.setId.eq(setID), _session.hitId.eq(unused.getHitId()))
+			if( SessionRecord.status(record) == SessionStatus.EXPERIMENT || 
+					SessionRecord.status(record) == SessionStatus.COMPLETED ) {
+				logger.warn("Refusing to delete session record for {} in experiment or completed", hitId);
+				return false;
+			}
+			
+			long deleted = new SQLDeleteClause(conn, dialect, _session)
+			.where(_session.hitId.eq(hitId))
 			.execute();
 			
-			return unused;
+			return deleted > 0;						
 			
 		} catch (SQLException e) {			
 			e.printStackTrace();
 		}
-		return null;
+		return false;
 	}
 
 	@Override

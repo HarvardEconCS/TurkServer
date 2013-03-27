@@ -257,10 +257,11 @@ public abstract class ExperimentDataTracker {
 	public abstract void clearWorkerForSession(String id);
 
 	/**
-	 * Delete a single session from the database. Useful for HIT reposting.
-	 * @return
+	 * Removes a session record from the database
+	 * @param hitId
+	 * @return true if the session was deleted
 	 */
-	public abstract Session deleteUnusedSession();
+	public abstract boolean deleteSession(String hitId);	
 
 	/**
 	 * Sets all sessions with NULL experiment in the DB to expired, and returns the HIT IDs
