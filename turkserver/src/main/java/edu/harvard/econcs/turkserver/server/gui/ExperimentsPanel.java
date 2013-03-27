@@ -51,6 +51,7 @@ public class ExperimentsPanel extends JSplitPane {
 	private JLabel label;
 	private JLabel lblSelectASet;
 	private JTextArea txtrFeedback;
+	private JButton btnDisableUnassignedHits;
 
 	/**
 	 * Create the panel.
@@ -101,13 +102,23 @@ public class ExperimentsPanel extends JSplitPane {
 		label = new JLabel("");
 		panel.add(label);
 		
-		btnDisableUnusedHits = new JButton("Disable Unused HITs");
+		btnDisableUnusedHits = new JButton("Disable All Unused HITs");
 		btnDisableUnusedHits.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				if (selectedSet != null && GUIUtils.checkRequesterNotNull(req, ExperimentsPanel.this))
 					new DisableUnusedWorker().execute();
 			}
 		});
+		
+		btnDisableUnassignedHits = new JButton("Disable Unassigned HITs");
+		btnDisableUnassignedHits.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				// TODO only delete the unassigned HITs from the current set
+				if (selectedSet != null && GUIUtils.checkRequesterNotNull(req, ExperimentsPanel.this))
+					new DisableUnassignedWorker().execute();
+			}
+		});
+		panel.add(btnDisableUnassignedHits);
 		
 		panel.add(btnDisableUnusedHits);
 		
@@ -120,7 +131,7 @@ public class ExperimentsPanel extends JSplitPane {
 		});
 		
 		txtrFeedback = new JTextArea();
-		txtrFeedback.setText("Thanks for playing the trick or treat game!");
+		txtrFeedback.setText("Thanks for your work!");
 		panel.add(txtrFeedback);
 		
 		panel.add(btnPayWorkers);
@@ -210,6 +221,25 @@ public class ExperimentsPanel extends JSplitPane {
 			lblCompletedHits.setText("Completed HITs: " + data.completedHITs);
 						
 		}
+	}
+
+	public class DisableUnassignedWorker extends SwingWorker<Integer, Object> {
+		@Override protected Integer doInBackground() throws Exception {
+			return hits.disableUnassignedAndRemoveFromDB();			
+		}
+		
+		@Override protected void done() {
+			int deletedCount;
+			try {
+				deletedCount = get();
+			} catch (Exception e) {
+				GUIUtils.showException(e, ExperimentsPanel.this);
+				e.printStackTrace();
+				return;
+			}
+			new RefreshDatabaseWorker().execute();
+			JOptionPane.showMessageDialog(ExperimentsPanel.this, deletedCount + " unassigned HITs disabled");			
+		}		
 	}
 
 	public class DisableUnusedWorker extends SwingWorker<Integer, Object> {	

@@ -258,16 +258,20 @@ public class MockDataTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	public Session deleteUnusedSession() {
-		for( Map.Entry<String, Session> e : hitIdToSessions.entrySet() ) {
-			Session s = e.getValue();
-			if( s.getWorkerId() == null ) {
-				hitIdToSessions.remove(e.getKey());
-				return s;
-			}
+	public boolean deleteSession(String hitId) {			
+		Session removed = hitIdToSessions.remove(hitId);
+		
+		if( removed != null ) {
+			String workerId = removed.getWorkerId();
+			if( workerId != null && 
+					SessionRecord.status(removed) != SessionStatus.EXPERIMENT &&
+					SessionRecord.status(removed) != SessionStatus.COMPLETED )
+				workerIdToSessions.remove(workerId, removed);
+			
+			return true;
 		}
 		
-		return null;				
+		return false;
 	}
 
 	@Override
