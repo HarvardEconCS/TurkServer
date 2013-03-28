@@ -132,6 +132,7 @@ public class UserItemMatcher<U, I> {
 		
 		// Remove old key from map, and update users in set		
 		orderedItems.remove(selected);		
+		
 		// TODO very rare case that user could get reassigned same item if they complete before here, but it's practically impossible
 		Set<U> users = itemUsers.get(selected.key);
 		users.add(user);
@@ -157,6 +158,19 @@ public class UserItemMatcher<U, I> {
 		
 		if( !users.remove(user) ) {
 			System.out.println("Warning: user not in set. shouldn't have gotten here.");
+		}
+		
+		// Decrement key for item I		
+		for( Iterator<CountingKey> it = orderedItems.iterator(); it.hasNext(); ) {			
+			CountingKey current = it.next();
+			
+			if( current.key.equals(item) ) {
+				CountingKey newKey = new CountingKey(item, current.count - 1);
+				orderedItems.add(newKey);				
+				// Remove old key from map		
+				it.remove();
+				break;
+			}
 		}
 	}
 	

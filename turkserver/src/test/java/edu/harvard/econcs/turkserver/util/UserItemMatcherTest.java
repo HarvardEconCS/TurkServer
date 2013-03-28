@@ -2,80 +2,24 @@ package edu.harvard.econcs.turkserver.util;
 
 import static org.junit.Assert.*;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.Collections;
 import java.util.Set;
-import java.util.Map.Entry;
-
-import net.andrewmao.math.RandomSelection;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
-@RunWith(Parameterized.class)
 public class UserItemMatcherTest {
 
-	@Parameters
-	public static Collection<Object[]> parameters() {		
-		return Arrays.<Object[]>asList(
-				new Object[] {10, 1, 10},
-				new Object[] {50, 1000, 10},
-				new Object[] {1000, 50, 5},
-				new Object[] {100, 100, 5}
-				);
-	}
-
-	Comparator<String> comp = new Comparator<String>() {
-		@Override
-		public int compare(String o1, String o2) {				
-			return o1.compareTo(o2);
-		}		
-	};
+	String item = "item";
 	
-	int numItems, numUsers, repetition;	
-	int arrivals;	
-			
-	public UserItemMatcherTest(int numItems, int numUsers, int repetitionPerItem) {
-		this.numItems = numItems;
-		this.numUsers = numUsers;
-		this.repetition = Math.min(repetitionPerItem, numUsers);
-		
-		this.arrivals = numItems * repetition;
-	}
-	
-	Set<String> items, users;
-	UserItemMatcher<String, String> matcher;	
-	
-	Map<String, String> busyUsers;
-	Set<String> availableUsers;
+	UserItemMatcher<String, String> matcher;
 	
 	@Before
-	public void setUp() throws Exception {		
+	public void setUp() throws Exception {
+		Set<String> items = Collections.singleton(item);
 		
-		items = new HashSet<String>();
-		users = new HashSet<String>();
-		
-		for( int i = 0; i < numItems; i++ ) {
-			items.add("Item " + i);
-		}
-		
-		for( int i = 0; i < numUsers; i++ ) {
-			users.add("User " + i);
-		}
-		
-		matcher = new UserItemMatcher<>(items, comp);
-		
-		busyUsers = new HashMap<String, String>();
-		availableUsers = new HashSet<String>(users);
+		matcher = new UserItemMatcher<>(items, UserItemMatcherRandomizedTest.comp);
 	}
 
 	@After
@@ -83,78 +27,41 @@ public class UserItemMatcherTest {
 	}
 
 	@Test
-	public void test() {			
-		System.out.printf("Beginning test with %d items, %d users, %d arrivals\n", numItems, numUsers, arrivals);			
+	public void testReturn() {
+		String user = "some user";
 		
-		for( int i = 0; i < arrivals; ) {
-			if( Math.random() < 0.5 ) {
-				// Assign a random user to a task
-				String user = RandomSelection.selectRandom(availableUsers);
-				if( user == null ) continue;
-				
-				beginAssignment(user);
-				i++;
-			}
-			else {
-				// Have a random user complete a task
-				Map.Entry<String, String> e = RandomSelection.selectRandom(busyUsers.entrySet());
-				if( e == null ) continue;				
-								
-				completeAssignment(e.getKey(), e.getValue());
-			}
-		}
+		assertEquals(0, matcher.orderedItems.first().count);		
 		
-		// Have all busy users finish tasks
-		for( Iterator<Map.Entry<String, String>> it = busyUsers.entrySet().iterator(); it.hasNext(); ) {
-			Map.Entry<String, String> e = it.next();
-			it.remove();
-			
-			completeAssignment(e.getKey(), e.getValue());
-		}
+		matcher.getNewAssignment(user);
 		
-		int totalAssignments = 0;
+		assertEquals(item, matcher.currentAssignments.get(user));
+		assertTrue(matcher.itemUsers.get(item).contains(user));
+		assertEquals(1, matcher.orderedItems.first().count);
 		
-		for( Entry<String, Set<String>> itemUsersEntry : matcher.itemUsers.entrySet() ) {
-			// Check that each item was done the same number of times
-			int nTimesDone = itemUsersEntry.getValue().size();
-								
-			totalAssignments += nTimesDone;
-		}
+		matcher.returnAssignment(user, item);
 		
-		// This should ensure no one was assigned to the same item twice
-		assertEquals(numItems, matcher.itemUsers.size());
-		assertEquals(arrivals, totalAssignments);
-		
-		for( Entry<String, Set<String>> itemUsersEntry : matcher.itemUsers.entrySet() ) {
-			// Check that each item was done the same number of times
-			int nTimesDone = itemUsersEntry.getValue().size();
-			
-			System.out.println("Checking " + itemUsersEntry.getValue());
-			
-			/*
-			 * TODO fix this check
-			 * Occasionally fails here if a user was forced to do 
-			 * some higher task due to having done a lower one before
-			 * (not the fault of the algorithm)
-			 */
-			assertEquals(repetition, nTimesDone);						
-		}
+		assertEquals(null, matcher.currentAssignments.get(user));
+		assertTrue(matcher.itemUsers.get(item).isEmpty());
+		assertEquals(0, matcher.orderedItems.first().count);		
 	}
-
-	void beginAssignment(String user) {
-		String item = matcher.getNewAssignment(user);
-//		System.out.println(user + " started " + item);
+	
+	@Test
+	public void testComplete() {
+		String user = "some user";
 		
-		availableUsers.remove(user);
-		busyUsers.put(user, item);
-	}
-
-	void completeAssignment(String user, String item) {
+		assertEquals(0, matcher.orderedItems.first().count);		
+		
+		matcher.getNewAssignment(user);
+		
+		assertEquals(item, matcher.currentAssignments.get(user));
+		assertTrue(matcher.itemUsers.get(item).contains(user));
+		assertEquals(1, matcher.orderedItems.first().count);
+		
 		matcher.completeAssignment(user, item);
-//		System.out.println(user + " completed " + item);
 		
-		busyUsers.remove(user);
-		availableUsers.add(user);
+		assertEquals(null, matcher.currentAssignments.get(user));
+		assertTrue(matcher.itemUsers.get(item).contains(user));
+		assertEquals(1, matcher.orderedItems.first().count);		
 	}
 
 }
