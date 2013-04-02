@@ -77,6 +77,11 @@ public class ExperimentControllerImpl implements ExperimentController {
 	}
 
 	@Override
+	public void setRoundInput(String inputData) {
+		experiments.saveRoundInput(this, inputData);		
+	}
+
+	@Override
 	public void setBonusAmount(HITWorker hitWorker, double amount) {
 		if( !group.contains(hitWorker) ) {
 			throw new RuntimeException("Tried to set bonus for worker not in experiment");			

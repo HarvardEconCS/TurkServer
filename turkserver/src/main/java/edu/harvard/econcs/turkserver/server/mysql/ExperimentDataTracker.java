@@ -6,6 +6,7 @@ package edu.harvard.econcs.turkserver.server.mysql;
 import edu.harvard.econcs.turkserver.api.HITWorker;
 import edu.harvard.econcs.turkserver.schema.Experiment;
 import edu.harvard.econcs.turkserver.schema.Quiz;
+import edu.harvard.econcs.turkserver.schema.Round;
 import edu.harvard.econcs.turkserver.schema.Session;
 import edu.harvard.econcs.turkserver.server.ExperimentControllerImpl;
 import edu.harvard.econcs.turkserver.server.HITWorkerImpl;
@@ -19,6 +20,8 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.Multimap;
 
 /**
  * A class to keep track of users and HITs. Must be thread safe.
@@ -54,6 +57,18 @@ public abstract class ExperimentDataTracker {
 	 */
 	public abstract Collection<Experiment> getSetExperiments();
 	
+	/**
+	 * Get all experiments and corresponding sessions
+	 * @return
+	 */
+	public abstract Multimap<Experiment, Session> getExperimentSessions();
+
+	/**
+	 * Get all experiments and corresponding rounds
+	 * @return
+	 */
+	public abstract Multimap<Experiment, Round> getExperimentRounds();
+
 	/**
 	 * Get all completed sessions in this set.
 	 * @return
@@ -218,12 +233,20 @@ public abstract class ExperimentDataTracker {
 	protected abstract void saveExpRoundStart(String expId, int round, long startTime);
 
 	/**
+	 * Save the treatment data for a round, if any
+	 * @param expId
+	 * @param currentRound
+	 * @param inputData
+	 */
+	protected abstract void saveExpRoundInput(String expId, int currentRound, String inputData);
+
+	/**
 	 * Save the results of a round to the database
 	 * @param expId
 	 * @param round
 	 * @param roundLog
 	 */
-	protected abstract void saveExpRoundEnd(String expId, long endTime, int round, String roundLog);
+	protected abstract void saveExpRoundEnd(String expId, int round, long endTime, String roundLog);
 
 	/**
 	 * Saves an experiment end time in the db
@@ -288,8 +311,12 @@ public abstract class ExperimentDataTracker {
 		saveExpRoundStart(expCont.getExpId(), expCont.getCurrentRound(), startTime);
 	}
 
+	public void saveRoundInput(ExperimentControllerImpl expCont, String inputData) {
+		saveExpRoundInput(expCont.getExpId(), expCont.getCurrentRound(), inputData);		
+	}
+
 	public final void experimentRoundComplete(ExperimentControllerImpl expCont, long endTime, String roundLog) {
-		saveExpRoundEnd(expCont.getExpId(), endTime, expCont.getCurrentRound(), roundLog);		
+		saveExpRoundEnd(expCont.getExpId(), expCont.getCurrentRound(), endTime, roundLog);		
 	}
 
 	/**
