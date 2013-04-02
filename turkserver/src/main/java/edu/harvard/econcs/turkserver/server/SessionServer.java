@@ -457,8 +457,9 @@ public abstract class SessionServer extends Thread {
 		Server server = null;
 		try {
 			server = jettyCometD.start(this);
-		} catch (Exception e1) {			
-			e1.printStackTrace();
+		} catch (Exception e) {			
+			e.printStackTrace();
+			return;
 		}
 		
 		bayeux = jettyCometD.getBayeux();		
