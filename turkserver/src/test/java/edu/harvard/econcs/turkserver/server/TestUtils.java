@@ -6,7 +6,6 @@ import java.net.ServerSocket;
 import java.util.List;
 
 import edu.harvard.econcs.turkserver.api.ExperimentLog;
-import edu.harvard.econcs.turkserver.api.HITWorker;
 import edu.harvard.econcs.turkserver.client.SessionClient;
 import edu.harvard.econcs.turkserver.logging.FakeExperimentLog;
 
@@ -14,17 +13,16 @@ public class TestUtils {
 	
 	public static int PORT_SLEEP_MILLIS = 200;
 
-	public static FakeHITWorkerGroup getFakeGroup(int groupSize, Class<?> clientClass) throws Exception {		
-		FakeHITWorkerGroup fakeGroup 
-			= new FakeHITWorkerGroup();
+	public static FakeHITWorkerGroup getFakeGroup(String prefix, int groupSize, Class<?> clientClass) throws Exception {		
+		FakeHITWorkerGroup fakeGroup = new FakeHITWorkerGroup();
 		
 		for(int i = 1; i <= groupSize; i++ ) {									
-			String hitId = "HIT " + i;
-			String workerId = "Worker " + i;
-			String assignmentId = "Assignment " + i;
-			String username = "Username " + i;
+			String hitId = "HIT " + prefix + i;
+			String workerId = "Worker " + prefix + i;
+			String assignmentId = "Assignment " + prefix +i;
+			String username = "Username " + prefix +i;
 			
-			FakeHITWorker fake = FakeHITWorker.getNew(hitId, assignmentId, workerId, username, clientClass);
+			FakeHITWorker fake = FakeHITWorker.getNew(hitId, assignmentId, workerId, username, clientClass);			
 			
 			fakeGroup.addWorker(fake);
 		}
@@ -34,9 +32,6 @@ public class TestUtils {
 	
 	public static FakeExperimentController getFakeController(FakeHITWorkerGroup fakeGroup) {
 		FakeExperimentController fakeCont = new FakeExperimentController(fakeGroup);
-		
-		for(HITWorker fake : fakeGroup.getHITWorkers() )
-			((FakeHITWorker) fake).expCont = fakeCont;
 		
 		return fakeCont;
 	}

@@ -24,10 +24,20 @@ public class FakeExperimentController implements ExperimentController {
 	
 	public FakeExperimentController(FakeHITWorkerGroup fakeGroup) {
 		this.group = fakeGroup;
+		
+		callbacks = new EventAnnotationManager();
+		
+		for(HITWorker fake : fakeGroup.getHITWorkers() )
+			((FakeHITWorker) fake).initialize(expId, callbacks);
 	}
 	
-	public void setBean(Object bean) {
-		callbacks = new EventAnnotationManager();
+	public void addFakeGroup(FakeHITWorkerGroup fakeGroup) {
+		// TODO This doesn't actually track this group, so fix it		
+		for(HITWorker fake : fakeGroup.getHITWorkers() )
+			((FakeHITWorker) fake).initialize(expId, callbacks);
+	}
+
+	public void setBean(Object bean) {		
 		callbacks.processExperiment(expId, bean);
 	}
 	

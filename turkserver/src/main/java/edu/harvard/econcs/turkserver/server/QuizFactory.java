@@ -18,4 +18,29 @@ public abstract class QuizFactory {
 		}		
 	}
 	
+	/**
+	 * A simple quiz factory that always returns a constant string 
+	 * @author alicexigao
+	 *
+	 */
+	public static class StringQuizFactory extends QuizFactory {
+		QuizMaterials qm;
+		
+		public StringQuizFactory(final String quizType) {
+			qm = new QuizMaterials() {				
+				private static final long serialVersionUID = 1L;
+				@Override
+				public Object toData() {					
+					return quizType;
+				}				
+			};
+		}
+		
+		@Override
+		public QuizMaterials getQuiz() {			
+			return qm;
+		}		
+		
+	}
+	
 }

@@ -25,7 +25,8 @@ public final class FakeHITWorker implements HITWorker, ClientController {
 	ClientAnnotationManager<?> clientWrapper;
 	
 	// This is set AFTER instantiation
-	FakeExperimentController expCont;
+	String expId;
+	EventAnnotationManager expEvent;
 	
 	public static <C> FakeHITWorker getNew(String hitId, String assignmentId, String workerId, String username,
 			Class<C> clientClass) throws Exception {
@@ -37,7 +38,12 @@ public final class FakeHITWorker implements HITWorker, ClientController {
 					
 		fakeWorker.clientWrapper = new ClientAnnotationManager<C>(fakeWorker, clientClass);
 		return fakeWorker;
-	}	
+	}
+	
+	public void initialize(String expId, EventAnnotationManager events) {
+		this.expId = expId;
+		expEvent = events;
+	}
 	
 	public Object getClientBean() {
 		return clientWrapper.getClientBean();
@@ -130,12 +136,12 @@ public final class FakeHITWorker implements HITWorker, ClientController {
 
 	@Override
 	public void sendExperimentBroadcast(Map<String, Object> data) {
-		expCont.rcvBroadcast(this, data);
+		expEvent.deliverBroadcastMsg(expId, this, data);
 	}
 
 	@Override
 	public void sendExperimentService(Map<String, Object> data) {
-		expCont.rcvService(this, data);
+		expEvent.deliverServiceMsg(expId, this, data);
 	}
 
 	@Override
