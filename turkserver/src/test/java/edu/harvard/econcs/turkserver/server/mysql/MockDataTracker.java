@@ -2,6 +2,7 @@ package edu.harvard.econcs.turkserver.server.mysql;
 
 import edu.harvard.econcs.turkserver.schema.Experiment;
 import edu.harvard.econcs.turkserver.schema.Quiz;
+import edu.harvard.econcs.turkserver.schema.Round;
 import edu.harvard.econcs.turkserver.schema.Session;
 import edu.harvard.econcs.turkserver.server.HITWorkerImpl;
 import edu.harvard.econcs.turkserver.server.SessionRecord;
@@ -56,8 +57,20 @@ public class MockDataTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	public boolean hitExistsInDB(String hitId) {
-		return hitIdToSessions.containsKey(hitId);
+	public Collection<Experiment> getSetExperiments() {		
+		return experiments.values();
+	}
+
+	@Override
+	public Multimap<Experiment, Session> getExperimentSessions() {
+		System.out.println("Returning empty existing sessions");
+		return HashMultimap.create();
+	}
+
+	@Override
+	public Multimap<Experiment, Round> getExperimentRounds() {
+		System.out.println("Returning empty existing rounds");
+		return HashMultimap.create();
 	}
 
 	@Override
@@ -70,6 +83,11 @@ public class MockDataTracker extends ExperimentDataTracker {
 		}
 		
 		return stuff;
+	}
+
+	@Override
+	public boolean hitExistsInDB(String hitId) {
+		return hitIdToSessions.containsKey(hitId);
 	}
 
 	@Override
@@ -98,11 +116,6 @@ public class MockDataTracker extends ExperimentDataTracker {
 			}				
 		}
 		return new SessionSummary(created, assigned, completed, submitted);
-	}
-
-	@Override
-	public Collection<Experiment> getSetExperiments() {		
-		return experiments.values();
 	}
 
 	@Override
@@ -218,7 +231,12 @@ public class MockDataTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	protected void saveExpRoundEnd(String expId, long endTime, int round, String roundLog) {
+	protected void saveExpRoundInput(String expId, int currentRound, String inputData) {
+		logger.info(expId + " round " + currentRound + " set to " + inputData);				
+	}
+
+	@Override
+	protected void saveExpRoundEnd(String expId, int round, long endTime, String roundLog) {
 		logger.info(expId + " round " + round);
 		logger.info(roundLog);		
 	}

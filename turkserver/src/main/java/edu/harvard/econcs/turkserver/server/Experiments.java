@@ -311,6 +311,10 @@ public class Experiments {
 		manager.triggerRound(expCont.getExpId(), round);
 	}
 
+	public void saveRoundInput(ExperimentControllerImpl expCont, String inputData) {
+		tracker.saveRoundInput(expCont, inputData);
+	}
+
 	public void saveLogRound(ExperimentControllerImpl expCont, String roundLog) {
 		/* save log results for this round
 		 * TODO save proper end time		

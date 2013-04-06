@@ -65,6 +65,12 @@ public class FakeExperimentController implements ExperimentController {
 	}
 
 	@Override
+	public void setRoundInput(String inputData) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
 	public void setBonusAmount(HITWorker hitWorker, double amount) {
 		// TODO Auto-generated method stub		
 	}

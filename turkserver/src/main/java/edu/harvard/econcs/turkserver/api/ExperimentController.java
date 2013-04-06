@@ -15,6 +15,12 @@ public interface ExperimentController {
 	void sendExperimentBroadcast(Map<String, Object> msg) throws MessageException;	
 	
 	/**
+	 * Sets the treatment/data associated with the current round. 
+	 * @param inputData
+	 */
+	void setRoundInput(String inputData);
+
+	/**
 	 * Set the bonus that a worker will be paid upon completion.
 	 * @param hitWorker
 	 * @param amount

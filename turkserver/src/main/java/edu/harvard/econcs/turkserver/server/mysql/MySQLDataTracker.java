@@ -20,6 +20,8 @@ import java.util.List;
 
 import org.apache.commons.configuration.Configuration;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
@@ -133,6 +135,50 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			e.printStackTrace();
 		} 
 		return null;
+	}
+
+	@Override
+	public Multimap<Experiment, Session> getExperimentSessions() {
+		Multimap<Experiment, Session> result = HashMultimap.create();
+		Collection<Experiment> expsInSet = getSetExperiments();
+		
+		try( Connection conn = pbds.getConnection() ) {			
+			for( Experiment e : expsInSet ) {
+				List<Session> sessions = new SQLQueryImpl(conn, dialect)
+				.from(_session)
+				.where(_session.experimentId.eq(e.getId()))
+				.list(_session);
+				
+				for( Session s : sessions ) result.put(e, s);
+			}			
+		} catch (SQLException e) {			
+			e.printStackTrace();
+			return null;
+		} 
+		
+		return result;
+	}
+
+	@Override
+	public Multimap<Experiment, Round> getExperimentRounds() {
+		Multimap<Experiment, Round> result = HashMultimap.create();
+		Collection<Experiment> expsInSet = getSetExperiments();
+		
+		try( Connection conn = pbds.getConnection() ) {			
+			for( Experiment e : expsInSet ) {
+				List<Round> rounds = new SQLQueryImpl(conn, dialect)
+				.from(_round)
+				.where(_round.experimentId.eq(e.getId()))
+				.list(_round);
+				
+				for( Round r : rounds ) result.put(e, r);
+			}			
+		} catch (SQLException e) {			
+			e.printStackTrace();
+			return null;
+		} 
+		
+		return result;
 	}
 
 	@Override
@@ -384,7 +430,6 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 			
 			Round r = new Round();
 			
-			// TODO: save round input data
 			r.setExperimentId(expId);
 			r.setStartTime(new Timestamp(startTime));
 			r.setRoundnum(round);
@@ -399,7 +444,21 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	protected void saveExpRoundEnd(String expId, long endTime, int round, String roundLog) {
+	protected void saveExpRoundInput(String expId, int round, String inputData) {
+		try( Connection conn = pbds.getConnection() ) {			
+			
+			new SQLUpdateClause(conn, dialect, _round)
+			.where(_round.experimentId.eq(expId), _round.roundnum.eq(round))
+			.set(_round.inputdata, inputData)			
+			.execute();							
+			
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	protected void saveExpRoundEnd(String expId, int round, long endTime, String roundLog) {
 		try( Connection conn = pbds.getConnection() ) {			
 		
 			new SQLUpdateClause(conn, dialect, _round)
