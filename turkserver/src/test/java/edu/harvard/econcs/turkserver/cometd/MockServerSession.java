@@ -11,6 +11,8 @@ import org.cometd.bayeux.server.ServerSession;
 
 public class MockServerSession implements ServerSession {
 
+	public boolean isConnected = true;
+	
 	public String lastChannel;
 	public Object lastData;
 	
@@ -22,7 +24,7 @@ public class MockServerSession implements ServerSession {
 
 	@Override
 	public boolean isConnected() {		
-		return true;
+		return isConnected;
 	}
 
 	@Override

@@ -23,12 +23,16 @@ public class HITWorkerImpl implements HITWorker, HITWorkerGroup {
 	volatile ExperimentControllerImpl expCont;
 	
 	final AtomicInteger numDisconnects = new AtomicInteger();
+	
 	final AtomicReference<Long> lastDisconnectTime = new AtomicReference<Long>();
-	final AtomicLong inactiveMillis = new AtomicLong();
+	final AtomicReference<Long> lastInactiveStart = new AtomicReference<Long>();
+	
+	final AtomicLong pastInactiveMillis = new AtomicLong();
+	final AtomicLong currentInactiveMillis = new AtomicLong();
 	
 	public HITWorkerImpl(ServerSession cometdSession, Session dbSession) {
 		this.cometdSession = new WeakReference<ServerSession>(cometdSession);
-		this.record = dbSession;
+		this.record = dbSession;				
 	}
 	
 	void setServerSession(ServerSession newSession) {
@@ -116,8 +120,14 @@ public class HITWorkerImpl implements HITWorker, HITWorkerGroup {
 			return;
 		}
 		
-		// TODO should not add inactive time before experiment starts
-		addInactiveTime( System.currentTimeMillis() - lastDisc );
+		/*
+		 * Add disconnected time to total inactive time
+		 * 
+		 * TODO this doesn't take care of the case where inactive is double-counted
+		 * after a non-reloading reconnect
+		 */
+		
+		pastInactiveMillis.addAndGet(System.currentTimeMillis() - lastDisc);			
 	}
 	
 	/**
@@ -132,17 +142,35 @@ public class HITWorkerImpl implements HITWorker, HITWorkerGroup {
 	/**
 	 * Add milliseconds of inactive time
 	 * @param millis
+	 * @param inactiveTime 
 	 */
-	void addInactiveTime(long millis) {
-		this.inactiveMillis.addAndGet(millis);	
+	void addInactiveTime(long inactiveStart, long inactiveTime) {
+		Long lastStart = lastInactiveStart.get();
+		
+		if( lastStart == null ) {
+			currentInactiveMillis.set(inactiveTime);
+			lastInactiveStart.set(inactiveStart);
+		}
+		else if( lastStart == inactiveStart ) {
+			currentInactiveMillis.set(inactiveTime);			
+		}
+		else {
+			// New inactive segment, add previous segment to total
+			long pastMillis = currentInactiveMillis.getAndSet(inactiveTime);
+			lastInactiveStart.set(inactiveStart);
+		
+			pastInactiveMillis.addAndGet(pastMillis);
+		}			
 	}	
 	
 	/**
 	 * Call at the end of an experiment to finish any uncomputed values
 	 */
-	public void finalizeActivity() {
+	public void finalizeActivity() {		
+		
 		if( !isConnected() ) {
 			Long lastDisc = lastDisconnectTime.get();
+			
 			if( lastDisc == null ) {
 				System.out.println("not connected but don't have record of last disconnect");
 				return;
@@ -152,27 +180,43 @@ public class HITWorkerImpl implements HITWorker, HITWorkerGroup {
 				return;
 			}
 			
-			addInactiveTime(expCont.expFinishTime - lastDisc);
+			addInactiveTime(lastDisc, expCont.expFinishTime - lastDisc);
+		}
+		else {
+			long pastMillis = currentInactiveMillis.getAndSet(0);
+			lastInactiveStart.set(null);
+			
+			pastInactiveMillis.addAndGet(pastMillis);
 		}
 	}
 	
 	@Override
-	public int getLiveNumDisconnects() {		
+	public int getNumDisconnects() {		
 		return numDisconnects.get();
 	}
 
 	@Override
-	public double getLiveInactivePercent() {
-		if( expCont == null ) return 0d;
-			
-		long totalTime = System.currentTimeMillis() - expCont.expStartTime;
-		return 1.0d * inactiveMillis.get() / totalTime;
+	public long getLastInactiveTime() {		
+		return currentInactiveMillis.get();
 	}
 
 	@Override
-	public String getLiveInactiveDescriptor() {
-		// TODO Auto-generated method stub
-		return null;
+	public long getTotalInactiveTime() {
+		return pastInactiveMillis.get() + currentInactiveMillis.get();
+	}
+
+	@Override
+	public double getInactivePercent() {
+		if( expCont == null ) return 0d;
+			
+		long totalTime = System.currentTimeMillis() - expCont.expStartTime;
+		return 1.0d * getTotalInactiveTime() / totalTime;
+	}
+
+	@Override
+	public String getInactiveInfo() {		
+		return String.format("Inactive a total of %d secs, last inactive %d secs",
+				getTotalInactiveTime() / 1000, getLastInactiveTime() / 1000);
 	}
 	
 	@Override

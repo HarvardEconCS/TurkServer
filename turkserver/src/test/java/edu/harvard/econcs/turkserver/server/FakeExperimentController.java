@@ -50,7 +50,7 @@ public class FakeExperimentController implements ExperimentController {
 	}
 
 	@Override
-	public void sendExperimentBroadcast(Map<String, Object> msg) throws MessageException {
+	public void sendExperimentBroadcast(Map<String, Object> msg) {
 		group.deliverExperimentBroadcast(msg);		
 	}
 

@@ -264,9 +264,9 @@ public abstract class ExperimentDataTracker {
 	protected void saveSessionCompleteInfo(HITWorkerImpl session) {
 		Session record = session.getSessionRecord();
 		
-		record.setInactiveData(session.getLiveInactiveDescriptor());
-		record.setInactivePercent(session.getLiveInactivePercent());
-		record.setNumDisconnects(session.getLiveNumDisconnects());
+		record.setInactiveData(session.getInactiveInfo());
+		record.setInactivePercent(session.getInactivePercent());
+		record.setNumDisconnects(session.getNumDisconnects());
 		
 		saveSession(record);
 	}

@@ -59,12 +59,10 @@ class TestExperiment {
 		
 		if( cont != null ) {
 			if( rounds > 0 ) cont.startRounds();
-			else {
-				try {
-					cont.sendExperimentBroadcast(
-							ImmutableMap.<String, Object>of("status", "something start")
-							);
-				} catch (MessageException e) { e.printStackTrace(); }
+			else {				
+				cont.sendExperimentBroadcast(
+						ImmutableMap.<String, Object>of("status", "something start")
+						);				
 			}
 		}
 	}

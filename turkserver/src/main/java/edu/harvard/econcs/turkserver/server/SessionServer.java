@@ -398,14 +398,15 @@ public abstract class SessionServer extends Thread {
 		}		
 	}
 
-	void rcvInactiveTime(ServerSession conn, long inactiveTime) {
+	void rcvInactiveTime(ServerSession conn, long inactiveStart, long inactiveTime) {
 		HITWorkerImpl worker = clientToHITWorker.get(conn);
 		
 		if( worker == null ) {
 			logger.error("Can't save inactivity: unknown worker for {}", conn.getId());
-		}
+			return;
+		}		
 		
-		worker.addInactiveTime(inactiveTime);
+		worker.addInactiveTime(inactiveStart, inactiveTime);
 	}
 
 	void rcvExperimentServiceMsg(ServerSession conn,

@@ -129,8 +129,9 @@ public class SessionServlet extends GenericServlet {
 				sessions.rcvQuizResults(session, qr);				
 			}
 			else if( "inactive".equals(status) ) {
-				long inactiveTime = Long.parseLong(data.get("time").toString());
-				sessions.rcvInactiveTime(session, inactiveTime);
+				long inactiveStart = ((Number) data.get("start")).longValue();
+				long inactiveTime = ((Number) data.get("time")).longValue();
+				sessions.rcvInactiveTime(session, inactiveStart, inactiveTime);
 			}
 			else if( Codec.hitSubmit.equals(status) ) {								
 				String survey = (String) data.get("comments");

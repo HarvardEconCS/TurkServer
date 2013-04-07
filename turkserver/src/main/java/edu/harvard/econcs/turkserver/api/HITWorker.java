@@ -41,19 +41,31 @@ public interface HITWorker {
 	 * Gets the actual number of disconnects since the worker has accepted the HIT.
 	 * @return
 	 */
-	int getLiveNumDisconnects();
+	int getNumDisconnects();
+	
+	/**
+	 * Get the length of the last inactivity segment (even if the worker is currently not inactive)
+	 * @return
+	 */
+	long getLastInactiveTime();
+	
+	/**
+	 * Get the total number of milliseconds inactive that have been tracked so far
+	 * @return
+	 */
+	long getTotalInactiveTime();
 	
 	/**
 	 * Gets the amount of time inactive since the worker has started an experiment.
 	 * @return
 	 */
-	double getLiveInactivePercent();
+	double getInactivePercent();
 	
 	/**
 	 * Gets a description of inactivity (subject to implementation)
 	 * @return
 	 */
-	String getLiveInactiveDescriptor();
+	String getInactiveInfo();
 	
 	/**
 	 * Send a JSON-encoded message to this particular user

@@ -18,6 +18,10 @@ class TSClient
   
   @clientId = undefined
   
+  @intervalMonitorId = null
+  @inactivityThreshold = null
+  @inactive_cb = null
+  
   @expBroadcastSubscription = null
   @expServiceSubscription = null
   @lobbySubscription = null
@@ -340,5 +344,39 @@ class TSClient
       $.cometd.publish channel, msg
     else
       console.log "Would send on channel " + channel + " message " + msg
+      
+  @startInactivityMonitor: (callback, thresh = 30000, interval = 5000) ->
+    @inactive_cb = callback
+    @inactivityThreshold = thresh
+    
+    @resetInactivity()
+    @intervalMonitorId = setInterval(@monitorInactivity, interval) if not @intervalMonitorId
+      
+  @stopInactivityMonitor: ->
+    clearInterval(@intervalMonitorId) if @intervalMonitorId
+    @intervalMonitorId = null
+  
+  @resetInactivity: ->
+    return unless @intervalMonitorId
+    
+    currentTime = Date.now()
+    inactiveTime = currentTime - @lastInactive
+    @inactive_cb(inactiveTime) if inactiveTime > @inactivityThreshold
+    
+    @lastInactive = currentTime
+  
+  @monitorInactivity: =>
+    # TODO: properly send inactivity to server
+    currentTime = Date.now()
+    inactiveTime = currentTime - @lastInactive
+    
+    return unless inactiveTime > @inactivityThreshold    
+    
+    @channelSend @userSubscription[0],
+      status: "inactive",
+      start: @lastInactive,
+      time: inactiveTime
+    
+    @inactive_cb(inactiveTime)
 
 module.exports = TSClient

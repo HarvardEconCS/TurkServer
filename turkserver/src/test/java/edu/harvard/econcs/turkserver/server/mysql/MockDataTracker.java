@@ -258,7 +258,7 @@ public class MockDataTracker extends ExperimentDataTracker {
 		super.saveSessionCompleteInfo(session);
 				
 		logger.info(String.format("session %s was inactive for fraction %.02f",
-				session, session.getLiveInactivePercent()));		
+				session, session.getInactivePercent()));		
 	}
 		
 	@Override

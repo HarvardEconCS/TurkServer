@@ -50,8 +50,7 @@ public class ExperimentControllerImpl implements ExperimentController {
 	void initialize(long startTime, String expId, String inputData, 
 			String expChannel, LocalSession source) {
 		/*
-		 * TODO move this into a Guice provider?
-		 * when the injection thing is fixed
+		 * TODO have Guice inject these values as well
 		 */
 		
 		this.experimentId = expId;
@@ -72,7 +71,7 @@ public class ExperimentControllerImpl implements ExperimentController {
 	}
 
 	@Override
-	public void sendExperimentBroadcast(Map<String, Object> msg) throws MessageException {		
+	public void sendExperimentBroadcast(Map<String, Object> msg) {		
 		source.getChannel(Codec.expChanPrefix + expChannel).publish(msg);		
 	}
 

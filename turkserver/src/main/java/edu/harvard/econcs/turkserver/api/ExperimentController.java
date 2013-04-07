@@ -2,8 +2,6 @@ package edu.harvard.econcs.turkserver.api;
 
 import java.util.Map;
 
-import edu.harvard.econcs.turkserver.server.MessageException;
-
 public interface ExperimentController {
 
 	String getExpId();
@@ -12,7 +10,7 @@ public interface ExperimentController {
 	 * Send a JSON-encoded message to the entire group.
 	 * @param msg
 	 */
-	void sendExperimentBroadcast(Map<String, Object> msg) throws MessageException;	
+	void sendExperimentBroadcast(Map<String, Object> msg);	
 	
 	/**
 	 * Sets the treatment/data associated with the current round. 
@@ -49,8 +47,16 @@ public interface ExperimentController {
 	 */
 	void finishExperiment();
 
+	/**
+	 * Get the start time of the experiment
+	 * @return
+	 */
 	long getStartTime();
 	
+	/**
+	 * Get the finished time of the experiment
+	 * @return
+	 */
 	long getFinishTime();
 	
 }

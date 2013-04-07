@@ -81,19 +81,31 @@ public final class FakeHITWorker implements HITWorker, ClientController {
 	}
 
 	@Override
-	public int getLiveNumDisconnects() {
+	public int getNumDisconnects() {
 		// TODO Auto-generated method stub
 		return 0;
 	}
 
 	@Override
-	public double getLiveInactivePercent() {
+	public long getLastInactiveTime() {
 		// TODO Auto-generated method stub
 		return 0;
 	}
 
 	@Override
-	public String getLiveInactiveDescriptor() {
+	public long getTotalInactiveTime() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public double getInactivePercent() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public String getInactiveInfo() {
 		// TODO Auto-generated method stub
 		return null;
 	}
