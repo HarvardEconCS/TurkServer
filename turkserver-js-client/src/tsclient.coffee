@@ -221,7 +221,7 @@ class TSClient
     console.log "Server status: " + status
     switch status
       when Codec.status_quizneeded
-        @quizneeded_cb?()
+        @quizneeded_cb?(data.quiz)
       when Codec.status_quizfailed
         @quizfail_cb?()
       when Codec.username  

@@ -1,7 +1,6 @@
 package edu.harvard.econcs.turkserver;
 
 import java.io.Serializable;
-import java.util.Map;
 
 public abstract class QuizMaterials implements Serializable {
 
@@ -9,8 +8,8 @@ public abstract class QuizMaterials implements Serializable {
 
 	/**
 	 * Converts the quiz into a JSON map for transferring
-	 * @return
+	 * @return an object that must be serializable by Jetty
 	 */
-	public abstract Map<String, Object> toData();
+	public abstract Object toData();
 
 }
