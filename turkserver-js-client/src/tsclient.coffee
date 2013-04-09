@@ -321,31 +321,37 @@ class TSClient
       @userSubscription = null
   
   @updateLobbyStatus: (readyStatus) =>
-    unless @localMode
+    if @lobbySubscription
       @channelSend @lobbySubscription[0],
         ready: readyStatus
     else
-      console.log "Lobby status: " + readyStatus
+      console.log "Unsent lobby status:"
+      console.log readyStatus
       
   @sendExperimentBroadcast: (msg) =>
-    unless @localMode
+    if @expBroadcastSubscription
       @channelSend @expBroadcastSubscription[0], msg
     else
-      console.log "Experiment broadcast: " + msg
+      console.log "Unsent experiment broadcast"
+      console.log msg
     
   @sendExperimentService: (msg) =>
-    unless @localMode
+    if @expServiceSubscription
       @channelSend @expServiceSubscription[0], msg
     else
-      console.log "Experiment service: " + msg
+      console.log "Unsent experiment service"
+      console.log msg
   
   @channelSend: (channel, msg) ->
     unless @localMode
       $.cometd.publish channel, msg
     else
-      console.log "Would send on channel " + channel + " message " + msg
+      console.log "SEND " + channel + ": " + msg
       
   @startInactivityMonitor: (callback, thresh = 30000, interval = 5000) ->
+    # Cancel existing if necessary
+    @stopInactivityMonitor()    
+      
     @inactive_cb = callback
     @inactivityThreshold = thresh
     
@@ -353,7 +359,8 @@ class TSClient
     @intervalMonitorId = setInterval(@monitorInactivity, interval) if not @intervalMonitorId
       
   @stopInactivityMonitor: ->
-    clearInterval(@intervalMonitorId) if @intervalMonitorId
+    return unless @intervalMonitorId
+    clearInterval(@intervalMonitorId)
     @intervalMonitorId = null
   
   @resetInactivity: ->
@@ -366,12 +373,12 @@ class TSClient
     @lastInactive = currentTime
   
   @monitorInactivity: =>
-    # TODO: properly send inactivity to server
     currentTime = Date.now()
     inactiveTime = currentTime - @lastInactive
     
     return unless inactiveTime > @inactivityThreshold    
     
+    # Send inactivity to server    
     @channelSend @userSubscription[0],
       status: "inactive",
       start: @lastInactive,

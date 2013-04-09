@@ -35,14 +35,20 @@ public interface HITWorker {
 	 * -1 if the worker is not disconnected.
 	 * @return
 	 */
-	long getDisconnectedTime();
+	long getLastDisconnectedTime();
 	
+	/**
+	 * Get the total amount of time a worker has been disconnected during an experiment (does not include inactive)
+	 * @return
+	 */
+	long getTotalDisconnectedTime();
+
 	/**
 	 * Gets the actual number of disconnects since the worker has accepted the HIT.
 	 * @return
 	 */
 	int getNumDisconnects();
-	
+
 	/**
 	 * Get the length of the last inactivity segment (even if the worker is currently not inactive)
 	 * @return
@@ -50,7 +56,7 @@ public interface HITWorker {
 	long getLastInactiveTime();
 	
 	/**
-	 * Get the total number of milliseconds inactive that have been tracked so far
+	 * Get the total number of milliseconds inactive that have been tracked so far, including time disconnected
 	 * @return
 	 */
 	long getTotalInactiveTime();

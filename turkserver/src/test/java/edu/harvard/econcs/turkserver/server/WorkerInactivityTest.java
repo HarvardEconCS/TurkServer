@@ -33,6 +33,7 @@ public class WorkerInactivityTest {
 		
 		assertEquals(0, testWorker.getNumDisconnects());
 		assertEquals(0, testWorker.getLastInactiveTime());
+		assertEquals(0, testWorker.getTotalDisconnectedTime());
 		
 		testSession.isConnected = false;		
 		testWorker.disconnected();
@@ -42,12 +43,14 @@ public class WorkerInactivityTest {
 		
 		Thread.sleep(discTime);
 		
-		assertEquals(discTime, testWorker.getDisconnectedTime(), 1);
+		assertEquals(discTime, testWorker.getTotalDisconnectedTime(), 1);
+		assertEquals(discTime, testWorker.getLastDisconnectedTime(), 1);
 		
 		testSession.isConnected = true;
 		testWorker.reconnected();
 		
-		assertEquals(-1, testWorker.getDisconnectedTime());
+		assertEquals(discTime, testWorker.getTotalDisconnectedTime(), 1);
+		assertEquals(-1, testWorker.getLastDisconnectedTime());
 		assertEquals(1, testWorker.getNumDisconnects());
 		assertEquals(0, testWorker.getLastInactiveTime());
 		assertEquals(discTime, testWorker.getTotalInactiveTime(), 1);
@@ -61,6 +64,7 @@ public class WorkerInactivityTest {
 		expCont.expFinishTime = System.currentTimeMillis();
 		
 		testWorker.finalizeActivity();		
+		assertEquals(2*discTime, testWorker.getTotalDisconnectedTime(), 1);
 		assertEquals(2*discTime, testWorker.getTotalInactiveTime(), 1);
 	}
 	

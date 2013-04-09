@@ -75,7 +75,13 @@ public final class FakeHITWorker implements HITWorker, ClientController {
 	}
 
 	@Override
-	public long getDisconnectedTime() {
+	public long getLastDisconnectedTime() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public long getTotalDisconnectedTime() {
 		// TODO Auto-generated method stub
 		return 0;
 	}

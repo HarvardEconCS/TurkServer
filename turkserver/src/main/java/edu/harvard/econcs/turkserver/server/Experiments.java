@@ -57,6 +57,8 @@ public class Experiments {
 		}			
 	};
 	
+	static final int TRIGGER_HACK_MILLIS = 1000;
+	
 	final EventAnnotationManager manager;	
 	final ExperimentDataTracker tracker;
 	
@@ -214,9 +216,7 @@ public class Experiments {
 		
 		for( ExperimentListener el : listeners ) {
 			el.experimentStarted(cont);
-		}
-
-		int initialDelayMillis = 1000;
+		}		
 		
 		/*
 		 * TODO this may not be enough time for every client to register channel...
@@ -227,7 +227,7 @@ public class Experiments {
 			public void run() {				
 				manager.triggerStart(expId);				
 			}
-		}, initialDelayMillis, TimeUnit.MILLISECONDS);
+		}, TRIGGER_HACK_MILLIS, TimeUnit.MILLISECONDS);
 		
 		// Schedule interval tasks
 		List<ScheduledFuture<?>> scheduled = new LinkedList<>();
@@ -239,7 +239,7 @@ public class Experiments {
 					manager.triggerInterval(expId, method);				
 				}				
 			},
-			ie.unit().convert(initialDelayMillis, TimeUnit.MILLISECONDS) + ie.interval(), 
+			ie.unit().convert(TRIGGER_HACK_MILLIS, TimeUnit.MILLISECONDS) + ie.interval(), 
 			ie.interval(), ie.unit());
 			scheduled.add(f);
 		}
@@ -346,8 +346,8 @@ public class Experiments {
 		return manager.deliverBroadcastMsg(expId, worker, message);		
 	}
 
-	void workerReconnected(HITWorkerImpl worker) {
-		String expId = currentExps.get(worker);		
+	void workerReconnected(final HITWorkerImpl worker) {
+		final String expId = currentExps.get(worker);		
 		if( expId == null ) {
 			logger.info("{} not in experiment, ignoring reconnect callback", worker);
 			return;
@@ -360,17 +360,25 @@ public class Experiments {
 				);
 		SessionUtils.sendServiceMsg(worker.cometdSession.get(), data);	
 		
-		manager.triggerWorkerConnect(expId, worker);
+		worker.reconnected();
+		
+		// Give worker a chance to subscribe to channels
+		eventScheduler.schedule(new Runnable() {
+			public void run() {				
+				manager.triggerWorkerConnect(expId, worker);				
+			}
+		}, TRIGGER_HACK_MILLIS, TimeUnit.MILLISECONDS);						
 	}
 	
-	void workerDisconnected(HITWorkerImpl worker) {
+	void workerDisconnected(final HITWorkerImpl worker) {
 		String expId = currentExps.get(worker);		
 		if( expId == null ) {
 			logger.info("{} not in experiment, ignoring disconnect callback", worker);
 			return;
 		}
 		
-		manager.triggerWorkerDisconnect(expId, worker);
+		worker.disconnected();
+		manager.triggerWorkerDisconnect(expId, worker);				
 	}
 
 	void scheduleFinishExperiment(final ExperimentControllerImpl cont) {

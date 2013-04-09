@@ -27,6 +27,7 @@ public class HITWorkerImpl implements HITWorker, HITWorkerGroup {
 	final AtomicReference<Long> lastDisconnectTime = new AtomicReference<Long>();
 	final AtomicReference<Long> lastInactiveStart = new AtomicReference<Long>();
 	
+	final AtomicLong totalDisconnectedMillis = new AtomicLong();
 	final AtomicLong pastInactiveMillis = new AtomicLong();
 	final AtomicLong currentInactiveMillis = new AtomicLong();
 	
@@ -86,16 +87,6 @@ public class HITWorkerImpl implements HITWorker, HITWorkerGroup {
 	}
 
 	@Override
-	public long getDisconnectedTime() {
-		Long lastDisc = lastDisconnectTime.get();
-		
-		if( lastDisc == null )
-			return -1;
-		else
-			return System.currentTimeMillis() - lastDisc;
-	}
-
-	@Override
 	public void deliverExperimentService(Map<String, Object> msg) throws MessageException {
 		// Find the experiment this user is on and send a message on that channel
 		expCont.sendExperimentService(this, msg);
@@ -127,7 +118,10 @@ public class HITWorkerImpl implements HITWorker, HITWorkerGroup {
 		 * after a non-reloading reconnect
 		 */
 		
-		pastInactiveMillis.addAndGet(System.currentTimeMillis() - lastDisc);			
+		long disconnectedMillis = System.currentTimeMillis() - lastDisc;
+		
+		pastInactiveMillis.addAndGet(disconnectedMillis);
+		totalDisconnectedMillis.addAndGet(disconnectedMillis);
 	}
 	
 	/**
@@ -169,7 +163,7 @@ public class HITWorkerImpl implements HITWorker, HITWorkerGroup {
 	public void finalizeActivity() {		
 		
 		if( !isConnected() ) {
-			Long lastDisc = lastDisconnectTime.get();
+			Long lastDisc = lastDisconnectTime.getAndSet(null);
 			
 			if( lastDisc == null ) {
 				System.out.println("not connected but don't have record of last disconnect");
@@ -180,16 +174,43 @@ public class HITWorkerImpl implements HITWorker, HITWorkerGroup {
 				return;
 			}
 			
-			addInactiveTime(lastDisc, expCont.expFinishTime - lastDisc);
-		}
-		else {
-			long pastMillis = currentInactiveMillis.getAndSet(0);
-			lastInactiveStart.set(null);
+			long disconnectedMillis = expCont.expFinishTime - lastDisc;
 			
-			pastInactiveMillis.addAndGet(pastMillis);
+			totalDisconnectedMillis.addAndGet(disconnectedMillis);
+			
+			// Add inactive time since disconnection as well
+			addInactiveTime(lastDisc, disconnectedMillis);
 		}
+		
+		// Clear out current inactive time
+		long pastMillis = currentInactiveMillis.getAndSet(0);
+		lastInactiveStart.set(null);
+
+		pastInactiveMillis.addAndGet(pastMillis);		
 	}
 	
+	@Override
+	public long getLastDisconnectedTime() {
+		Long lastDisc = lastDisconnectTime.get();
+		
+		if( lastDisc == null )
+			return -1;
+		else
+			return System.currentTimeMillis() - lastDisc;
+	}
+
+	@Override
+	public long getTotalDisconnectedTime() {
+		Long lastDisc = lastDisconnectTime.get();
+		
+		if( lastDisc == null ) {
+			return totalDisconnectedMillis.get();
+		}
+		else {
+			return totalDisconnectedMillis.get() + (System.currentTimeMillis() - lastDisc);
+		}		
+	}
+
 	@Override
 	public int getNumDisconnects() {		
 		return numDisconnects.get();

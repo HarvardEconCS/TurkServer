@@ -331,15 +331,14 @@ public abstract class SessionServer extends Thread {
 	 */
 	void sessionReconnect(ServerSession conn, HITWorkerImpl hitw) {			
 		// experiment should send state to user with this callback
-		experiments.workerReconnected(hitw);		
-		hitw.reconnected();
+		experiments.workerReconnected(hitw);				
 	}
 	
 	void sessionDisconnect(ServerSession conn) {
-		HITWorkerImpl worker = clientToHITWorker.get(conn);				
+		HITWorkerImpl worker = clientToHITWorker.get(conn);
+		
 		if( worker != null ) {
-			experiments.workerDisconnected(worker);
-			worker.disconnected();
+			experiments.workerDisconnected(worker);			
 		}
 		
 		String workerHitId = worker == null ? null : worker.getHitId(); 				
