@@ -318,6 +318,8 @@ public class TurkHITController implements HITController {
 		int approved = 0;
 		int rejected = 0;
 		int skipped = 0;
+		int bonused = 0;
+		int alreadypaid = 0;
 		int unreviewable = 0;
 		
 		/* Get a list of workers that have been assigned to experiments, 
@@ -352,13 +354,12 @@ public class TurkHITController implements HITController {
 
 					HITStatus status = hit.getHITStatus();
 
-					if( HITStatus.Reviewable.equals(status) || 
-							HITStatus.Disposed.equals(status) ) {							
+					if( HITStatus.Reviewable.equals(status) || HITStatus.Disposed.equals(status) ) {							
 						// How much are we paying this hack?
 						BigDecimal reward = hit.getReward().getAmount();
 
 						// Save the stuff that the worker submitted
-						System.out.printf("HIT %s is %s, checking the result\n", hitId, status);
+						logger.info("HIT {} is {}, checking the result", hitId, status);						
 
 						Assignment a = assts[0];
 						String submittedAsstId = a.getAssignmentId();
@@ -383,34 +384,46 @@ public class TurkHITController implements HITController {
 
 						if( HITStatus.Disposed.equals(status) ) {
 							// TODO if it's disposed, they should have been paid, right?
-							System.out.println("Skipping payment for previously disposed HIT " + hitId);
+							logger.info("Skipping payment for previously disposed HIT " + hitId);
 							skipped++;
 							break;
 						}					
 
-						System.out.println(a.getAssignmentStatus());
+						logger.info("Assignment status: " + a.getAssignmentStatus());
+						
 						if( AssignmentStatus.Submitted.equals(a.getAssignmentStatus()) ) {
 							// Approve and pay assignment
 							requester.approveAssignment(assignmentId, feedback); 					
 							// Save in database that we paid them
 							s.setPayment(reward);
 							s.setPaid(true);
-
-							BigDecimal bonus = s.getBonus();
-
-							// Check if we pay bonus
-							if( bonus != null && !s.getBonusPaid() ) {
-								requester.grantBonus(workerId, bonus.doubleValue(), assignmentId, feedback);
-								s.setBonusPaid(true);
-							}
 							
 							tracker.saveSession(s);
 
-							approved++;					
+							approved++;
 						}
-						else {
-							logger.warn("HIT {} was already approved or rejected, skipping", hitId);
+						else if( AssignmentStatus.Approved.equals(a.getAssignmentStatus()) ){
+							logger.warn("HIT {} was already approved, saving base payment", hitId);
+														
+							s.setPayment(hit.getReward().getAmount());
+							s.setPaid(true);
+							tracker.saveSession(s);														
+							
+							alreadypaid++;
+						}
+						else {							
+							logger.warn("HIT {} was previously rejected ({})", hitId, a.getAssignmentStatus());
 							skipped++;
+						}
+						
+						// Pay bonus even for auto-approved or disabled HITs if possible
+						BigDecimal bonus = s.getBonus();						
+						if( bonus != null && !s.getBonusPaid() && bonus.doubleValue() > 0d ) {							
+							requester.grantBonus(workerId, bonus.doubleValue(), assignmentId, feedback);
+							s.setBonusPaid(true);
+							tracker.saveSession(s);
+							
+							bonused++;
 						}
 
 					} else {							
@@ -439,7 +452,9 @@ public class TurkHITController implements HITController {
 		}
 		
 		System.out.println("Total approved: " + approved);
+		System.out.println("Total already paid or expired: " + alreadypaid);
 		System.out.println("Total rejected: " + rejected);
+		System.out.println("Total bonuses paid: " + bonused);
 		System.out.println("Total skipped: " + skipped);
 		System.out.println("Total unreviewable:" + unreviewable);
 		
@@ -462,6 +477,8 @@ public class TurkHITController implements HITController {
 		 * TODO right now not disposed <==> hitStatus is null
 		 */
 		List<Session> completed = tracker.getCompletedSessions();
+		
+		logger.info("Checking out {} completed sessions", completed.size());		
 
 		for( Session s : completed ) {
 //			"SELECT hitId, assignmentId, workerId FROM session " +
@@ -509,8 +526,8 @@ public class TurkHITController implements HITController {
 					else {
 						throw new RuntimeException("Unexpected status for assignment recorded as paid: " 
 								+ a.getAssignmentStatus());
-					}					
-
+					}							
+					
 					if( HITStatus.Reviewable.equals(hit.getHITStatus()) ) {
 						// We got the right pay and the right notify, safe to dispose							
 						requester.disposeHIT(hitId);						
@@ -522,8 +539,11 @@ public class TurkHITController implements HITController {
 												
 						disposed++;
 					} else if( HITStatus.Disposed.equals(hit.getHITStatus()) ) {
-						logger.info(hitId + "already disposed");
+						logger.info(hitId + "already disposed");						
+						
 						skipped++;
+					} else {
+						throw new RuntimeException("Unrecognized status " + hit.getHITStatus());
 					}
 
 				} catch (ServiceException e) {					
