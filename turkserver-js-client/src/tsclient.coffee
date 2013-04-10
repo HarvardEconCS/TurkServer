@@ -3,13 +3,13 @@ require './setup'
 Codec = require './codec'
 Util = require './util'
 
-class TSClient
-  
-  @logLevel = "info"
+class TSClient  
 
   # Setup values
   @params = Util.getURLParams()
   @params.port = 9876 if not @params.port # TODO: put this at a more permanent value
+  
+  @logLevel = if @params.logLevel then @params.logLevel else "info"
   
   @localMode = false
   
@@ -150,10 +150,11 @@ class TSClient
     # Initialize CometD - TODO un-fix the specific port
     cometURL = location.protocol + "//" + location.hostname + ":" + @params.port + contextPath + "/cometd"
     $.cometd.websocketEnabled = true
+        
     $.cometd.init
       url: cometURL
       logLevel: @logLevel
-    
+      
     # Setup reload extension 
     $(window).unload =>
       if $.cometd.reload

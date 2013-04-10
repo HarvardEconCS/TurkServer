@@ -289,6 +289,7 @@ public abstract class SessionServer extends Thread {
 		}			
 		clientToHITWorker.put(conn, hitw);
 
+		// TODO Alice wants to move this to before the quiz
 		tracker.saveWorkerAssignment(hitw, assignmentId, workerId);
 		
 		// Successful registration, save info

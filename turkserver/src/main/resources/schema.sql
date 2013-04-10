@@ -84,6 +84,7 @@ CREATE TABLE `quiz` (
   `sessionId` varchar(40) DEFAULT NULL,
   `workerId` varchar(14) DEFAULT NULL,
   `setId` varchar(24) DEFAULT NULL,
+  `timeReceived` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `numCorrect` int(11) DEFAULT '0',
   `numTotal` int(11) DEFAULT '0',
   `score` double DEFAULT NULL,
@@ -192,7 +193,7 @@ CREATE TABLE `sets` (
   `descript` text,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -236,4 +237,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2013-03-11 23:29:08
+-- Dump completed on 2013-04-10 12:00:36
