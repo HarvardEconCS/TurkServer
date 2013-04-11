@@ -22,6 +22,7 @@ import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
@@ -104,6 +105,21 @@ public class ServerPanel extends JPanel implements ActionListener {
 		JPanel runningExpPanel = new JPanel();
 		runningExpPanel.setLayout(new BoxLayout(runningExpPanel, BoxLayout.PAGE_AXIS));
 		runningExpPanel.setBorder(BorderFactory.createEtchedBorder());
+		
+		JButton btnInitiateShutdown = new JButton("Initiate Shutdown");
+		btnInitiateShutdown.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				int selection = JOptionPane.showConfirmDialog(ServerPanel.this, 
+						"This will block new experiments from starting, " +
+						"wait for ones in progress to finish, and then shut down server. Proceed?",
+						"Initiate Shutdown", JOptionPane.OK_CANCEL_OPTION);
+				
+				if (selection == JOptionPane.OK_OPTION ) {
+					server.shutdown();
+				}
+			}
+		});
+		runningExpPanel.add(btnInitiateShutdown);
 		
 		runningExpsLabel = new JLabel(runningExpsText + 0);
 		runningExpPanel.add(runningExpsLabel);

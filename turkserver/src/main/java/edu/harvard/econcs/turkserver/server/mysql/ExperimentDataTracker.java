@@ -287,7 +287,7 @@ public abstract class ExperimentDataTracker {
 	public abstract boolean deleteSession(String hitId);	
 
 	/**
-	 * Sets all sessions with NULL experiment in the DB to expired, and returns the HIT IDs
+	 * Deletes HIT IDs that are not in experiment or completed from database, and returns them 
 	 * @return
 	 */	
 	public abstract List<Session> expireUnusedSessions();	
