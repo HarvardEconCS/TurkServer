@@ -66,11 +66,16 @@ public class UserItemMatcher<U, I> {
 		}				
 		
 		// Set up counts for existing keys
+		int total = 0;
 		orderedItems = new ConcurrentSkipListSet<CountingKey>();
 		
 		for( Map.Entry<I, Set<U>> e : itemUsers.entrySet() ) {
-			orderedItems.add(new CountingKey(e.getKey(), e.getValue().size()));
+			int count = e.getValue().size();
+			total += count;
+			orderedItems.add(new CountingKey(e.getKey(), count));			
 		}
+		
+		System.out.printf("Preloaded %d existing items\n", total);
 		
 		currentAssignments = new ConcurrentHashMap<U, I>();
 	}
