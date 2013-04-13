@@ -98,6 +98,8 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	public void setSetId(@Named(TSConfig.EXP_SETID) String setID) {
 		this.setID = setID;		
 		
+		System.out.println("Experiment set ID is " + setID);
+		
 		try( Connection conn = pbds.getConnection() ) {	
 			
 			// ensure this setId exists

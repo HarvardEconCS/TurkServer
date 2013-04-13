@@ -219,7 +219,7 @@ public abstract class SessionServer extends Thread {
 		}
 		
 		// Check for this AFTER possible completed sessions
-		if( completedHITs >= hitGoal ) {
+		if( !running || completedHITs >= hitGoal ) {
 			SessionUtils.sendStatus(conn, Codec.status_batchfinished, Messages.BATCH_COMPLETED);
 			logger.info("Ignoring connection after quota reached (HIT {})", hitId);
 			return null;

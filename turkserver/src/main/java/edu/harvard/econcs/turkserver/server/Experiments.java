@@ -347,7 +347,9 @@ public class Experiments {
 	}
 
 	void workerReconnected(final HITWorkerImpl worker) {
-		final String expId = currentExps.get(worker);		
+		worker.reconnected();
+		
+		final String expId = currentExps.get(worker);
 		if( expId == null ) {
 			logger.info("{} not in experiment, ignoring reconnect callback", worker);
 			return;
@@ -358,9 +360,7 @@ public class Experiments {
 				"status", Codec.status_connectexp,
 				"channel", worker.expCont.expChannel
 				);
-		SessionUtils.sendServiceMsg(worker.cometdSession.get(), data);	
-		
-		worker.reconnected();
+		SessionUtils.sendServiceMsg(worker.cometdSession.get(), data);				
 		
 		// Give worker a chance to subscribe to channels
 		eventScheduler.schedule(new Runnable() {
@@ -371,13 +371,15 @@ public class Experiments {
 	}
 	
 	void workerDisconnected(final HITWorkerImpl worker) {
+		worker.disconnected();
+		
 		String expId = currentExps.get(worker);		
+		
 		if( expId == null ) {
 			logger.info("{} not in experiment, ignoring disconnect callback", worker);
 			return;
-		}
+		}		
 		
-		worker.disconnected();
 		manager.triggerWorkerDisconnect(expId, worker);				
 	}
 

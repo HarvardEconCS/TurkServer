@@ -107,6 +107,7 @@ public class HITWorkerImpl implements HITWorker, HITWorkerGroup {
 		Long lastDisc = lastDisconnectTime.getAndSet(null);
 		
 		if( lastDisc == null ) {
+			// This currently happens on a reload.
 			System.out.println("reconnected but don't have record of last disconnect");
 			return;
 		}
