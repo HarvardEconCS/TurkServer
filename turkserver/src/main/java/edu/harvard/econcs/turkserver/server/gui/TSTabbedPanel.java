@@ -32,7 +32,7 @@ public class TSTabbedPanel extends JPanel {
 		ControlPanel controlPanel = new ControlPanel();
 		tabbedPane.addTab("Control", null, controlPanel, null);		
 		
-		WorkerPanel workerPanel = new WorkerPanel();
+		WorkerPanel workerPanel = new WorkerPanel(req);
 		tabbedPane.addTab("Workers", null, workerPanel, null);
 		
 		ExperimentsPanel experimentsPanel = new ExperimentsPanel(cpds, req);

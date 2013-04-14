@@ -131,6 +131,9 @@ public class ExperimentsPanel extends JSplitPane {
 		});
 		
 		txtrFeedback = new JTextArea();
+		txtrFeedback.setLineWrap(true);
+		txtrFeedback.setWrapStyleWord(true);
+		txtrFeedback.setRows(10);
 		txtrFeedback.setText("Thanks for your work!");
 		panel.add(txtrFeedback);
 		
