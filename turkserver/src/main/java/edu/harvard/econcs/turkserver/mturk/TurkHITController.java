@@ -446,8 +446,7 @@ public class TurkHITController implements HITController {
 								
 								s.setBonusPaid(true);								
 								
-								amountPaid += reward.doubleValue();
-								
+								amountPaid += bonus.doubleValue();								
 								bonused++;	
 							}							
 							
@@ -484,8 +483,8 @@ public class TurkHITController implements HITController {
 		System.out.println("Total rejected: " + rejected);
 		System.out.println("Total bonuses paid: " + bonused);
 		System.out.println("Total skipped: " + skipped);
-		System.out.println("Total unreviewable:" + unreviewable);
-		System.out.println("Total amount paid:" + amountPaid);
+		System.out.println("Total unreviewable: " + unreviewable);
+		System.out.println("Total amount paid: " + amountPaid);
 		
 		// TODO return something more meaningful
 		return amountPaid;
