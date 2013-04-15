@@ -126,6 +126,20 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	}
 
 	@Override
+	public Experiment getExperiment(String experimentId) {
+		try( Connection conn = pbds.getConnection() ) {	
+			
+			return new SQLQueryImpl(conn, dialect)
+			.from(_experiment)
+			.where(_experiment.id.eq(experimentId))
+			.singleResult(_experiment);
+		} catch (SQLException e) {			
+			e.printStackTrace();
+		} 
+		return null;		
+	}
+
+	@Override
 	public Collection<Experiment> getSetExperiments() {
 		try( Connection conn = pbds.getConnection() ) {	
 			
@@ -140,7 +154,7 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	public Multimap<Experiment, Session> getExperimentSessions() {
+	public Multimap<Experiment, Session> getAllExperimentSessions() {
 		Multimap<Experiment, Session> result = HashMultimap.create();
 		Collection<Experiment> expsInSet = getSetExperiments();
 		
@@ -162,7 +176,22 @@ public class MySQLDataTracker extends ExperimentDataTracker {
 	}
 
 	@Override
-	public Multimap<Experiment, Round> getExperimentRounds() {
+	public List<Round> getExperimentRounds(String experimentId) {
+		try( Connection conn = pbds.getConnection() ) {			
+			
+			return new SQLQueryImpl(conn, dialect)
+			.from(_round)
+			.where(_round.experimentId.eq(experimentId))
+			.list(_round);
+										
+		} catch (SQLException e) {			
+			e.printStackTrace();			
+		} 		
+		return null;
+	}
+
+	@Override
+	public Multimap<Experiment, Round> getAllExperimentRounds() {
 		Multimap<Experiment, Round> result = HashMultimap.create();
 		Collection<Experiment> expsInSet = getSetExperiments();
 		

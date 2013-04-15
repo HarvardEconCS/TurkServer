@@ -20,6 +20,7 @@ import javax.swing.BoxLayout;
 
 import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 
+import edu.harvard.econcs.turkserver.mturk.AlwaysApprovePolicy;
 import edu.harvard.econcs.turkserver.mturk.RequesterServiceExt;
 import edu.harvard.econcs.turkserver.mturk.TurkHITController;
 import edu.harvard.econcs.turkserver.schema.Sets;
@@ -264,28 +265,28 @@ public class ExperimentsPanel extends JSplitPane {
 		}
 	}
 
-	public class ReviewAndPayWorker extends SwingWorker<Integer, Object> {	
+	public class ReviewAndPayWorker extends SwingWorker<Double, Object> {	
 		final String approvalText;
 		
 		ReviewAndPayWorker(String approvalText) { 
 			this.approvalText = approvalText; 
 		}
 		
-		@Override protected Integer doInBackground() throws Exception {					
-			return hits.reviewAndPayWorkers(approvalText);
+		@Override protected Double doInBackground() throws Exception {					
+			return hits.reviewAndPayWorkers(new AlwaysApprovePolicy(approvalText));
 		}
 		
 		// TODO inform about how many workers paid and $ spent
 		@Override protected void done() {
-			int approvedCount;
+			double amountPaid;
 			try {
-				approvedCount = get();
+				amountPaid = get();
 			} catch (Exception e) {
 				GUIUtils.showException(e, ExperimentsPanel.this);
 				e.printStackTrace();
 				return;
 			}
-			JOptionPane.showMessageDialog(ExperimentsPanel.this, approvedCount + " HITs paid");
+			JOptionPane.showMessageDialog(ExperimentsPanel.this, "paid $" + amountPaid);
 		}
 	}
 

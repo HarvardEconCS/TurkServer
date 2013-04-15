@@ -41,7 +41,7 @@ public class MockDataTracker extends ExperimentDataTracker {
 	private final Multimap<String, Session> workerIdToSessions;
 	private final Multimap<String, Quiz> workerIdToQuizzes;
 	
-	// Experiment tracking - FALSE if in progress and TRUE if finished
+	// Map of experiments by experimentId
 	protected final ConcurrentMap<String, Experiment> experiments; 
 	
 	public MockDataTracker() {						
@@ -57,18 +57,28 @@ public class MockDataTracker extends ExperimentDataTracker {
 	}
 
 	@Override
+	public Experiment getExperiment(String experimentId) {		
+		return experiments.get(experimentId);
+	}
+
+	@Override
 	public Collection<Experiment> getSetExperiments() {		
 		return experiments.values();
 	}
 
 	@Override
-	public Multimap<Experiment, Session> getExperimentSessions() {
+	public Multimap<Experiment, Session> getAllExperimentSessions() {
 		System.out.println("Returning empty existing sessions");
 		return HashMultimap.create();
 	}
 
 	@Override
-	public Multimap<Experiment, Round> getExperimentRounds() {
+	public List<Round> getExperimentRounds(String experimentId) {
+		throw new UnsupportedOperationException();		
+	}
+
+	@Override
+	public Multimap<Experiment, Round> getAllExperimentRounds() {
 		System.out.println("Returning empty existing rounds");
 		return HashMultimap.create();
 	}

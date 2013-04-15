@@ -314,13 +314,15 @@ public class TurkHITController implements HITController {
 	 * Synchronous method.
 	 * @return
 	 */
-	public int reviewAndPayWorkers(String feedback) {
+	public double reviewAndPayWorkers(PaymentPolicy policy) {
 		int approved = 0;
 		int rejected = 0;
 		int skipped = 0;
 		int bonused = 0;
 		int alreadypaid = 0;
 		int unreviewable = 0;
+		
+		double amountPaid = 0;
 		
 		/* Get a list of workers that have been assigned to experiments, 
 		 * finished, but not yet paid
@@ -392,15 +394,28 @@ public class TurkHITController implements HITController {
 						logger.info("Assignment status: " + a.getAssignmentStatus());
 						
 						if( AssignmentStatus.Submitted.equals(a.getAssignmentStatus()) ) {
-							// Approve and pay assignment
-							requester.approveAssignment(assignmentId, feedback); 					
-							// Save in database that we paid them
-							s.setPayment(reward);
-							s.setPaid(true);
+												
+							if ( policy.shouldPayBaseReward(s) ) {
+								// Approve and pay assignment
+								requester.approveAssignment(assignmentId, policy.getLastAssignmentFeedback());
+								
+								// Save in database that we paid them
+								s.setPayment(reward);		
+								s.setPaid(true);
+								
+								amountPaid += reward.doubleValue();								
+								approved++;
+							}
+							else {
+								requester.rejectAssignment(assignmentId, policy.getLastAssignmentFeedback());
+								
+								s.setPayment(BigDecimal.ZERO);
+								s.setPaid(false);								
+								
+								rejected++;
+							}
 							
 							tracker.saveSession(s);
-
-							approved++;
 						}
 						else if( AssignmentStatus.Approved.equals(a.getAssignmentStatus()) ){
 							logger.warn("HIT {} was already approved, saving base payment", hitId);
@@ -417,13 +432,26 @@ public class TurkHITController implements HITController {
 						}
 						
 						// Pay bonus even for auto-approved or disabled HITs if possible
-						BigDecimal bonus = s.getBonus();						
-						if( bonus != null && !s.getBonusPaid() && bonus.doubleValue() > 0d ) {							
-							requester.grantBonus(workerId, bonus.doubleValue(), assignmentId, feedback);
-							s.setBonusPaid(true);
-							tracker.saveSession(s);
+										
+						if( s.getBonus() != null && !s.getBonusPaid() ) {							
+							policy.checkAndAdjustBonus(s, 
+									tracker.getExperiment(s.getExperimentId()), 
+									tracker.getExperimentRounds(s.getExperimentId()));
 							
-							bonused++;
+							BigDecimal bonus = s.getBonus();
+							
+							if( bonus.doubleValue() > 0d ) {
+								requester.grantBonus(workerId, bonus.doubleValue(), assignmentId, 
+										policy.getLastBonusFeedback());
+								
+								s.setBonusPaid(true);								
+								
+								amountPaid += reward.doubleValue();
+								
+								bonused++;	
+							}							
+							
+							tracker.saveSession(s);
 						}
 
 					} else {							
@@ -457,9 +485,10 @@ public class TurkHITController implements HITController {
 		System.out.println("Total bonuses paid: " + bonused);
 		System.out.println("Total skipped: " + skipped);
 		System.out.println("Total unreviewable:" + unreviewable);
+		System.out.println("Total amount paid:" + amountPaid);
 		
 		// TODO return something more meaningful
-		return approved;
+		return amountPaid;
 	}
 
 	/**

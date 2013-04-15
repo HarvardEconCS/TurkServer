@@ -58,16 +58,30 @@ public abstract class ExperimentDataTracker {
 	public abstract Collection<Experiment> getSetExperiments();
 	
 	/**
+	 * Get experiment data
+	 * @param experimentId
+	 * @return
+	 */
+	public abstract Experiment getExperiment(String experimentId);
+
+	/**
 	 * Get all experiments and corresponding sessions
 	 * @return
 	 */
-	public abstract Multimap<Experiment, Session> getExperimentSessions();
+	public abstract Multimap<Experiment, Session> getAllExperimentSessions();
+
+	/**
+	 * Get all rounds for an experiment
+	 * @param experimentId
+	 * @return
+	 */
+	public abstract List<Round> getExperimentRounds(String experimentId);
 
 	/**
 	 * Get all experiments and corresponding rounds
 	 * @return
 	 */
-	public abstract Multimap<Experiment, Round> getExperimentRounds();
+	public abstract Multimap<Experiment, Round> getAllExperimentRounds();
 
 	/**
 	 * Get all completed sessions in this set.
