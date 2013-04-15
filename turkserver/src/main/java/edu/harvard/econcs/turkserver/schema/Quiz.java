@@ -20,6 +20,8 @@ public class Quiz {
 
     private String setId;
 
+    private java.sql.Timestamp timeReceived;
+
     private String workerId;
 
     public String getAnswers() {
@@ -76,6 +78,14 @@ public class Quiz {
 
     public void setSetId(String setId) {
         this.setId = setId;
+    }
+
+    public java.sql.Timestamp getTimeReceived() {
+        return timeReceived;
+    }
+
+    public void setTimeReceived(java.sql.Timestamp timeReceived) {
+        this.timeReceived = timeReceived;
     }
 
     public String getWorkerId() {

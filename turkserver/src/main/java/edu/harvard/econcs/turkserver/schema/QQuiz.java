@@ -33,6 +33,8 @@ public class QQuiz extends com.mysema.query.sql.RelationalPathBase<Quiz> {
 
     public final StringPath setId = createString("setId");
 
+    public final DateTimePath<java.sql.Timestamp> timeReceived = createDateTime("timeReceived", java.sql.Timestamp.class);
+
     public final StringPath workerId = createString("workerId");
 
     public final com.mysema.query.sql.PrimaryKey<Quiz> primary = createPrimaryKey(id);
