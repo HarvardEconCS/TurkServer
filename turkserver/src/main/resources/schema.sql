@@ -28,7 +28,7 @@ CREATE TABLE `experiment` (
   `participants` int(11) DEFAULT NULL,
   `inputdata` varchar(24) DEFAULT NULL,
   `startTime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `endTime` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `endTime` timestamp NULL DEFAULT NULL,
   `results` mediumtext,
   PRIMARY KEY (`id`),
   KEY `experiment_ibfk_1` (`setId`),
