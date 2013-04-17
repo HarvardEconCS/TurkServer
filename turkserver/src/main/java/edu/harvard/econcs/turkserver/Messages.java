@@ -68,8 +68,8 @@ public class Messages {
 			"Please return this HIT and try again later.";
 
 	public static final String BATCH_COMPLETED = 
-			"All games for this batch have been completed.\n" +
+			"All tasks for this batch have been completed.\n" +
 			"If you have signed up for notifications, we will let you know\n" +
-			"when we post more games. Please return the HIT.";
+			"when we post more tasks. Please return the HIT.";
 
 }

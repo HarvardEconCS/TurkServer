@@ -498,12 +498,12 @@ public abstract class SessionServer extends Thread {
 		 * This may be less than hitGoal
 		 */
 		if( !debugMode ) {
-			logger.info("Waiting for workers to submit HITs");
+			logger.info("Waiting for experiments to finish and workers to submit HITs");
 			do try {
 				Thread.sleep(5000);
 			} catch(InterruptedException e ) {} 
-			while( completedHITs > submittedHITs );
-			logger.info("Got all HIT submissions");
+			while( getExpsInProgress() > 0 || completedHITs > submittedHITs );
+			logger.info("Experiments finished and got all HIT submissions");
 		}
 		else {						
 			try { Thread.sleep(1000); }
