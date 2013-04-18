@@ -393,11 +393,16 @@ public class TurkHITController implements HITController {
 
 						logger.info("Assignment status: " + a.getAssignmentStatus());
 						
+						boolean shouldPay = policy.processSession(s, 
+								tracker.getExperiment(s.getExperimentId()), 
+								tracker.getExperimentRounds(s.getExperimentId()));
+						String feedback = policy.getLastAssignmentFeedback();
+						
 						if( AssignmentStatus.Submitted.equals(a.getAssignmentStatus()) ) {
 												
-							if ( policy.shouldPayBaseReward(s) ) {
+							if ( shouldPay ) {
 								// Approve and pay assignment
-								requester.approveAssignment(assignmentId, policy.getLastAssignmentFeedback());
+								requester.approveAssignment(assignmentId, feedback);
 								
 								// Save in database that we paid them
 								s.setPayment(reward);		
@@ -407,7 +412,7 @@ public class TurkHITController implements HITController {
 								approved++;
 							}
 							else {
-								requester.rejectAssignment(assignmentId, policy.getLastAssignmentFeedback());
+								requester.rejectAssignment(assignmentId, feedback);
 								
 								s.setPayment(BigDecimal.ZERO);
 								s.setPaid(false);								
@@ -431,15 +436,11 @@ public class TurkHITController implements HITController {
 							skipped++;
 						}
 						
-						// Pay bonus even for auto-approved or disabled HITs if possible
-										
-						if( s.getBonus() != null && !s.getBonusPaid() ) {							
-							policy.checkAndAdjustBonus(s, 
-									tracker.getExperiment(s.getExperimentId()), 
-									tracker.getExperimentRounds(s.getExperimentId()));
-							
-							BigDecimal bonus = s.getBonus();
-							
+						// Pay bonus even for auto-approved or disabled HITs if possible						
+						BigDecimal bonus = s.getBonus();
+						
+						if( bonus != null && !s.getBonusPaid() ) {							
+														
 							if( bonus.doubleValue() > 0d ) {
 								requester.grantBonus(workerId, bonus.doubleValue(), assignmentId, 
 										policy.getLastBonusFeedback());
@@ -448,8 +449,7 @@ public class TurkHITController implements HITController {
 								
 								amountPaid += bonus.doubleValue();								
 								bonused++;	
-							}							
-							
+							}														
 							tracker.saveSession(s);
 						}
 

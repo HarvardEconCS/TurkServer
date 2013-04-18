@@ -10,10 +10,15 @@ public interface PaymentPolicy {
 
 	/**
 	 * Whether the base reward should be paid for a session
+	 * Adjust the recorded bonus as necessary
+	 * 
 	 * @param session
-	 * @return true if the base reward should be paid, otherwise rejected
+	 * @param experiment
+	 * @param experimentRounds
+	 * 
+	 * @return true if the base reward should be paid, otherwise rejected	 
 	 */
-	boolean shouldPayBaseReward(Session session);
+	boolean processSession(Session session, Experiment experiment, List<Round> experimentRounds);
 
 	/**
 	 * Get the feedback to go along with the last base reward decision
@@ -22,19 +27,9 @@ public interface PaymentPolicy {
 	String getLastAssignmentFeedback();
 
 	/**
-	 * Decide if the recorded bonus should be changed and adjust it
-	 * @param session
-	 * @param experiment
-	 * @param experimentRounds
-	 */
-	void checkAndAdjustBonus(Session session, Experiment experiment, List<Round> experimentRounds);
-
-	/**
 	 * Get the feedback to go along with the last checked bonus payment
 	 * @return
 	 */
 	String getLastBonusFeedback();
-	
-	
-
+		
 }
