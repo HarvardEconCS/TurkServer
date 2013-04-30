@@ -45,7 +45,7 @@ public class RoundParser {
 			}									
 
 			round = Integer.parseInt(sc.match().group(1));
-			target.roundStart(round);
+			target.roundStart(round, this.round.getInputdata());
 			
 			while( sc.hasNextLine() ) {				
 				currentTime = parseTime(sc.next());
