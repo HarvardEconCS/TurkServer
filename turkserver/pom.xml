@@ -39,7 +39,7 @@
     <dependency>
     	<groupId>commons-codec</groupId>
     	<artifactId>commons-codec</artifactId>
-    	<version>1.6</version>
+    	<version>1.8</version>
     </dependency>    
     <dependency>
     	<groupId>commons-collections</groupId>
@@ -49,12 +49,12 @@
     <dependency>
     	<groupId>commons-configuration</groupId>
     	<artifactId>commons-configuration</artifactId>
-    	<version>1.8</version>
+    	<version>1.9</version>
     </dependency>    
     <dependency>
     	<groupId>commons-dbutils</groupId>
     	<artifactId>commons-dbutils</artifactId>
-    	<version>1.4</version>
+    	<version>1.5</version>
     </dependency>
     <dependency>
     	<groupId>com.google.inject</groupId>
@@ -136,8 +136,7 @@
     <dependency>
     	<groupId>com.jolbox</groupId>
     	<artifactId>bonecp</artifactId>
-    	<version>0.7.1.RELEASE</version>
-    	<classifier>jdk5</classifier>
+    	<version>0.8.0-rc3</version>    	
     </dependency>
     
     <!-- TESTING -->
