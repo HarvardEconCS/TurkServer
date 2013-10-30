@@ -2,6 +2,14 @@ TurkServer
 
 multi-user experiment framework for Amazon Mechanical Turk
 
+**October 2013 update: We are building the [next generation of
+ TurkServer](https://github.com/HarvardEconCS/turkserver-meteor). If
+ you are just getting started with an experimental project, you will
+ want to use the [Meteor](http://www.meteor.com/) version of
+ TurkServer instead. It accomplishes everything that this version does
+ with even less code and allows you to focus on designing and running
+ your experiment, not technical minutiae.**
+	    
 TurkServer builds a framework for real-time communication and group
 tasks on top of Amazon Mechanical Turk (MTurk). Features include
 real-time communication between clients and a server, user grouping,
